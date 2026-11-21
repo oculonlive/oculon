@@ -1,0 +1,63 @@
+{
+  "name": "oculon",
+  "version": "0.1.0",
+  "description": "Open-source intelligence engine: cross-source signals with provenance from 50+ public sources, Robinhood Chain token and deployer checks, satellites, ships and aircraft, forecasts timestamped on Bitcoin. CLI, SDK, MCP server, web app and Telegram bot.",
+  "keywords": [
+    "osint",
+    "ai-agent",
+    "mcp",
+    "mcp-server",
+    "intelligence",
+    "satellite",
+    "ads-b",
+    "prediction-markets",
+    "opentimestamps",
+    "cli",
+    "robinhood-chain",
+    "bgp",
+    "cve",
+    "threat-intelligence"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "bin": {
+    "oculon": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
+    "oculon": "node --import tsx src/cli.ts",
+    "test": "node --disable-warning=ExperimentalWarning --import tsx --test \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "homepage": "https://oculon.live",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oculonlive/oculon.git"
+  },
+  "bugs": {
+    "url": "https://github.com/oculonlive/oculon/issues"
+  }
+}

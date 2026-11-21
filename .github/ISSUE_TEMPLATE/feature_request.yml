@@ -1,0 +1,16 @@
+name: Feature or source request
+description: A new module, data source or improvement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What should Oculon do
+      description: The question it should answer and who it helps.
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: Public APIs or datasets that could answer it, with their free-tier limits and terms if you know them.

@@ -1,0 +1,1674 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Oculon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root {
+  --bg: #000; --panel: #060606; --panel-2: #0e0e0e; --line: #222; --text: #fff; --muted: #9a9a9a;
+  --accent: #00f0ff; --accent-2: #e8e8e8; --warn: #00f0ff; --bad: #ff7a6b; --chip: #111;
+  --mono: 'Space Mono', ui-monospace, Consolas, monospace;
+  --sans: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+:root[data-theme="light"] {
+  --bg: #fff; --panel: #fff; --panel-2: #f4f4f4; --line: #e2e2e2; --text: #000; --muted: #5f5f5f;
+  --accent: #000; --accent-2: #000; --warn: #00838f; --bad: #c62828; --chip: #f2f2f2;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 var(--sans); }
+header { display: flex; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; }
+.brand { font-weight: 700; letter-spacing: .08em; font-family: var(--mono); }
+.brand span { color: var(--accent); }
+nav { display: flex; gap: 4px; flex-wrap: wrap; }
+nav button { background: none; border: 1px solid transparent; color: var(--muted); padding: 6px 12px; border-radius: 0; cursor: pointer; font: inherit; }
+nav button[aria-selected="true"] { color: var(--text); border-color: var(--line); background: var(--panel-2); }
+.spacer { flex: 1; }
+.icon-btn { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 0; padding: 6px 10px; cursor: pointer; font: inherit; }
+main { padding: 16px; max-width: 1400px; margin: 0 auto; }
+section[hidden] { display: none !important; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 0; padding: 14px 16px; min-width: 0; }
+.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.sig { display: grid; grid-template-columns: 52px 1fr; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.sig:first-child { border-top: 0; }
+.score { font-family: var(--mono); font-weight: 700; font-size: 18px; text-align: center; border-radius: 0; padding: 4px 0; background: var(--chip); }
+.score.hi { color: var(--bad); } .score.mid { color: var(--warn); } .score.lo { color: var(--accent); }
+.title { font-weight: 600; overflow-wrap: anywhere; }
+.meta { color: var(--muted); font-size: 12px; }
+.chip { display: inline-block; font-family: var(--mono); font-size: 11px; background: var(--chip); border: 1px solid var(--line); border-radius: 0; padding: 1px 8px; margin-right: 4px; }
+.ev { margin: 4px 0 0; padding-left: 16px; color: var(--muted); font-size: 12.5px; }
+.ev a { color: var(--accent-2); text-decoration: none; }
+input[type=text] { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 0; padding: 8px 10px; font: inherit; min-width: 0; flex: 1; }
+button.go { background: var(--accent); color: #04130d; border: 0; border-radius: 0; padding: 8px 14px; font-weight: 600; cursor: pointer; font: inherit; }
+button.go:disabled { opacity: .5; cursor: progress; }
+select { background: var(--panel-2); border: 1px solid var(--line); color: var(--text); border-radius: 0; padding: 8px; font: inherit; }
+#map { height: 62vh; min-height: 360px; border-radius: 0; border: 1px solid var(--line); }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 8px; }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+pre { background: var(--panel-2); border: 1px solid var(--line); border-radius: 0; padding: 10px; overflow: auto; font: 12px/1.45 var(--mono); max-height: 50vh; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 7px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; font-size: 12px; border-top: 0; }
+td.num { font-family: var(--mono); white-space: nowrap; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.kpi { background: var(--panel-2); border: 1px solid var(--line); border-radius: 0; padding: 10px 12px; }
+.kpi b { display: block; font: 700 22px var(--mono); }
+.kpi span { color: var(--muted); font-size: 12px; }
+canvas#graph { width: 100%; height: 62vh; min-height: 360px; display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 0; }
+.status { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.err { color: var(--bad); }
+.out h3 { margin: 14px 0 6px; font-size: 14px; }
+.spark { display: inline-flex; align-items: flex-end; gap: 2px; height: 28px; vertical-align: middle; }
+.spark i { display: block; width: 6px; background: var(--accent-2); border-radius: 0; }
+img.sat { max-width: 100%; border-radius: 0; border: 1px solid var(--line); }
+.leaflet-container { background: var(--panel-2); }
+.md { color: var(--text); }
+.md h1 { font-size: 16px; margin: 0 0 6px; }
+.md h2 { font-size: 13px; text-transform: none; letter-spacing: 0; color: var(--muted); margin: 12px 0 4px; }
+.md ul { margin: 4px 0; padding-left: 18px; }
+.md a, table a, .out a, #case-list a { color: var(--accent-2); text-decoration: none; }
+table a:hover, .out a:hover, #case-list a:hover { text-decoration: underline; }
+code { font-family: var(--mono); font-size: 12px; background: var(--chip); padding: 1px 5px; border-radius: 0; }
+/* Dark basemap from the standard OSM tiles. */
+:root:not([data-theme="light"]) .osm-tiles { filter: invert(1) grayscale(1) brightness(.8) contrast(1.1); }
+@media (max-width: 640px) { main { padding: 12px; } header { padding: 10px 12px; } }
+/* Oculon 06 look */
+header { background: rgba(0,0,0,.86); backdrop-filter: blur(12px); padding: 14px 24px; gap: 28px; }
+:root[data-theme="light"] header { background: rgba(255,255,255,.9); }
+.brand { font: 600 17px var(--sans); letter-spacing: .4em; color: var(--text); text-decoration: none; }
+nav button { font: 500 14px var(--sans); padding: 8px 12px; border: 0; border-bottom: 2px solid transparent; }
+nav button[aria-selected="true"] { background: none; border-color: transparent; border-bottom-color: var(--accent); }
+.toplink { color: var(--muted); text-decoration: none; font-size: 14px; }
+.toplink:hover { color: var(--text); }
+main { padding: 28px 24px 60px; max-width: 1480px; }
+.card { padding: 20px 22px; }
+.card h2 { font: 400 12px var(--mono); letter-spacing: .14em; color: var(--muted); }
+.title { font-weight: 500; }
+.score { font-weight: 700; font-size: 15px; background: none; border: 1px solid var(--line); }
+.score.hi { background: var(--warn); color: #000; border-color: var(--warn); }
+.score.mid { color: var(--warn); border-color: var(--warn); }
+.score.lo { color: var(--muted); }
+button.go { background: var(--accent); color: #000; font: 600 14px var(--sans); padding: 9px 16px; }
+:root[data-theme="light"] button.go { color: #fff; }
+.icon-btn { font: 13px var(--mono); text-decoration: none; display: inline-block; }
+input[type=text], select { font: 14px var(--mono); padding: 10px 12px; }
+input[type=text]:focus, select:focus { outline: 1px solid var(--accent); outline-offset: -1px; }
+.kpi b { font: 300 30px var(--sans); }
+.kpi span { font: 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+th { font: 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+.chip { font-size: 11px; }
+.md a, table a, .out a, #case-list a, .ev a { color: var(--text); text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: 3px; }
+.spark i { background: var(--accent); }
+::selection { background: var(--accent); color: #000; }
+/* ---------- motion (same language as the landing page) ---------- */
+#bgfx { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+#liquidbg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: .32; }
+:root[data-theme="light"] #liquidbg { opacity: .14; }
+.appband { position: relative; z-index: 1; height: 150px; margin-bottom: -96px; overflow: hidden; }
+.appband canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.appband-fade { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, var(--bg)); pointer-events: none; }
+:root[data-theme="light"] .appband { opacity: .5; }
+input[type=checkbox] { accent-color: var(--accent); }
+header, main { position: relative; z-index: 1; }
+header { position: sticky; z-index: 1000; }
+:root:not([data-theme="light"]) { --panel: rgba(8,8,8,.82); }
+.card { backdrop-filter: blur(6px); }
+header::after { content: ''; position: absolute; left: -30%; bottom: -1px; width: 30%; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); animation: hscan 6s linear infinite; }
+@keyframes hscan { to { left: 100%; } }
+.brand { background: linear-gradient(90deg, var(--text) 40%, var(--accent) 50%, var(--text) 60%); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: brand 7s linear infinite; }
+@keyframes brand { from { background-position: 100% 0; } to { background-position: -200% 0; } }
+section:not([hidden]) { animation: secin .6s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes secin { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+section:not([hidden]) .card { animation: secin .7s cubic-bezier(.2,.8,.2,1) both; }
+section:not([hidden]) .card:nth-child(2) { animation-delay: .08s; } section:not([hidden]) .card:nth-child(3) { animation-delay: .16s; } section:not([hidden]) .card:nth-child(4) { animation-delay: .24s; }
+.card { position: relative; overflow: hidden; isolation: isolate; }
+.card::before { content: ''; position: absolute; width: 520px; height: 520px; left: var(--mx, 10%); top: var(--my, -40%); transform: translate(-50%, -50%); background: radial-gradient(circle, rgba(0,240,255,.07), transparent 60%); z-index: -1; pointer-events: none; animation: drift 16s ease-in-out infinite alternate; animation-delay: calc(var(--i, 0) * -2.3s); transition: left .25s, top .25s; }
+.card:hover::before { animation-play-state: paused; }
+@keyframes drift { 0% { left: -10%; top: -20%; } 50% { left: 110%; top: 50%; } 100% { left: 30%; top: 120%; } }
+.card::after { content: ''; position: absolute; inset: 0; border: 1px solid transparent; background: linear-gradient(120deg, transparent 30%, rgba(0,240,255,.45), transparent 70%) border-box; background-size: 300% 300%; -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0; transition: opacity .3s; animation: sweep 3s linear infinite; pointer-events: none; }
+.card:hover::after { opacity: 1; }
+@keyframes sweep { to { background-position: 300% 0; } }
+.sig { animation: rowin .55s cubic-bezier(.2,.8,.2,1) both; }
+.sig:nth-child(2) { animation-delay: .05s; } .sig:nth-child(3) { animation-delay: .1s; } .sig:nth-child(4) { animation-delay: .15s; } .sig:nth-child(5) { animation-delay: .2s; } .sig:nth-child(6) { animation-delay: .25s; } .sig:nth-child(7) { animation-delay: .3s; } .sig:nth-child(n+8) { animation-delay: .35s; }
+tr, .row + .row { animation: rowin .5s ease both; }
+@keyframes rowin { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+.score.hi { animation: hot 2.2s ease-in-out infinite; }
+@keyframes hot { 50% { box-shadow: 0 0 0 4px rgba(0,240,255,.18), 0 0 22px rgba(0,240,255,.35); } }
+.kpi { position: relative; overflow: hidden; }
+.kpi::after { content: ''; position: absolute; top: 0; bottom: 0; left: -50%; width: 50%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.05), transparent); animation: shine 6s ease-in-out infinite; }
+@keyframes shine { 0%, 55% { left: -50%; } 100% { left: 120%; } }
+.loading { background: linear-gradient(90deg, var(--muted) 30%, var(--text) 50%, var(--muted) 70%); background-size: 300% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: brand 1.6s linear infinite; }
+button.go, .icon-btn { transition: box-shadow .25s, transform .25s, border-color .25s; }
+button.go:hover { box-shadow: 0 0 26px rgba(0,240,255,.45); transform: translateY(-1px); }
+.icon-btn:hover { border-color: var(--accent); }
+nav button { transition: color .2s, border-color .3s; }
+input[type=text]:focus { box-shadow: 0 0 0 1px var(--accent), 0 0 24px rgba(0,240,255,.18); transition: box-shadow .3s; }
+.status:not(:empty)::before { content: '●'; color: #3fd16b; margin-right: 6px; animation: blink 1.6s steps(1) infinite; }
+.status.err::before { color: var(--bad); }
+@keyframes blink { 50% { opacity: .2; } }
+.mk-pulse { animation: mkpulse 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes mkpulse { 0%, 100% { stroke-opacity: 1; stroke-width: 2px; } 50% { stroke-opacity: .25; stroke-width: 9px; } }
+.mk-blink { animation: mkblink 2s ease-in-out infinite; }
+@keyframes mkblink { 50% { fill-opacity: .25; stroke-opacity: .3; } }
+.mk-fence { stroke-dasharray: 8 6; animation: dash 1.2s linear infinite; }
+@keyframes dash { to { stroke-dashoffset: -28; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+/* ---------- overview tab ---------- */
+.ov-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; margin: 10px 0 22px; flex-wrap: wrap; }
+.ov-k { font: 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.ov-h { margin: 10px 0 0; font-size: clamp(30px, 3.4vw, 46px); font-weight: 300; letter-spacing: -.03em; line-height: 1.05; }
+.ov-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 16px; }
+.ov-kpi { background: var(--panel); padding: 16px 18px; position: relative; overflow: hidden; backdrop-filter: blur(6px); }
+.ov-kpi span { display: block; font: 10.5px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.ov-kpi b { display: block; font: 300 32px var(--sans); margin-top: 6px; letter-spacing: -.02em; }
+.ov-kpi::after { content: ''; position: absolute; top: 0; bottom: 0; left: -50%; width: 50%; background: linear-gradient(90deg, transparent, rgba(0,240,255,.06), transparent); animation: shine 6s ease-in-out infinite; animation-delay: calc(var(--i, 0) * .9s); }
+.ov-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.ov { position: relative; border: 1px solid var(--line); background: var(--panel); backdrop-filter: blur(6px); padding: 18px 20px 14px; display: flex; flex-direction: column; min-width: 0; overflow: hidden; isolation: isolate; transition: border-color .3s, transform .35s; animation: secin .7s cubic-bezier(.2,.8,.2,1) both; }
+.ov:hover { border-color: rgba(0,240,255,.5); transform: translateY(-3px); }
+.ov::before { content: ''; position: absolute; inset: -1px; padding: 1px; background: conic-gradient(from var(--ova, 0deg), transparent 0 80%, rgba(0,240,255,.6) 90%, transparent 100%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0; transition: opacity .3s; animation: ovspin 5s linear infinite; z-index: -1; pointer-events: none; }
+.ov:hover::before { opacity: 1; }
+@property --ova { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes ovspin { to { --ova: 360deg; } }
+.ov.w2 { grid-column: span 2; } .ov.w4 { grid-column: 1 / -1; } .ov.w4 .ov-qgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.ov .ovh { display: flex; justify-content: space-between; gap: 12px; font: 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.ov .ovh a { color: var(--accent); text-decoration: none; cursor: pointer; letter-spacing: .06em; }
+.ov .ovh a:hover { text-shadow: 0 0 12px var(--accent); }
+.ovb { flex: 1; margin-top: 14px; }
+.ov .ovf { margin-top: 12px; font: 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); opacity: .7; }
+.ov-sk { height: 110px; background: linear-gradient(90deg, var(--panel-2) 30%, rgba(0,240,255,.08) 50%, var(--panel-2) 70%); background-size: 300% 100%; animation: brand 1.4s linear infinite; }
+.ov-big { font: 300 40px var(--sans); letter-spacing: -.03em; line-height: 1; }
+.ov-big small { font-size: 14px; color: var(--muted); margin-left: 6px; letter-spacing: 0; }
+.ov-kv { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.ov-kv span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-kv span:last-child { font-family: var(--mono); font-size: 12.5px; flex: none; }
+.ov-kev { display: grid; grid-template-columns: minmax(0, 1fr) 110px 80px; gap: 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.ov-kev b { font: 600 12.5px var(--mono); color: var(--accent); }
+.ov-kev > div:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-meter { height: 5px; background: var(--panel-2); position: relative; overflow: hidden; }
+.ov-meter i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--accent); box-shadow: 0 0 10px var(--accent); transition: width 1.4s cubic-bezier(.2,.8,.2,1); }
+.ov-due { font: 11.5px var(--mono); text-align: right; color: var(--muted); }
+.ov-due.hot { color: var(--bad); }
+.ov-bars { display: flex; align-items: flex-end; gap: 3px; height: 70px; margin-top: 12px; }
+.ov-bars i { flex: 1; min-height: 2px; background: linear-gradient(180deg, var(--accent), rgba(0,240,255,.15)); transform-origin: bottom; animation: ovgrow 1s cubic-bezier(.2,.8,.2,1) both; }
+.ov-bars i.hot { background: linear-gradient(180deg, var(--bad), rgba(255,107,107,.15)); }
+@keyframes ovgrow { from { transform: scaleY(0); } }
+.ov-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 8px; background: #3fd16b; box-shadow: 0 0 8px #3fd16b; vertical-align: 1px; }
+.ov-dot.warn { background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: blink 1.4s ease-in-out infinite; }
+.ov-dot.bad { background: var(--bad); box-shadow: 0 0 8px var(--bad); animation: blink 1s ease-in-out infinite; }
+.ov-out { padding: 9px 0; border-bottom: 1px solid var(--line); }
+.ov-out .t { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+.ov-out .t span:last-child { font: 11.5px var(--mono); color: var(--muted); flex: none; }
+.ov-out p { margin: 4px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ov-pool { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); font: 12.5px var(--mono); }
+.ov-pool .f { color: var(--accent); }
+.ov-pool .f.bad { color: var(--bad); }
+.ov-chain { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 10px; }
+.ov-chain div { background: var(--panel-2); padding: 10px 12px; font: 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.ov-chain b { display: block; font: 500 17px var(--mono); color: var(--text); letter-spacing: 0; margin-top: 4px; }
+.ov-cal { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.ov-cal .d { font: 11.5px var(--mono); color: var(--accent); text-transform: uppercase; }
+.ov-cal .ti { font-size: 13px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ov-cal .k { font: 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.ov-narr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ov-n { border: 1px solid var(--line); padding: 12px 14px; background: var(--panel-2); }
+.ov-n .ph { font: 10px var(--mono); letter-spacing: .1em; color: var(--accent); border: 1px solid var(--accent); padding: 1px 6px; }
+.ov-n h4 { margin: 10px 0 0; font-size: 15px; font-weight: 500; line-height: 1.3; }
+.ov-n .ov-bars { height: 34px; }
+.ov-n .m { font: 11px var(--mono); color: var(--muted); margin-top: 6px; }
+.ov-prob { display: grid; grid-template-columns: 80px minmax(0, 1fr) 46px; gap: 12px; align-items: center; padding: 6px 0; font: 12.5px var(--mono); }
+.ov-prob .ov-meter { height: 8px; }
+.ov-prob.mk .ov-meter i { background: var(--muted); box-shadow: none; }
+.ov-ver { display: inline-flex; gap: 8px; align-items: center; margin-top: 12px; border: 1px solid var(--accent); color: var(--accent); padding: 6px 12px; font: 600 11.5px var(--mono); letter-spacing: .1em; box-shadow: 0 0 20px rgba(0,240,255,.2); }
+.ov-chip { display: inline-block; font: 11px var(--mono); border: 1px solid var(--line); padding: 2px 8px; margin: 0 6px 6px 0; color: var(--muted); }
+.ov-q { padding: 7px 0; }
+.ov-q .t { display: flex; justify-content: space-between; font: 12px var(--mono); }
+.ov-q .t span:last-child { color: var(--muted); }
+.ov-q .ov-meter { margin-top: 6px; height: 4px; }
+.ov-qgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+@media (max-width: 1200px) { .ov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ov-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 720px) { .ov-grid { grid-template-columns: minmax(0, 1fr); } .ov.w2 { grid-column: auto; } .ov-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ov-narr, .ov-qgrid, .ov.w4 .ov-qgrid { grid-template-columns: minmax(0, 1fr); } .ov-kev { grid-template-columns: minmax(0, 1fr) 70px; } .ov-kev .ov-due { display: none; } }
+/* ---------- nav scrolls instead of wrapping ---------- */
+header { flex-wrap: nowrap; }
+nav { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; mask-image: linear-gradient(90deg, #000 92%, transparent); }
+header .spacer { display: none; }
+header .status { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 1300px) { header .status { display: none; } }
+@media (max-width: 720px) { header { flex-wrap: wrap; row-gap: 8px; } header nav { order: 5; flex-basis: 100%; } #pal-btn .kbd { display: none; } header .brand { margin-right: auto; } .ov-kpi b { font-size: 22px; overflow-wrap: anywhere; } .ov-kpi { padding: 12px 14px; } }
+.pal input { color: var(--text) !important; }
+#pal-btn { white-space: nowrap; flex: none; }
+.ib .ev2 a { color: var(--text); text-decoration: underline; text-decoration-color: rgba(0,240,255,.4); text-underline-offset: 3px; }
+.ib .acts { display: grid; grid-template-columns: repeat(2, auto); gap: 6px; align-content: start; }
+input[type=range] { accent-color: var(--accent); }
+nav::-webkit-scrollbar { display: none; }
+nav button { white-space: nowrap; }
+.kbd { font: 11px var(--mono); border: 1px solid var(--line); padding: 2px 6px; color: var(--muted); }
+.icon-btn.on { border-color: var(--accent); color: var(--accent); }
+/* ---------- command palette ---------- */
+.pal-bg { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.6); backdrop-filter: blur(6px); display: flex; justify-content: center; align-items: flex-start; padding-top: 12vh; animation: fadein .2s ease both; }
+.pal-bg[hidden] { display: none; }
+.pal { width: min(720px, 92vw); background: rgba(6,10,11,.96); border: 1px solid rgba(0,240,255,.45); box-shadow: 0 30px 120px rgba(0,0,0,.8), 0 0 60px rgba(0,240,255,.12); animation: palin .25s cubic-bezier(.2,.8,.2,1) both; }
+:root[data-theme="light"] .pal { background: rgba(255,255,255,.97); }
+@keyframes palin { from { opacity: 0; transform: translateY(-12px) scale(.98); } }
+@keyframes fadein { from { opacity: 0; } }
+.pal input { width: 100%; border: 0 !important; border-bottom: 1px solid var(--line) !important; background: transparent !important; font: 17px var(--sans) !important; padding: 18px 20px !important; outline: none !important; box-shadow: none !important; }
+.pal-list { max-height: 56vh; overflow-y: auto; padding: 6px; }
+.pal-sec { font: 10.5px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); padding: 10px 12px 4px; }
+.pal-it { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; cursor: pointer; border-left: 2px solid transparent; }
+.pal-it .i { font: 12px var(--mono); color: var(--accent); text-align: center; }
+.pal-it .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pal-it .t small { color: var(--muted); margin-left: 8px; }
+.pal-it .k { font: 11px var(--mono); color: var(--muted); }
+.pal-it.on { background: rgba(0,240,255,.08); border-left-color: var(--accent); }
+.pal-foot { display: flex; gap: 16px; padding: 10px 16px; border-top: 1px solid var(--line); font: 11px var(--mono); color: var(--muted); }
+/* ---------- toasts ---------- */
+.toasts { position: fixed; right: 18px; bottom: 18px; z-index: 2500; display: flex; flex-direction: column; gap: 10px; width: min(380px, 90vw); }
+.toast { background: rgba(6,10,11,.95); border: 1px solid rgba(0,240,255,.45); padding: 12px 14px; box-shadow: 0 10px 40px rgba(0,0,0,.6), 0 0 30px rgba(0,240,255,.12); animation: toastin .4s cubic-bezier(.2,.8,.2,1) both; cursor: pointer; }
+:root[data-theme="light"] .toast { background: #fff; }
+@keyframes toastin { from { opacity: 0; transform: translateX(30px); } }
+.toast .k { font: 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+.toast .t { margin-top: 4px; font-size: 14px; line-height: 1.4; }
+/* ---------- inbox ---------- */
+.ib-bar { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.ib-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ib-chips button { background: none; border: 1px solid var(--line); color: var(--muted); font: 12px var(--mono); padding: 5px 10px; cursor: pointer; }
+.ib-chips button.on { border-color: var(--accent); color: var(--accent); background: rgba(0,240,255,.06); }
+.ib { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 14px; padding: 14px 16px; border: 1px solid var(--line); background: var(--panel); margin-bottom: 8px; position: relative; animation: rowin .4s ease both; }
+.ib.unread::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 3px; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.ib.new { animation: ibnew 1.6s ease both; }
+@keyframes ibnew { 0% { background: rgba(0,240,255,.25); } 100% { background: var(--panel); } }
+.sc2 { font: 700 15px var(--mono); text-align: center; border: 1px solid var(--line); padding: 6px 0; align-self: start; }
+.sc2.hi { background: var(--accent); color: #001418; border-color: var(--accent); }
+.sc2.mid { color: var(--accent); border-color: var(--accent); }
+.ib h4 { margin: 0; font-size: 15.5px; font-weight: 500; line-height: 1.35; cursor: pointer; }
+.ib .m { font: 11.5px var(--mono); color: var(--muted); margin-top: 4px; }
+.ib .ev2 { font-size: 13px; color: var(--muted); margin-top: 6px; line-height: 1.45; }
+.ib .ev2 b { font: 500 11px var(--mono); color: var(--accent); margin-right: 6px; }
+.ib .acts { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.ib .acts button { background: none; border: 1px solid var(--line); color: var(--muted); font: 11.5px var(--mono); padding: 5px 10px; cursor: pointer; white-space: nowrap; }
+.ib .acts button:hover { color: var(--text); border-color: var(--accent); }
+.ib .acts button.voted { color: var(--accent); border-color: var(--accent); }
+/* ---------- timeline ---------- */
+#tl-chart { width: 100%; display: block; }
+#tl-range { accent-color: var(--accent); margin-top: 8px; }
+.tl-it { display: grid; grid-template-columns: 120px 46px minmax(0, 1fr); gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; animation: rowin .35s ease both; }
+.tl-it .d { font: 12px var(--mono); color: var(--muted); }
+.tl-it .s { font: 700 12.5px var(--mono); color: var(--accent); }
+/* ---------- sources + accuracy ---------- */
+.hosts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 24px; }
+.host { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font: 12.5px var(--mono); }
+.host .st { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.host .st.fresh { background: #3fd16b; box-shadow: 0 0 8px #3fd16b; animation: blink 2.4s ease-in-out infinite; }
+.host .st.today { background: var(--accent); }
+.host span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.host span:last-child { color: var(--muted); font-size: 11px; }
+.keyrow { display: grid; grid-template-columns: minmax(0, 1fr) 70px; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.keyrow small { display: block; font: 11px var(--mono); color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.keyrow b { font: 600 12.5px var(--mono); text-align: right; }
+.keyrow b.full { color: #3fd16b; } .keyrow b.part { color: var(--accent); } .keyrow b.none { color: var(--muted); }
+.cal-t { width: 100%; border-collapse: collapse; font: 12.5px var(--mono); }
+.cal-t td, .cal-t th { padding: 6px 4px; border-top: 1px solid var(--line); text-align: right; }
+.cal-t td:first-child, .cal-t th:first-child { text-align: left; }
+.cal-t tr.best td { color: var(--accent); }
+/* ---------- entity profile ---------- */
+.ent-h { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; align-items: flex-end; margin: 10px 0 18px; }
+.ent-h .kind { display: inline-block; font: 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; border: 1px solid var(--accent); color: var(--accent); padding: 2px 8px; }
+.ent-h h1 { margin: 10px 0 0; font-size: clamp(30px, 4vw, 52px); font-weight: 300; letter-spacing: -.03em; line-height: 1.05; word-break: break-word; }
+.ent-h .id { font: 12px var(--mono); color: var(--muted); margin-top: 8px; word-break: break-all; }
+.nb { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; cursor: pointer; }
+.nb:hover { color: var(--accent); }
+.nb span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nb span:last-child { font: 11px var(--mono); color: var(--muted); flex: none; }
+.attr { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.attr span:first-child { font: 11.5px var(--mono); color: var(--muted); }
+.attr span:last-child { word-break: break-word; }
+.elink { color: var(--accent); cursor: pointer; text-decoration: underline; text-decoration-color: rgba(0,240,255,.35); text-underline-offset: 3px; }
+/* ---------- overview layout editing ---------- */
+.ov[draggable="true"] { cursor: grab; }
+.ov.dragging { opacity: .4; }
+.ov.drop { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.ov .pin { background: none; border: 0; color: var(--muted); cursor: pointer; font: 13px var(--mono); padding: 0 0 0 10px; }
+.ov .pin:hover { color: var(--accent); }
+.ov-hidden { margin-top: 12px; font: 12px var(--mono); color: var(--muted); }
+.ov-hidden button { background: none; border: 1px solid var(--line); color: var(--muted); font: 11.5px var(--mono); padding: 3px 8px; margin: 0 6px 6px 0; cursor: pointer; }
+@media (max-width: 1100px) { .hosts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 720px) { .hosts { grid-template-columns: minmax(0, 1fr); } .ib { grid-template-columns: 44px minmax(0, 1fr); } .ib .acts { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; } .tl-it { grid-template-columns: 90px 40px minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="/">OCULON</a>
+  <nav role="tablist">
+    <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
+    <button role="tab" data-tab="robinhood" aria-selected="false">Robinhood</button>
+    <button role="tab" data-tab="inbox" aria-selected="false">Inbox</button>
+    <button role="tab" data-tab="signals" aria-selected="false">Signals</button>
+    <button role="tab" data-tab="map">Map</button>
+    <button role="tab" data-tab="investigate">Investigate</button>
+    <button role="tab" data-tab="cases">Cases</button>
+    <button role="tab" data-tab="watch">Watch</button>
+    <button role="tab" data-tab="forecasts">Forecasts</button>
+    <button role="tab" data-tab="world">World</button>
+    <button role="tab" data-tab="calendar">Calendar</button>
+    <button role="tab" data-tab="live">Live</button>
+    <button role="tab" data-tab="graph">Graph</button>
+    <button role="tab" data-tab="timeline">Timeline</button>
+    <button role="tab" data-tab="sources">Sources</button>
+    <button role="tab" data-tab="accuracy">Accuracy</button>
+  </nav>
+  <div class="spacer"></div>
+  <a class="toplink" href="/docs">Docs</a>
+  <span class="status" id="status"></span>
+  <button class="icon-btn" id="theme" title="Toggle theme" aria-label="Toggle theme">◐</button>
+</header>
+<main>
+  <section id="tab-overview">
+    <div class="ov-head">
+      <div><div class="ov-k">Overview · <span id="ov-time">live</span></div><h1 class="ov-h">Everything this install is watching.</h1></div>
+      <button class="go" id="ov-refresh">Refresh all</button>
+    </div>
+    <div class="ov-kpis">
+      <div class="ov-kpi"><span>Signals · 24h</span><b id="ok-sig">—</b></div>
+      <div class="ov-kpi"><span>BGP hijacks · 48h</span><b id="ok-bgp">—</b></div>
+      <div class="ov-kpi"><span>Exploited CVEs · 7d</span><b id="ok-kev">—</b></div>
+      <div class="ov-kpi"><span>Robinhood Chain txs today</span><b id="ok-rh">—</b></div>
+      <div class="ov-kpi"><span>Military aircraft now</span><b id="ok-mil">—</b></div>
+      <div class="ov-kpi"><span>MCP tools</span><b id="ok-mcp">—</b></div>
+    </div>
+    <div class="ov-grid">
+      <article class="ov w2"><div class="ovh"><span>Exploited in the wild</span><a data-go="world">World →</a></div><div id="ov-kev" class="ovb"><div class="ov-sk"></div></div><div class="ovf">CISA KEV · EPSS</div></article>
+      <article class="ov"><div class="ovh"><span>Space weather</span><a data-go="investigate" data-kind="space">Open →</a></div><div id="ov-space" class="ovb"><div class="ov-sk"></div></div><div class="ovf">NOAA SWPC</div></article>
+      <article class="ov"><div class="ovh"><span>Cloud and services</span><a data-go="world">World →</a></div><div id="ov-cloud" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Official status pages</div></article>
+      <article class="ov w2"><div class="ovh"><span>Robinhood Chain · newest pools</span><a data-go="investigate" data-kind="robinhood">Investigate →</a></div><div id="ov-rh" class="ovb"><div class="ov-sk"></div></div><div class="ovf">GeckoTerminal · Blockscout</div></article>
+      <article class="ov w2"><div class="ovh"><span>Internet outages · 48h</span><a data-go="world">World →</a></div><div id="ov-out" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Cloudflare Radar · IODA</div></article>
+      <article class="ov"><div class="ovh"><span>DeFi pulse</span><a href="/docs#what-it-does">Docs →</a></div><div id="ov-defi" class="ovb"><div class="ov-sk"></div></div><div class="ovf">DefiLlama</div></article>
+      <article class="ov"><div class="ovh"><span>Catalysts · 14 days</span><a data-go="calendar">Calendar →</a></div><div id="ov-cal" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Finnhub · FRED · Federal Register</div></article>
+      <article class="ov w2"><div class="ovh"><span>Narratives</span><a data-go="signals">Signals →</a></div><div id="ov-narr" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Storylines across days</div></article>
+      <article class="ov w2"><div class="ovh"><span>Forecast and proof</span><a data-go="forecasts">Forecasts →</a></div><div id="ov-fc" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Raven · Tortoise · OpenTimestamps</div></article>
+      <article class="ov"><div class="ovh"><span>Watchlist</span><a data-go="watch">Watch →</a></div><div id="ov-watch" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Meerkat</div></article>
+      <article class="ov"><div class="ovh"><span>Case files</span><a data-go="cases">Cases →</a></div><div id="ov-cases" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Sourced investigations</div></article>
+      <article class="ov w4"><div class="ovh"><span>Free-tier budgets today</span><a href="/docs#configuration">Docs →</a></div><div id="ov-quota" class="ovb"><div class="ov-sk"></div></div><div class="ovf">oculon quota</div></article>
+    </div>
+  </section>
+  <section id="tab-robinhood" hidden>
+    <div class="ov-head"><div><div class="ov-k">Robinhood Chain · Heron · <span id="rh-upd">live</span></div><h1 class="ov-h">Every launch, traced to a wallet.</h1></div>
+      <div class="row"><label class="meta"><input type="checkbox" id="rh-auto" checked> auto refresh 60s</label><button class="go" id="rh-refresh">Refresh</button></div></div>
+    <div class="ov-kpis" id="rh-kpis">
+      <div class="ov-kpi"><span>Block height</span><b id="rk-block">—</b></div>
+      <div class="ov-kpi"><span>Transactions today</span><b id="rk-txs">—</b></div>
+      <div class="ov-kpi"><span>Addresses</span><b id="rk-addr">—</b></div>
+      <div class="ov-kpi"><span>Average gas</span><b id="rk-gas">—</b></div>
+      <div class="ov-kpi"><span>New pools flagged</span><b id="rk-flag">—</b></div>
+      <div class="ov-kpi"><span>Deployers profiled</span><b id="rk-dep">—</b></div>
+    </div>
+    <div class="ov-grid">
+      <article class="ov w2"><div class="ovh"><span>New pools · newest first</span><span class="meta" id="rh-poolsn"></span></div><div class="ovb" id="rh-pools"><div class="ov-sk"></div></div><div class="ovf">GeckoTerminal · click a pool to check its token</div></article>
+      <article class="ov w2"><div class="ovh"><span>Token check</span><a id="rh-share" hidden>Share card →</a></div><div class="ovb">
+        <div class="row"><input type="text" id="rh-addr" placeholder="0x… Robinhood Chain token address" aria-label="Token address"><button class="go" id="rh-check">Check</button></div>
+        <div id="rh-verdict" style="margin-top:14px"><p class="meta">Pick a pool on the left or paste an address. Oculon reads verification, holders and pool behavior, then the deployer's history.</p></div></div><div class="ovf">Blockscout · GeckoTerminal · heuristics, not an audit</div></article>
+      <article class="ov w2"><div class="ovh"><span>Trending pools · 24h</span></div><div class="ovb" id="rh-trend"><div class="ov-sk"></div></div><div class="ovf">GeckoTerminal</div></article>
+      <article class="ov w2"><div class="ovh"><span>Deployer board · most tokens launched</span><span class="meta">dead counts appear after a deployer is re-checked</span></div><div class="ovb" id="rh-deps"><div class="ov-sk"></div></div><div class="ovf">Heron deployer memory · click to open</div></article>
+      <article class="ov w2"><div class="ovh"><span>Watched Robinhood Chain tokens</span><a data-go="watch">Watch →</a></div><div class="ovb" id="rh-watch"><div class="ov-sk"></div></div><div class="ovf">oculon watch add token 0x…@robinhood</div></article>
+      <article class="ov w2"><div class="ovh"><span>Recent Heron signals</span><span class="meta">these reach Telegram when they pass the alert bar</span></div><div class="ovb" id="rh-sigs"><div class="ov-sk"></div></div><div class="ovf">Signals from the schedule</div></article>
+    </div>
+  </section>
+
+  <section id="tab-inbox" hidden>
+    <div class="ov-head"><div><div class="ov-k">Signal inbox · <span id="ib-count">—</span></div><h1 class="ov-h">Read, rate, share.</h1></div>
+      <div class="row"><button class="icon-btn" id="ib-allread">Mark all read</button><button class="icon-btn" id="ib-notify">Enable alerts</button></div></div>
+    <div class="ib-bar">
+      <div class="ib-chips" id="ib-mods"></div>
+      <div class="row"><label class="meta">min score <input type="range" id="ib-min" min="0" max="90" step="5" value="0"> <b id="ib-minv">0</b></label><label class="meta"><input type="checkbox" id="ib-unread"> unread only</label><input type="text" id="ib-q" placeholder="filter text" style="max-width:220px" aria-label="Filter"></div>
+    </div>
+    <div id="ib-list"></div>
+  </section>
+
+  <section id="tab-timeline" hidden>
+    <div class="ov-head"><div><div class="ov-k">Timeline · signals stored on this install</div><h1 class="ov-h">Scrub through what Oculon saw.</h1></div>
+      <div class="row"><select id="tl-hours" aria-label="Window"><option value="24">24 hours</option><option value="72" selected>3 days</option><option value="168">7 days</option><option value="336">14 days</option></select><button class="icon-btn" id="tl-play">▶ Play</button></div></div>
+    <div class="card"><canvas id="tl-chart" height="180"></canvas>
+      <input type="range" id="tl-range" min="0" max="100" value="100" style="width:100%" aria-label="Time">
+      <div class="row" style="justify-content:space-between"><span class="meta" id="tl-at">—</span><span class="meta" id="tl-win"></span></div></div>
+    <div id="tl-list" style="margin-top:16px"></div>
+  </section>
+
+  <section id="tab-sources" hidden>
+    <div class="ov-head"><div><div class="ov-k">Sources · health of this install</div><h1 class="ov-h">Who answered, and when.</h1></div><button class="go" id="src-refresh">Refresh</button></div>
+    <div class="ov-kpis" id="src-kpis"></div>
+    <div class="ov-grid">
+      <article class="ov w4"><div class="ovh"><span>Hosts answered · from the response cache</span><span class="meta">fresh = last hour · today = last 24h</span></div><div class="ovb" id="src-hosts"><div class="ov-sk"></div></div></article>
+      <article class="ov w2"><div class="ovh"><span>Optional keys</span><a href="/docs#configuration">How to add →</a></div><div class="ovb" id="src-keys"><div class="ov-sk"></div></div><div class="ovf">names only; key values never leave the server</div></article>
+      <article class="ov w2"><div class="ovh"><span>Daily budgets</span></div><div class="ovb" id="src-quota"><div class="ov-sk"></div></div><div class="ovf">oculon quota</div></article>
+    </div>
+  </section>
+
+  <section id="tab-accuracy" hidden>
+    <div class="ov-head"><div><div class="ov-k">Accuracy · measured, not claimed</div><h1 class="ov-h">How good is the radar?</h1></div></div>
+    <div class="ov-kpis" id="acc-kpis"></div>
+    <div class="ov-grid">
+      <article class="ov w2"><div class="ovh"><span>First to know</span><a data-go="signals">Signals →</a></div><div class="ovb" id="acc-scoops"><div class="ov-sk"></div></div><div class="ovf">lead time of Oculon signals vs first media coverage</div></article>
+      <article class="ov w2"><div class="ovh"><span>Radar calibration</span></div><div class="ovb" id="acc-cal"><div class="ov-sk"></div></div><div class="ovf">oculon calibrate · replayed past days</div></article>
+      <article class="ov w4"><div class="ovh"><span>Forecast scoreboard</span><a data-go="forecasts">Forecasts →</a></div><div class="ovb" id="acc-fc"><div class="ov-sk"></div></div><div class="ovf">Brier scores appear once markets resolve</div></article>
+    </div>
+  </section>
+
+  <section id="tab-entity" hidden>
+    <div id="ent-body"><div class="ov-sk"></div></div>
+  </section>
+  <section id="tab-signals" hidden>
+    <div class="card" style="margin-bottom:16px">
+      <div class="row" style="justify-content:space-between"><h2>Today's brief</h2><button class="icon-btn" id="brief-refresh">Rewrite</button></div>
+      <div id="brief" class="md meta">Loading…</div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <h2>Ask Oculon</h2>
+      <div class="row">
+        <input type="text" id="ask-q" placeholder="Why is Nvidia in the news this week?" aria-label="Question">
+        <button class="go" id="ask-go">Ask</button>
+      </div>
+      <div id="ask-out" class="out"></div>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <div class="row" style="justify-content:space-between"><h2>Signal feed</h2><button class="go" id="run-radar">Run radar</button></div>
+        <div id="signals"></div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="row" style="justify-content:space-between"><h2>Narratives</h2><a class="icon-btn" href="/report" target="_blank" rel="noopener">Weekly report</a></div>
+          <div id="narratives" class="meta">Loading…</div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <h2>First to know</h2>
+          <div id="scoops" class="meta">Loading…</div>
+        </div>
+        <div class="card">
+          <h2>Radar sources</h2>
+          <div id="radar-sources" class="meta">Run the radar to see which sources answered.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-cases" hidden>
+    <div class="card">
+      <h2>Open a case</h2>
+      <div class="row">
+        <input type="text" id="case-q" placeholder="Who is behind the token 0x…? / Is company X about to launch Y?" aria-label="Case question">
+        <button class="go" id="case-go">Investigate</button>
+      </div>
+      <p class="meta">A deeper investigation (1-3 minutes). Every cited source is checked against what the tools really returned.</p>
+    </div>
+    <div class="grid" style="margin-top:16px">
+      <div class="card"><h2>Case files</h2><div id="case-list"></div></div>
+      <div class="card"><div id="case-view" class="md meta">Select a case.</div></div>
+    </div>
+  </section>
+
+  <section id="tab-map" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2>Live map</h2>
+        <div class="row">
+          <label class="meta"><input type="checkbox" data-layer="air" checked> military aircraft</label>
+          <label class="meta"><input type="checkbox" data-layer="quakes" checked> earthquakes</label>
+          <label class="meta"><input type="checkbox" data-layer="events" checked> natural events</label>
+          <label class="meta"><input type="checkbox" data-layer="fences" checked> fences</label>
+          <button class="icon-btn" id="draw-fence">Draw fence</button>
+          <button class="go" id="load-map">Refresh</button>
+        </div>
+      </div>
+      <div id="map"></div>
+      <div class="legend">
+        <span><i class="dot" style="background:#00f0ff"></i>notable military role (tanker, AWACS, ISR, bomber…)</span>
+        <span><i class="dot" style="background:#ffffff"></i>other military aircraft</span>
+        <span><i class="dot" style="background:#8a8a8a"></i>earthquake M4.5+ (24h)</span>
+        <span><i class="dot" style="background:#ff9f43"></i>natural event (NASA EONET)</span>
+        <span><i class="dot" style="background:#00f0ff;outline:1px solid #00f0ff;background:none"></i>your fences</span>
+      </div>
+      <div id="map-meta" class="meta" style="margin-top:6px"></div>
+    </div>
+  </section>
+
+  <section id="tab-investigate" hidden>
+    <div class="card">
+      <div class="row">
+        <select id="inv-kind" aria-label="What to investigate">
+          <option value="dossier">Dossier (company, person)</option>
+          <option value="hype">Hype phase (topic)</option>
+          <option value="footprint">Pre-release footprint (domain)</option>
+          <option value="lights">Night lights (place)</option>
+          <option value="aircraft">Aircraft (registration / hex)</option>
+          <option value="image">Satellite image (place)</option>
+          <option value="wallet">Wallet (0x… or Solana address)</option>
+          <option value="token">Token contract (0x…, Ethereum)</option>
+          <option value="air">Air quality (place)</option>
+          <option value="space">Space weather</option>
+          <option value="robinhood">Robinhood Chain pools</option>
+          <option value="deployer">Robinhood Chain deployer (token or wallet)</option>
+          <option value="launches">Launch radar (company)</option>
+          <option value="markets">Prediction markets cross-check</option>
+          <option value="rewind">Time machine (YYYY-MM-DD)</option>
+          <option value="sanctions">Sanctions screening (wallet, IMO, name)</option>
+          <option value="health">Company health score</option>
+          <option value="impact">Disaster impact (place, or empty for current events)</option>
+          <option value="contradictions">Contradictions across sources (topic)</option>
+        </select>
+        <input type="text" id="inv-q" placeholder="Nvidia" aria-label="Query">
+        <button class="go" id="inv-go">Investigate</button>
+      </div>
+      <div id="inv-out" class="out"></div>
+    </div>
+  </section>
+
+  <section id="tab-watch" hidden>
+    <div class="card">
+      <h2>Watchlist</h2>
+      <p class="meta">Oculon re-checks these targets every hour while <code>oculon serve --watch</code> runs and reports only what changed. Add targets from the CLI (<code>oculon watch add company Nvidia</code>), Telegram or MCP.</p>
+      <div style="overflow-x:auto"><table id="watch"></table></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Recent watch changes</h2>
+      <div id="watch-signals"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>API usage today</h2>
+      <div style="overflow-x:auto"><table id="quota"></table></div>
+    </div>
+  </section>
+
+  <section id="tab-forecasts" hidden>
+    <div class="card">
+      <h2>Track record</h2>
+      <div class="kpis" id="kpis"></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Forecasts</h2>
+      <div style="overflow-x:auto"><table id="fc"></table></div>
+      <div id="proof" class="out"></div>
+    </div>
+  </section>
+
+  <section id="tab-world" hidden>
+    <div class="grid">
+      <div class="card">
+        <h2>Internet outages</h2>
+        <p class="meta">Cloudflare Radar confirmed outages and anomalies, IODA scores, RIPEstat routing.</p>
+        <div id="w-blackout" class="meta">Loading…</div>
+      </div>
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <h2>Disaster alerts</h2>
+          <p class="meta">GDACS orange and red alerts, tsunami bulletins, extreme US weather.</p>
+          <div id="w-hazards" class="meta">Loading…</div>
+        </div>
+        <div class="card">
+          <h2>Cloud and services</h2>
+          <p class="meta">Official status pages: AWS, Azure, Google Cloud, GitHub, Cloudflare, OpenAI and more.</p>
+          <div id="w-cloud" class="meta">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-calendar" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h2>Catalyst calendar</h2><span class="meta" id="cal-meta"></span></div>
+      <p class="meta">Earnings (watched companies first, then the largest), key US macro releases, and high-volume prediction markets closing. ★ marks a watched company or an open Oculon forecast.</p>
+      <div id="calendar" class="meta">Loading…</div>
+    </div>
+  </section>
+
+  <section id="tab-live" hidden>
+    <div class="card">
+      <h2>Live streams</h2>
+      <p class="meta">Wikipedia articles suddenly edited by several people, and names or hashtags surging in English Bluesky posts. Runs with <code>oculon serve --live</code>.</p>
+      <div id="live"></div>
+    </div>
+  </section>
+
+  <section id="tab-graph" hidden>
+    <div class="card" style="margin-bottom:16px">
+      <h2>How are they connected?</h2>
+      <div class="row">
+        <input type="text" id="con-a" placeholder="Nvidia" aria-label="First thing">
+        <input type="text" id="con-b" placeholder="Jensen Huang" aria-label="Second thing">
+        <button class="go" id="con-go">Find path</button>
+      </div>
+      <div id="con-out" class="out"></div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h2>Entity graph</h2><span class="meta" id="graph-meta"></span></div>
+      <canvas id="graph"></canvas>
+      <div class="meta" id="graph-hover" style="margin-top:6px">Hover a node to see it; click to open its neighbors.</div>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="/assets/fx.js"></script>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? esc(u) : '#');
+const status = (t, bad) => { const el = $('#status'); el.textContent = t; el.className = 'status' + (bad ? ' err' : ''); };
+
+async function api(path) {
+  status('loading ' + path.split('?')[0] + '…');
+  const t0 = performance.now();
+  const res = await fetch(path);
+  const body = await res.json().catch(() => ({ error: 'bad response' }));
+  if (!res.ok) { status(body.error || res.statusText, true); throw new Error(body.error || res.statusText); }
+  status(path.split('?')[0] + ' ' + Math.round(performance.now() - t0) + 'ms');
+  return body;
+}
+
+/* theme */
+try { const t = localStorage.getItem('oculon-theme'); if (t) document.documentElement.dataset.theme = t; } catch {}
+$('#theme').onclick = () => {
+  const cur = document.documentElement.dataset.theme || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('oculon-theme', next); } catch {}
+  if (graphState) drawGraph();
+};
+
+/* tabs */
+const loaded = {};
+document.querySelectorAll('nav button').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('nav button').forEach((x) => x.setAttribute('aria-selected', x === b));
+  document.querySelectorAll('main > section').forEach((s) => s.hidden = s.id !== 'tab-' + b.dataset.tab);
+  const t = b.dataset.tab;
+  if (!loaded[t]) { loaded[t] = true; ({ robinhood: loadRobinhood, inbox: loadInbox, timeline: loadTimeline, sources: loadSources, accuracy: loadAccuracy, overview: loadOverview, map: loadMap, forecasts: loadForecasts, graph: loadGraph, watch: loadWatch, cases: loadCases, calendar: loadCalendar, live: loadLive, world: loadWorld })[t]?.(); }
+  if (t === 'map' && map) setTimeout(() => map.invalidateSize(), 50);
+  if (t === 'graph' && graphState) drawGraph();
+});
+
+
+/* overview: live preview cards, each linking to the tab with the full view */
+const ovAgo = (iso) => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`; };
+const ovFail = (id) => () => { const el = document.getElementById(id); if (el) el.innerHTML = '<p class="meta">Unavailable right now.</p>'; };
+const ovMeters = (root) => setTimeout(() => root.querySelectorAll('[data-w]').forEach((i) => { i.style.width = `${i.dataset.w}%`; }), 80);
+const ovSet = (id, v) => { const el = document.getElementById(id); el.textContent = v; delete el.dataset.counted; };
+function ovCount(id, n) { const el = document.getElementById(id); el.textContent = Number(n).toLocaleString('en-US'); }
+document.querySelectorAll('.ov-kpi').forEach((el, i) => el.style.setProperty('--i', i));
+document.querySelectorAll('#tab-overview [data-go]').forEach((a) => a.addEventListener('click', () => {
+  document.querySelector(`nav button[data-tab="${a.dataset.go}"]`)?.click();
+  if (a.dataset.kind) { const s = document.getElementById('inv-kind'); if (s) { s.value = a.dataset.kind; s.dispatchEvent(new Event('change')); } }
+  scrollTo({ top: 0, behavior: 'smooth' });
+}));
+async function loadOverview() {
+  document.getElementById('ov-time').textContent = new Date().toUTCString().slice(17, 22) + ' UTC';
+  api('/api/meta').then((m) => ovCount('ok-mcp', m.mcpTools)).catch(() => ovSet('ok-mcp', 'n/a'));
+  api('/api/signals?limit=200').then((s) => { const n = s.filter((x) => Date.now() - Date.parse(x.createdAt) < 864e5).length; if (n >= 200) ovSet('ok-sig', '200+'); else ovCount('ok-sig', n); }).catch(() => ovSet('ok-sig', 'n/a'));
+  api('/api/bgp').then((b) => ovCount('ok-bgp', b.result.incidents.hijacks.length)).catch(() => ovSet('ok-bgp', 'n/a'));
+  api('/api/military').then((m) => ovCount('ok-mil', m.result.withPosition ?? m.aircraft.length)).catch(() => ovSet('ok-mil', 'n/a'));
+  api('/api/vulns').then((r) => {
+    ovCount('ok-kev', r.result.kev.length);
+    const rows = r.result.kev.slice(0, 5).map((k) => { const d = k.dueDate ? Math.round((Date.parse(k.dueDate) - Date.now()) / 864e5) : null; return `<div class="ov-kev"><div><b>${esc(k.cveID)}</b> ${esc(k.vendorProject)} ${esc(k.product)}</div><div class="ov-meter" title="EPSS ${k.epss ?? 'n/a'}"><i data-w="${k.epss == null ? 0 : Math.max(3, k.epss * 100).toFixed(1)}"></i></div><div class="ov-due ${d != null && d <= 3 ? 'hot' : ''}">${d == null ? '' : d >= 0 ? `due ${d}d` : `${-d}d over`}</div></div>`; }).join('');
+    const el = document.getElementById('ov-kev');
+    el.innerHTML = `<div style="display:flex;gap:28px;align-items:baseline;margin-bottom:6px"><div class="ov-big">${r.result.kev.length}<small>newly exploited</small></div><div class="ov-big" style="font-size:26px">${r.result.criticalCves?.length ?? 0}<small>critical CVEs</small></div></div>${rows}<div class="meta" style="margin-top:8px">bar = EPSS · ${esc(ovAgo(r.generatedAt))}</div>`;
+    ovMeters(el);
+  }).catch(ovFail('ov-kev'));
+  api('/api/space').then((r) => {
+    const s = r.result, kp = (s.kp || []).slice(-24);
+    document.getElementById('ov-space').innerHTML = `<div class="ov-big">Kp ${esc(s.kpNow)}<small>max ${esc(s.kpMax24h)} · 24h</small></div><div class="ov-kv" style="margin-top:10px"><span>Storm level</span><span>${esc(s.stormLevel || 'none')}</span></div><div class="ov-kv"><span>Strongest flare</span><span>${esc(s.strongestFlare?.maxClass || '—')}</span></div><div class="ov-bars">${kp.map((k, i) => `<i class="${k.kp >= 5 ? 'hot' : ''}" style="height:${Math.max(3, (k.kp / 9) * 100)}%;animation-delay:${i * 25}ms"></i>`).join('')}</div>`;
+  }).catch(ovFail('ov-space'));
+  api('/api/cloud').then((r) => {
+    const s = r.result, deg = s.degraded || [];
+    document.getElementById('ov-cloud').innerHTML = `<div class="ov-big">${s.checked - deg.length}<small>of ${s.checked} up</small></div><div style="margin-top:10px">${deg.slice(0, 5).map((d) => `<div class="ov-kv"><span><i class="ov-dot ${/major|critical/.test(d.indicator) ? 'bad' : 'warn'}"></i>${esc(d.service)}</span><span>${esc(d.indicator)}</span></div>`).join('') || '<div class="ov-kv"><span><i class="ov-dot"></i>All operational</span><span>ok</span></div>'}</div>`;
+  }).catch(ovFail('ov-cloud'));
+  api('/api/robinhood').then((r) => {
+    const st = r.result.stats, fresh = r.result.fresh.slice(0, 6);
+    if (st) ovCount('ok-rh', st.transactionsToday);
+    document.getElementById('ov-rh').innerHTML = (st ? `<div class="ov-chain"><div>Block<b>${Number(st.blocks).toLocaleString('en-US')}</b></div><div>Addresses<b>${Number(st.addresses).toLocaleString('en-US')}</b></div><div>Gas<b>${esc(st.gasAverage)} gwei</b></div></div>` : '') +
+      fresh.map((p) => `<div class="ov-pool"><span>${esc(p.pool.name)} <span class="meta">· ${p.ageHours.toFixed(1)}h</span></span><span class="f ${p.flags.length ? 'bad' : ''}">${esc(p.flags[0] || `${p.pool.buys24h}/${p.pool.sells24h} buys/sells`)}</span></div>`).join('');
+  }).catch((e) => { ovFail('ov-rh')(e); ovSet('ok-rh', 'n/a'); });
+  api('/api/blackout').then((r) => {
+    const o = (r.result.outages || []).slice(0, 4);
+    document.getElementById('ov-out').innerHTML = o.map((x) => `<div class="ov-out"><div class="t"><span><i class="ov-dot ${x.end ? '' : 'bad'}"></i>${esc(x.country || x.countryCode || 'Unknown')}${x.network ? ` · ${esc(x.network)}` : ''}</span><span>${x.end ? 'ended' : 'ongoing'} · ${esc((x.start || '').slice(5, 16).replace('T', ' '))}</span></div>${x.description ? `<p>${esc(x.description)}</p>` : ''}</div>`).join('') || '<p class="meta">No confirmed outages in the window.</p>';
+  }).catch(ovFail('ov-out'));
+  api('/api/defi').then((r) => {
+    const t = r.result.totals, drop = r.result.tvlDrops?.[0], dep = r.result.depegs?.[0];
+    document.getElementById('ov-defi').innerHTML = `<div class="ov-big">$${(t.defiTvl / 1e9).toFixed(1)}B<small>TVL</small></div><div class="ov-kv" style="margin-top:10px"><span>7 day change</span><span style="color:${t.defiTvlChange7d < 0 ? 'var(--bad)' : '#3fd16b'}">${t.defiTvlChange7d > 0 ? '+' : ''}${t.defiTvlChange7d.toFixed(2)}%</span></div>${drop ? `<div class="ov-kv"><span>Drop · ${esc(drop.name)}</span><span>${drop.change1d.toFixed(0)}% 1d</span></div>` : ''}${dep ? `<div class="ov-kv"><span>Off peg · ${esc(dep.symbol)}</span><span>${dep.offPct.toFixed(1)}%</span></div>` : ''}<div class="ov-kv"><span>DEX volume 24h</span><span>$${(t.dexVolume24h / 1e9).toFixed(2)}B</span></div>`;
+  }).catch(ovFail('ov-defi'));
+  api('/api/calendar?days=14').then((r) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const items = (r.result.items || []).filter((i) => i.date >= today && i.kind !== 'market').slice(0, 5);
+    document.getElementById('ov-cal').innerHTML = items.map((i) => `<div class="ov-cal"><div class="d">${esc(new Date(i.date + 'T00:00:00Z').toUTCString().slice(5, 11))}</div><div><div class="k">${esc(i.kind)}</div><div class="ti">${esc(i.title)}</div></div></div>`).join('') || '<p class="meta">Nothing scheduled.</p>';
+  }).catch(ovFail('ov-cal'));
+  api('/api/narratives').then((list) => {
+    document.getElementById('ov-narr').innerHTML = list.length ? `<div class="ov-narr">${list.slice(0, 3).map((n) => { const mx = Math.max(1, ...n.daily); return `<div class="ov-n"><span class="ph">${esc(n.phase)}</span><h4>${esc(n.name)}</h4><div class="ov-bars">${n.daily.map((d, i) => `<i style="height:${Math.max(4, (d / mx) * 100)}%;animation-delay:${i * 60}ms"></i>`).join('')}</div><div class="m">${n.total} items · 7 days</div></div>`; }).join('')}</div>` : '<p class="meta">No storylines yet.</p>';
+  }).catch(ovFail('ov-narr'));
+  api('/api/forecasts').then(async (r) => {
+    const f = r.forecasts[0], el = document.getElementById('ov-fc');
+    if (!f) { el.innerHTML = '<p class="meta">No forecasts yet.</p>'; return; }
+    el.innerHTML = `<div style="font-size:18px;line-height:1.3">${esc(f.question)}</div><div style="margin-top:12px"><div class="ov-prob"><span>Oculon</span><div class="ov-meter"><i data-w="${(f.pModel * 100).toFixed(1)}"></i></div><span>${Math.round(f.pModel * 100)}%</span></div><div class="ov-prob mk"><span>Market</span><div class="ov-meter"><i data-w="${(f.pMarket * 100).toFixed(1)}"></i></div><span>${Math.round(f.pMarket * 100)}%</span></div></div><div class="meta" style="margin-top:8px">${esc(f.rationale)}</div><div id="ov-ver"></div>`;
+    ovMeters(el);
+    try { const v = await api(`/api/verify?id=${encodeURIComponent(f.id)}`); document.getElementById('ov-ver').innerHTML = `<div class="ov-ver">● ${esc(v.result.status)}${v.result.bitcoin?.height ? ` · BITCOIN BLOCK ${esc(v.result.bitcoin.height)}` : ''}</div>`; } catch {}
+  }).catch(ovFail('ov-fc'));
+  api('/api/watch').then((w) => {
+    const kinds = {}; w.forEach((x) => { kinds[x.kind] = (kinds[x.kind] || 0) + 1; });
+    const last = w.map((x) => x.lastRun).filter(Boolean).sort().pop();
+    document.getElementById('ov-watch').innerHTML = `<div class="ov-big">${w.length}<small>targets</small></div><div style="margin-top:12px">${Object.entries(kinds).map(([k, n]) => `<span class="ov-chip">${esc(k)} ${n}</span>`).join('')}</div>${w.slice(0, 3).map((x) => `<div class="ov-kv"><span>${esc(x.label || x.target)}</span><span>${esc(x.kind)}</span></div>`).join('')}<div class="meta" style="margin-top:8px">${last ? `last run ${esc(ovAgo(last))}` : 'not run yet'}</div>`;
+  }).catch(ovFail('ov-watch'));
+  api('/api/cases').then((c) => {
+    document.getElementById('ov-cases').innerHTML = c.length ? `<div class="ov-big">${c.length}<small>cases</small></div><div style="margin-top:10px">${c.slice(0, 3).map((k) => `<div class="ov-kv"><span>${esc(k.question)}</span><span>${esc(k.confidence ?? '—')}</span></div>`).join('')}</div>` : '<p class="meta">No cases yet. Open one in the Cases tab.</p>';
+  }).catch(ovFail('ov-cases'));
+  api('/api/quota').then((q) => {
+    const top = q.filter((x) => x.budget).sort((a, b) => b.used / b.budget - a.used / a.budget).slice(0, 8);
+    const el = document.getElementById('ov-quota');
+    el.innerHTML = `<div class="ov-qgrid">${top.map((x) => `<div class="ov-q"><div class="t"><span>${esc(x.source)}</span><span>${x.used} / ${x.budget}</span></div><div class="ov-meter"><i data-w="${Math.max(1.5, Math.min(100, (x.used / x.budget) * 100)).toFixed(1)}"></i></div></div>`).join('')}</div>`;
+    ovMeters(el);
+  }).catch(ovFail('ov-quota'));
+}
+document.getElementById('ov-refresh').onclick = () => { document.querySelectorAll('#tab-overview .ovb').forEach((b) => { b.innerHTML = '<div class="ov-sk"></div>'; }); loadOverview(); };
+
+/* signals */
+const scoreClass = (s) => (s >= 75 ? 'hi' : s >= 55 ? 'mid' : 'lo');
+function renderSignal(s) {
+  const ev = (s.evidence || []).slice(0, 4).map((e) => `<li><span class="chip">${esc(e.source)}</span>${e.url ? `<a href="${safeUrl(e.url)}" target="_blank" rel="noopener noreferrer">${esc(e.text)}</a>` : esc(e.text)}</li>`).join('');
+  return `<div class="sig"><div class="score ${scoreClass(s.score)}">${Math.round(s.score)}</div><div><div class="title">${esc(s.title)}</div><div class="meta"><span class="chip">${esc(s.module)}</span>${esc((s.createdAt || '').replace('T', ' ').slice(0, 16))} UTC</div><ul class="ev">${ev}</ul></div></div>`;
+}
+async function loadSignals() {
+  const sigs = await api('/api/signals?limit=60');
+  $('#signals').innerHTML = sigs.length ? sigs.map(renderSignal).join('') : '<p class="meta">No signals yet. Run the radar.</p>';
+}
+function renderSources(p) {
+  return Object.entries(p.sources).map(([src, st]) => `<div class="row" style="justify-content:space-between;padding:4px 0;border-top:1px solid var(--line)"><span class="chip">${esc(src)}</span><span class="meta">${Object.entries(st).map(([k, v]) => `${esc(k)} ×${v}`).join('  ')}</span></div>`).join('') + (p.notes.length ? `<ul class="ev">${p.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : '');
+}
+$('#run-radar').onclick = async (e) => {
+  e.target.disabled = true;
+  try { const r = await api('/api/radar'); $('#radar-sources').innerHTML = renderSources(r.provenance); await loadSignals(); }
+  catch (err) { $('#radar-sources').innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+  finally { e.target.disabled = false; }
+};
+loadSignals().catch(() => {});
+
+/* map: layers + fences */
+let map;
+const layers = {};
+async function post(path, body) {
+  const res = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', 'x-oculon': '1' }, body: JSON.stringify(body) });
+  const out = await res.json().catch(() => ({ error: 'bad response' }));
+  if (!res.ok) throw new Error(out.error || res.statusText);
+  return out;
+}
+function syncLayers() {
+  document.querySelectorAll('[data-layer]').forEach((cb) => { const l = layers[cb.dataset.layer]; if (!l) return; if (cb.checked) l.addTo(map); else l.remove(); });
+}
+document.querySelectorAll('[data-layer]').forEach((cb) => (cb.onchange = syncLayers));
+async function loadFences() {
+  layers.fences.clearLayers();
+  const fences = await api('/api/fences');
+  for (const f of fences) {
+    const [s, w, n, e] = f.box;
+    const now = f.now ? `<br>${f.now.milAircraft.length} mil aircraft, ${f.now.milVessels.length} mil vessels, ${f.now.quakes.length} quakes, ${f.now.events.length} events` : '<br><i>not checked yet</i>';
+    const rect = L.rectangle([[s, w], [n, e]], { color: '#00f0ff', weight: 2, fillOpacity: .06, className: 'mk-fence' })
+      .bindPopup(`<b>${esc(f.name)}</b> (#${f.id})<br>${esc(f.kinds.join(', '))}${now}<br><button class="icon-btn" data-del-fence="${f.id}">Delete fence</button>`);
+    rect.on('popupopen', () => document.querySelector(`[data-del-fence="${f.id}"]`)?.addEventListener('click', async () => { await post('/api/fences/delete', { id: f.id }); loadFences(); }));
+    rect.addTo(layers.fences);
+  }
+  return fences.length;
+}
+async function loadMap() {
+  if (!window.L) { $('#map-meta').innerHTML = '<span class="err">Map library could not load (offline?).</span>'; return; }
+  if (!map) {
+    map = L.map('map', { worldCopyJump: true }).setView([25, 10], 2);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors', maxZoom: 12, className: 'osm-tiles' }).addTo(map);
+    for (const k of ['air', 'quakes', 'events', 'fences']) layers[k] = L.layerGroup();
+  }
+  for (const k in layers) layers[k].clearLayers();
+  $('#load-map').disabled = true;
+  try {
+    const [mil, ev, quakes, nf] = await Promise.all([api('/api/military'), api('/api/events'), api('/api/quakes'), loadFences()]);
+    const notable = new Set(mil.result.regions.flatMap((r) => r.notable.map((n) => n.hex)));
+    for (const a of mil.aircraft) {
+      const hot = notable.has(a.hex);
+      L.circleMarker([a.lat, a.lon], { radius: hot ? 7 : 4, color: hot ? '#00f0ff' : '#ffffff', weight: 1, fillOpacity: .8, className: hot ? 'mk-pulse' : 'mk-blink' })
+        .bindPopup(`<b>${esc(a.callsign || a.reg || a.hex)}</b><br>${esc(a.type || '?')} · ${esc(a.reg || '')}<br>alt ${esc(a.alt)}<br><a href="https://globe.adsb.lol/?icao=${esc(a.hex)}" target="_blank" rel="noopener noreferrer">live track</a>`)
+        .addTo(layers.air);
+    }
+    for (const q of quakes.filter((x) => x.lat !== null)) {
+      L.circleMarker([q.lat, q.lon], { radius: Math.max(4, (q.mag - 3) * 3), color: '#8a8a8a', weight: 2, fillOpacity: .35, className: 'mk-pulse' })
+        .bindPopup(`<b>M${esc(q.mag.toFixed(1))}</b> ${esc(q.place)}<br>${esc(new Date(q.time).toISOString().slice(0, 16))}Z<br><a href="${safeUrl(q.url)}" target="_blank" rel="noopener noreferrer">USGS</a>`)
+        .addTo(layers.quakes);
+    }
+    for (const e of ev.result.events.filter((x) => x.lat !== null)) {
+      L.circleMarker([e.lat, e.lon], { radius: e.severity ? 9 : 5, color: '#ff9f43', weight: 2, fillOpacity: .35, className: 'mk-pulse' })
+        .bindPopup(`<b>${esc(e.title)}</b><br>${esc(e.category)}${e.why ? ' · ' + esc(e.why) : ''}<br>${esc(e.date.slice(0, 16))}Z`)
+        .addTo(layers.events);
+    }
+    syncLayers();
+    $('#map-meta').textContent = `${mil.aircraft.length} military aircraft · ${quakes.length} earthquakes (24h) · ${ev.result.events.length} natural events · ${nf} fence(s)`;
+  } catch (err) { $('#map-meta').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+  finally { $('#load-map').disabled = false; }
+}
+$('#load-map').onclick = loadMap;
+
+/* draw a fence: click two opposite corners */
+let drawing = null;
+$('#draw-fence').onclick = () => {
+  if (!map) return;
+  drawing = [];
+  $('#map-meta').textContent = 'Click the first corner of the fence on the map…';
+  map.getContainer().style.cursor = 'crosshair';
+};
+function handleMapClick(e) {
+  if (!drawing) return;
+  drawing.push(e.latlng);
+  if (drawing.length === 1) { $('#map-meta').textContent = 'Now click the opposite corner…'; return; }
+  const [a, b] = drawing;
+  drawing = null;
+  map.getContainer().style.cursor = '';
+  const box = [Math.min(a.lat, b.lat), Math.min(a.lng, b.lng), Math.max(a.lat, b.lat), Math.max(a.lng, b.lng)].map((v) => Math.round(v * 1000) / 1000);
+  const name = (prompt('Fence name?', 'my-fence') || '').trim();
+  if (!name) { $('#map-meta').textContent = 'Fence cancelled.'; return; }
+  post('/api/fences', { name, box })
+    .then((f) => { $('#map-meta').textContent = `Fence #${f.id} "${f.name}" saved. It is checked every scan; the first check records a baseline.`; return loadFences(); })
+    .catch((err) => { $('#map-meta').innerHTML = `<span class="err">${esc(err.message)}</span>`; });
+}
+const waitMap = setInterval(() => { if (map) { map.on('click', handleMapClick); clearInterval(waitMap); } }, 300);
+
+/* investigate */
+const placeholders = { dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', air: 'New Delhi', space: '(no input needed)', robinhood: '(no input needed)', deployer: '0x… token or deployer', launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
+const usd = (x) => (x == null ? '?' : '$' + Math.round(x).toLocaleString('en-US'));
+
+/* brief: tiny, safe Markdown renderer (escape first, then headings, bold, links, bullets) */
+function renderMd(md) {
+  const lines = esc(md).split('\n');
+  let html = '', inList = false;
+  for (const raw of lines) {
+    // Italic only for a whole line ("_Written by ..._"): inline underscores appear in URLs.
+    let l = raw.replace(/^_(.+)_$/, '<i>$1</i>').replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, t, u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${t}</a>`);
+    const h = /^(#{1,3})\s+(.*)$/.exec(l);
+    const li = /^\s*[-*]\s+(.*)$/.exec(l);
+    if (li) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${li[1]}</li>`; continue; }
+    if (inList) { html += '</ul>'; inList = false; }
+    if (h) html += `<h${h[1].length}>${h[2]}</h${h[1].length}>`;
+    else if (l.trim()) html += `<p>${l}</p>`;
+  }
+  return html + (inList ? '</ul>' : '');
+}
+async function loadBrief(refresh) {
+  $('#brief').textContent = refresh ? 'Rewriting…' : 'Loading…';
+  try { const b = await api('/api/brief' + (refresh ? '?refresh=1' : '')); $('#brief').innerHTML = renderMd(b.markdown); $('#brief').className = 'md'; }
+  catch (err) { $('#brief').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+}
+$('#brief-refresh').onclick = () => loadBrief(true);
+loadBrief(false);
+
+/* watch */
+async function loadWatch() {
+  const [list, sigs, quota] = await Promise.all([api('/api/watch'), api('/api/signals?limit=200'), api('/api/quota')]);
+  $('#watch').innerHTML = '<tr><th>#</th><th>kind</th><th>target</th><th>last check</th></tr>' + (list.map((w) => `<tr><td class="num">${w.id}</td><td>${esc(w.kind)}</td><td>${esc(w.label || w.target)}${w.label ? `<div class="meta">${esc(w.target)}</div>` : ''}</td><td class="meta">${esc(w.lastRun ? w.lastRun.slice(0, 16).replace('T', ' ') + ' UTC' : 'not yet')}</td></tr>`).join('') || '<tr><td colspan="4" class="meta">empty</td></tr>');
+  const ws = sigs.filter((s) => s.module === 'meerkat');
+  $('#watch-signals').innerHTML = ws.length ? ws.slice(0, 30).map(renderSignal).join('') : '<p class="meta">No changes yet. The first check of each target records a baseline.</p>';
+  $('#quota').innerHTML = '<tr><th>source</th><th>used</th><th>daily budget</th></tr>' + (quota.map((q) => `<tr><td>${esc(q.source)}</td><td class="num">${q.used}</td><td class="num">${q.budget ?? '—'}</td></tr>`).join('') || '<tr><td colspan="3" class="meta">no metered calls today</td></tr>');
+}
+
+/* first to know */
+async function loadScoops() {
+  try {
+    const b = await api('/api/scoops');
+    $('#scoops').innerHTML = b.checked
+      ? `<div class="kpis"><div class="kpi"><b>${b.checked}</b><span>signals checked</span></div><div class="kpi"><b>${b.oculonFirst}</b><span>Oculon first</span></div><div class="kpi"><b>${b.mediaFirst}</b><span>media first</span></div><div class="kpi"><b>${b.medianLeadHours == null ? '—' : (b.medianLeadHours > 0 ? '+' : '') + b.medianLeadHours + 'h'}</b><span>median lead</span></div></div>` +
+        (b.best.length ? `<ul class="ev">${b.best.slice(0, 5).map((s) => `<li>+${esc(s.leadHours)}h ${esc(s.subject)} <a href="${safeUrl(s.mediaUrl)}" target="_blank" rel="noopener noreferrer">${esc(s.mediaSource || 'media')}</a></li>`).join('')}</ul>` : '<p class="meta">No scoops yet: so far the media reported first. Signals are checked once they are 6-72 hours old.</p>')
+      : 'No signals checked yet. Signals are compared with Guardian, NYT and GNews once they are 6-72 hours old.';
+  } catch (err) { $('#scoops').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+}
+loadScoops();
+
+/* narratives */
+async function loadNarratives() {
+  try {
+    const list = await api('/api/narratives');
+    $('#narratives').innerHTML = list.length
+      ? `<table>${list.slice(0, 8).map((n) => `<tr><td>${spark(n.daily)}</td><td><b>${esc(n.name)}</b><div class="meta">${n.daily[6]} today · ${n.total} total · ${esc(n.phase.toLowerCase())}</div></td></tr>`).join('')}</table>`
+      : 'No narratives yet. They are built every 6 hours while the schedule runs.';
+    $('#narratives').className = '';
+  } catch (err) { $('#narratives').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+}
+loadNarratives();
+
+/* cases */
+async function loadCases() {
+  const list = await api('/api/cases');
+  $('#case-list').innerHTML = list.length
+    ? `<table>${list.map((k) => `<tr><td class="num">#${k.id}</td><td><a href="#cases" data-case="${k.id}">${esc(k.question)}</a><div class="meta">${esc(k.confidence || '-')} confidence · ${k.findings} findings · run ${k.runs}${k.watch ? ' · watching' : ''}</div></td></tr>`).join('')}</table>`
+    : '<p class="meta">No cases yet.</p>';
+  document.querySelectorAll('[data-case]').forEach((a) => (a.onclick = async (e) => {
+    e.preventDefault();
+    const k = await api('/api/case?id=' + encodeURIComponent(a.dataset.case));
+    $('#case-view').innerHTML = k && k.markdown ? renderMd(k.markdown) : 'Not found.';
+    $('#case-view').className = 'md';
+  }));
+}
+$('#case-go').onclick = async () => {
+  const q = $('#case-q').value.trim();
+  if (q.length < 8) return;
+  $('#case-go').disabled = true;
+  $('#case-view').innerHTML = '<p class="meta">Investigating… 1-3 minutes.</p>';
+  try {
+    const r = await post('/api/cases', { question: q });
+    $('#case-view').innerHTML = renderMd(r.markdown || '');
+    $('#case-view').className = 'md';
+    loadCases();
+  } catch (err) { $('#case-view').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+  finally { $('#case-go').disabled = false; }
+};
+
+/* ask */
+$('#ask-go').onclick = async () => {
+  const q = $('#ask-q').value.trim() || $('#ask-q').placeholder;
+  const out = $('#ask-out');
+  $('#ask-go').disabled = true;
+  out.innerHTML = '<p class="meta">Thinking and calling tools… this can take 20-60 seconds.</p>';
+  try {
+    const r = await api('/api/ask?q=' + encodeURIComponent(q));
+    const linked = esc(r.answer).replace(/https?:\/\/[^\s<)\]]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`);
+    out.innerHTML = `<div style="white-space:pre-wrap;margin-top:10px">${linked}</div><p class="meta">${r.steps.map((s) => `<span class="chip">${esc(s.tool)}</span>`).join('')} model: ${esc([...new Set(r.providers)].join(', '))} · AI-written from tool results; check the sources</p>`;
+  } catch (err) { out.innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+  finally { $('#ask-go').disabled = false; }
+};
+$('#ask-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#ask-go').click(); });
+$('#inv-kind').onchange = () => { $('#inv-q').placeholder = placeholders[$('#inv-kind').value]; };
+const spark = (xs) => { const m = Math.max(...xs, 1e-9); return `<span class="spark">${xs.map((x) => `<i style="height:${Math.max(2, Math.round((x / m) * 28))}px" title="${esc(x)}"></i>`).join('')}</span>`; };
+const sigList = (s) => (s.length ? `<h3>Signals</h3>${s.map(renderSignal).join('')}` : '');
+const views = {
+  dossier: (r) => {
+    const d = r.result;
+    return `${d.wikipedia ? `<h3>${esc(d.wikipedia.title)}</h3><p class="meta">${esc(d.wikipedia.description || '')}${d.wikipedia.spike ? ` · readers ${d.wikipedia.spike.toFixed(1)}× usual` : ''}</p>` : ''}
+      ${d.markets.length ? `<h3>Prediction markets</h3><table>${d.markets.map((m) => `<tr><td><a href="${safeUrl(m.url)}" target="_blank" rel="noopener noreferrer">${esc(m.question)}</a></td><td class="num">${Math.round((m.prices[0] || 0) * 100)}%</td></tr>`).join('')}</table>` : ''}
+      <h3>Timeline</h3><table>${d.timeline.slice(0, 30).map((t) => `<tr><td class="num">${esc(t.date.slice(0, 10))}</td><td><span class="chip">${esc(t.source)}</span>${t.url ? `<a href="${safeUrl(t.url)}" target="_blank" rel="noopener noreferrer">${esc(t.text)}</a>` : esc(t.text)}</td></tr>`).join('') || '<tr><td class="meta">nothing in the window</td></tr>'}</table>${sigList(r.signals)}`;
+  },
+  hype: (r) => {
+    const d = r.result;
+    return `<h3>${esc(d.topic)}: ${esc(d.phase)}</h3><p class="meta">${esc(d.summary)}</p><table><tr><th>channel</th><th>source</th><th>phase</th><th>8 weeks</th></tr>${d.channels.map((c) => `<tr><td>${esc(c.channel)}</td><td>${esc(c.source)}</td><td>${esc(c.trend?.phase || 'n/a')}</td><td>${c.weekly.length ? spark(c.weekly) : '<span class="meta">no data</span>'}</td></tr>`).join('')}</table>${sigList(r.signals)}`;
+  },
+  footprint: (r) => {
+    const d = r.result;
+    return `<p class="meta">${d.counts.subdomain} subdomains · ${d.counts.page} pages · ${d.counts.repo} repos in ${d.windowDays} days</p><table>${d.findings.slice(0, 40).map((f) => `<tr><td class="num">${f.score}</td><td><span class="chip">${esc(f.kind)}</span><a href="${safeUrl(f.url)}" target="_blank" rel="noopener noreferrer">${esc(f.value)}</a><div class="meta">${esc(f.reasons.join('; '))}</div></td><td class="num">${esc(f.firstSeen.slice(0, 10))}</td></tr>`).join('') || '<tr><td class="meta">no new footprints</td></tr>'}</table>${sigList(r.signals)}`;
+  },
+  lights: (r) => {
+    const d = r.result;
+    return `<h3>${esc(d.place.name)}: ${esc(d.verdict)}${d.ratio ? ` (${d.ratio >= 1 ? '+' : ''}${Math.round((d.ratio - 1) * 100)}%)` : ''}</h3><p class="meta">recent ${d.recent.length} nights vs baseline ${d.baseline.length} nights · newest ${esc(d.latestDate || 'n/a')}</p><p>recent ${spark(d.recent.map((x) => x.mean).reverse())} &nbsp; baseline ${spark(d.baseline.map((x) => x.mean).reverse())}</p>${sigList(r.signals)}`;
+  },
+  wallet: (r) => {
+    const w = r.result;
+    return `<h3>${esc(w.address)}</h3>${w.portfolio ? `<p><b>${usd(w.portfolio.totalUsd)}</b> <span class="meta">portfolio (Zerion)</span></p><table>${w.portfolio.top.slice(0, 8).map((t) => `<tr><td>${esc(t.symbol)}</td><td class="num">${usd(t.valueUsd)}</td><td class="meta">${esc(t.chain)}</td></tr>`).join('')}</table><p class="meta">Values as reported by Zerion; airdropped tokens can carry inflated prices.</p>` : ''}
+      ${w.solana ? `<p>${w.solana.sol.toFixed(3)} SOL · ${w.solana.tokens} token accounts</p>` : ''}
+      ${w.firstSeen ? `<p class="meta">first transaction ${esc(w.firstSeen.slice(0, 10))} (${w.ageDays} days ago)</p>` : ''}
+      ${w.robinhood ? `<p>Robinhood Chain: ${w.robinhood.balanceEth.toFixed(4)} ETH, ${w.robinhood.txCount} txs</p>` : ''}
+      <p>risk: ${w.labels.length ? `<span class="err">${esc(w.labels.join(', '))}</span>` : 'no GoPlus labels'}${w.riskScore != null ? ` · Webacy ${esc(w.riskScore)}` : ''}</p>${sigList(r.signals)}`;
+  },
+  token: (r) => {
+    const t = r.result;
+    return `<h3>${esc(t.security?.symbol || t.market?.symbol || t.address)}: ${esc(t.verdict)}</h3><ul class="ev">${t.reasons.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>${t.market ? `<p>price ${esc(t.market.priceUsd)} · mcap ${usd(t.market.marketCapUsd)}</p>` : ''}<table>${t.pairs.slice(0, 6).map((p) => `<tr><td>${esc(p.dex)}</td><td>${esc(p.pair)}</td><td class="num">liq ${usd(p.liquidityUsd)}</td><td class="num">vol ${usd(p.volume24h)}</td></tr>`).join('')}</table>${sigList(r.signals)}`;
+  },
+  air: (r) => {
+    const d = r.result;
+    return `<h3>${esc(d.place.name)}: ${d.median != null ? `PM2.5 ${d.median.toFixed(0)} µg/m³ · ${esc(d.category)}` : 'no fresh stations within 25 km'}</h3><table>${d.stations.map((s) => `<tr><td>${esc(s.name)}</td><td class="num">${esc(s.value)} ${esc(s.unit)}</td><td class="meta">${esc(s.category)}</td></tr>`).join('')}</table>${sigList(r.signals)}`;
+  },
+  space: (r) => {
+    const s = r.result;
+    return `<h3>Space weather: ${esc(s.stormLevel)}</h3><p>Kp now ${esc(s.kpNow)}, max 24h ${esc(s.kpMax24h)} ${spark(s.kp.map((k) => k.kp))}</p>${s.strongestFlare ? `<p>strongest flare (7 days) ${esc(s.strongestFlare.maxClass)} at ${esc(s.strongestFlare.maxTime.slice(0, 16))}Z · ${s.flares7d} flares</p>` : ''}${sigList(r.signals)}`;
+  },
+  deployer: (r) => {
+    const d = r.result;
+    return `<h3>Deployer ${esc(d.deployer)}: ${esc(d.verdict)}</h3><p class="meta">${esc(d.reasons.join('; '))} · ${d.contracts} contract(s) launched</p><table><tr><th>token</th><th>liquidity</th><th>status</th><th>created</th></tr>${d.tokens.map((t) => `<tr><td>${esc(t.symbol || '?')}<div class="meta">${esc(t.address)}</div></td><td class="num">${usd(t.reserveUsd)}</td><td>${t.dead ? '<span class="err">dead</span>' : 'alive'}</td><td class="meta">${esc(t.createdAt.slice(0, 10))}</td></tr>`).join('')}</table>${sigList(r.signals)}`;
+  },
+  launches: (r) => {
+    const d = r.result;
+    return `<h3>${esc(d.company)}: ${d.items.length} item(s) in ${d.windowDays} days</h3><table>${d.items.slice(0, 40).map((i) => `<tr><td class="num">${esc(i.date.slice(0, 10))}</td><td><span class="chip">${esc(i.kind)}</span><a href="${safeUrl(i.url)}" target="_blank" rel="noopener noreferrer">${esc(i.title)}</a>${i.detail ? `<div class="meta">${esc(i.detail)}</div>` : ''}</td></tr>`).join('') || '<tr><td class="meta">nothing new</td></tr>'}</table>${sigList(r.signals)}`;
+  },
+  markets: (r) => {
+    const d = r.result;
+    if (!d.comparisons.length) return `<p class="meta">Checked ${d.checked} Polymarket markets: no market on Kalshi or Manifold asks exactly the same question right now.</p>`;
+    return `<table><tr><th>gap</th><th>Polymarket</th><th>other venue</th></tr>${d.comparisons.map((x) => `<tr><td class="num">${x.gapPp >= 15 ? `<span class="err">${x.gapPp}pp</span>` : `${x.gapPp}pp`}</td><td><a href="${safeUrl(x.polymarket.url)}" target="_blank" rel="noopener noreferrer">${esc(x.polymarket.question)}</a> <b>${Math.round(x.polymarket.probability * 100)}%</b></td><td><a href="${safeUrl(x.other.url)}" target="_blank" rel="noopener noreferrer">${esc(x.other.question)}</a> <b>${Math.round(x.other.probability * 100)}%</b> <span class="chip">${esc(x.other.venue)}</span></td></tr>`).join('')}</table>${sigList(r.signals)}`;
+  },
+  sanctions: (r) => {
+    const d = r.result;
+    return `<h3>${esc(d.query)}: ${d.verdict === 'CLEAR' ? esc(d.verdict) : `<span class="err">${esc(d.verdict)}</span>`}</h3><p class="meta">OFAC SDN list, ${esc(d.listSize.toLocaleString('en-US'))} entries${d.listDate ? `, fetched ${esc(d.listDate.slice(0, 10))}` : ''}. Exact matches only; not legal advice.</p><ul class="ev">${d.hits.map((h) => `<li><span class="chip">${esc(h.kind)}</span>${esc(h.entry.name)} [${esc(h.entry.program)}]${h.detail ? ` — ${esc(h.detail)}` : ''}</li>`).join('')}</ul>`;
+  },
+  health: (r) => {
+    const d = r.result;
+    return `<h3>${esc(d.company)}: ${d.score}/100${d.change !== null ? ` <span class="meta">(${d.change >= 0 ? '+' : ''}${d.change} vs 7-day average)</span>` : ''}</h3><table>${d.parts.map((p) => `<tr><td class="num">${p.points > 0 ? '+' : ''}${p.points}</td><td>${esc(p.name)}</td><td class="meta">${esc(p.why)}</td></tr>`).join('')}</table>${d.history.length > 1 ? `<p>history ${spark(d.history.map((h) => h.score))}</p>` : ''}${sigList(r.signals)}`;
+  },
+  impact: (r) => {
+    const d = r.result;
+    if (!d.impacts.length) return '<p class="meta">No M6+ earthquakes or severe storms right now. Enter a place to estimate exposure around it.</p>';
+    return d.impacts.map((i) => `<h3>${esc(i.event)}</h3><p>${esc(i.exposedPopulation.toLocaleString('en-US'))} people in listed places within ${i.radiusKm} km${i.settlements.length ? '' : ' (open sea or remote area)'}${i.lights ? ` · night lights ${esc(i.lights.verdict)}` : ''}</p><table>${i.settlements.slice(0, 8).map((s) => `<tr><td>${esc(s.name)}</td><td class="num">${esc(s.population.toLocaleString('en-US'))}</td><td class="meta">${s.distanceKm} km</td></tr>`).join('')}</table>`).join('') + '<p class="meta">Exposure estimate from Wikidata settlement populations (places can overlap); not a casualty estimate.</p>' + sigList(r.signals);
+  },
+  contradictions: (r) => {
+    const d = r.result;
+    return `<h3>${esc(d.topic)}: ${d.contradictions.length} contradiction(s) across ${d.sourcesRead.length} sources</h3>${d.contradictions.map((x) => `<div class="sig"><div class="score ${x.severity === 'major' ? 'hi' : 'mid'}">${esc(x.severity)}</div><div><div class="title">${esc(x.about)}</div><ul class="ev"><li>A: ${esc(x.claimA)} <a href="${safeUrl(x.sourceA)}" target="_blank" rel="noopener noreferrer">source</a></li><li>B: ${esc(x.claimB)} <a href="${safeUrl(x.sourceB)}" target="_blank" rel="noopener noreferrer">source</a></li></ul></div></div>`).join('') || '<p class="meta">The sources agree on the facts they share.</p>'}<p class="meta">Read: ${d.sourcesRead.map((s) => `<a href="${safeUrl(s.url)}" target="_blank" rel="noopener noreferrer">${esc(new URL(s.url).hostname.replace(/^www\./, ''))}</a>`).join(', ')}</p>`;
+  },
+  rewind: (r) => {
+    const d = r.result;
+    const main = d.fused.filter((f) => f.sources.some((s) => s !== 'guardian')).slice(0, 15);
+    return `<h3>${esc(d.date)}</h3><table>${main.map((f) => `<tr><td class="num">${f.score}</td><td>${esc(f.title)} ${f.sources.map((s) => `<span class="chip">${esc(s)}</span>`).join('')}<div class="meta">${f.blips.slice(0, 2).map((b) => esc(b.detail)).join(' · ')}</div></td></tr>`).join('')}</table><h3>That day in the Guardian</h3><ul class="ev">${d.headlines.slice(0, 10).map((h) => `<li>${esc(h.time.slice(11, 16))} <a href="${safeUrl(h.url)}" target="_blank" rel="noopener noreferrer">${esc(h.title)}</a></li>`).join('')}</ul><p class="meta">Oculon recorded ${d.oculonSignals.length} signal(s) that day.</p>`;
+  },
+  robinhood: (r) => {
+    const d = r.result;
+    const row = (p) => `<tr><td>${esc(p.pool.name)}</td><td class="num">${usd(p.pool.liquidityUsd)}</td><td class="num">${p.pool.change24h != null ? esc(p.pool.change24h.toFixed(0)) + '%' : '?'}</td><td class="num">${p.pool.buys24h}/${p.pool.sells24h}</td><td>${p.flags.length ? `<span class="err">${esc(p.flags.join('; '))}</span>` : ''}</td></tr>`;
+    const head = '<tr><th>pool</th><th>liquidity</th><th>24h</th><th>buys/sells</th><th>flags</th></tr>';
+    return `${d.stats ? `<p>${d.stats.transactionsToday.toLocaleString('en-US')} transactions today · ${d.stats.addresses.toLocaleString('en-US')} addresses</p>` : ''}<h3>Trending pools</h3><table>${head}${d.trending.map(row).join('')}</table><h3>New pools</h3><table>${head}${d.fresh.map(row).join('')}</table>${sigList(r.signals)}`;
+  },
+  aircraft: (r) => {
+    const t = r.result;
+    return `<h3>${esc(t.info?.registration || t.query)} · ${esc(t.status)}</h3><p class="meta">${esc([t.info?.manufacturer, t.info?.type].filter(Boolean).join(' '))}${t.info?.owner ? ' · owner ' + esc(t.info.owner) : ''}</p>${t.place ? `<p>${esc(t.place.relation)} ${esc(t.place.airport)} (${t.place.km} km)</p>` : ''}${t.change ? `<p><b>${esc(t.change)}</b></p>` : ''}${sigList(r.signals)}`;
+  },
+};
+$('#inv-go').onclick = async () => {
+  const kind = $('#inv-kind').value;
+  let q = $('#inv-q').value.trim() || placeholders[kind];
+  // Placeholders in parentheses are hints, not input.
+  if (q.startsWith('(')) q = '';
+  const out = $('#inv-out');
+  if (kind === 'image') { out.innerHTML = `<p class="meta">Loading satellite image of ${esc(q)}…</p><img class="sat" alt="Satellite image of ${esc(q)}" src="/api/image?place=${encodeURIComponent(q)}">`; return; }
+  const param = { dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', wallet: 'address', token: 'address', air: 'place', space: 'x', robinhood: 'x', deployer: 'address', launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
+  $('#inv-go').disabled = true;
+  out.innerHTML = '<p class="meta">Working… some sources are rate-limited and take a while.</p>';
+  try {
+    const r = await api(`/api/${kind}?${param}=${encodeURIComponent(q)}`);
+    out.innerHTML = views[kind](r) + `<h3>Sources</h3>${renderSources(r.provenance)}`;
+  } catch (err) { out.innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+  finally { $('#inv-go').disabled = false; }
+};
+$('#inv-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#inv-go').click(); });
+
+/* forecasts */
+async function loadForecasts() {
+  const { scoreboard: s, forecasts } = await api('/api/forecasts');
+  const fmt = (x) => (x == null ? '—' : x.toFixed(3));
+  $('#kpis').innerHTML = [
+    ['forecasts', s.total], ['open', s.open], ['resolved', s.resolved],
+    ['Brier model', fmt(s.brierModel)], ['Brier market', fmt(s.brierMarket)],
+    ['skill vs market', s.skill == null ? '—' : Math.round(s.skill * 100) + '%'],
+  ].map(([k, v]) => `<div class="kpi"><b>${esc(v)}</b><span>${esc(k)}</span></div>`).join('');
+  $('#fc').innerHTML = '<tr><th>question</th><th>model</th><th>market</th><th>method</th><th>status</th><th>proof</th></tr>' + forecasts.map((p) =>
+    `<tr><td>${esc(p.question)}<div class="meta">${esc(p.createdAt.slice(0, 16).replace('T', ' '))} · ${esc(p.rationale)}</div></td><td class="num">${Math.round(p.pModel * 100)}%</td><td class="num">${Math.round(p.pMarket * 100)}%</td><td>${esc(p.method)}</td><td>${p.result == null ? 'open' : 'resolved ' + (p.result ? 'YES' : 'NO')}</td><td>${p.batchId ? `<button class="icon-btn" data-verify="${esc(p.id)}">verify</button>` : '<span class="meta">unstamped</span>'}</td></tr>`).join('');
+  document.querySelectorAll('[data-verify]').forEach((b) => b.onclick = async () => {
+    b.disabled = true;
+    try {
+      const r = await api('/api/verify?id=' + encodeURIComponent(b.dataset.verify));
+      $('#proof').innerHTML = `<h3>${esc(r.result.predictionId)}: ${esc(r.result.status)}</h3><ul class="ev">${r.result.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>`;
+    } catch (err) { $('#proof').innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+    finally { b.disabled = false; }
+  });
+}
+
+/* graph: small force-directed layout on canvas */
+let graphState = null;
+const KIND_COLORS = { domain: '#6ee7b7', subdomain: '#34d399', url: '#a7f3d0', repo: '#a78bfa', org: '#60a5fa', company: '#3b82f6', topic: '#f472b6', article: '#00b8d4', story: '#fb923c', market: '#f87171', event: '#7df9ff', aircraft: '#22d3ee' };
+const wRow = (html) => `<div style="padding:5px 0;border-top:1px solid var(--line)">${html}</div>`;
+const wLink = (u, t) => (u ? `<a href="${safeUrl(u)}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>` : esc(t));
+async function loadWorld() {
+  api('/api/blackout?days=2').then((r) => {
+    const b = r.result;
+    const rows = b.outages.slice(0, 12).map((o) => wRow(`<span class="chip">${o.verified ? 'confirmed' : 'anomaly'}</span><b>${esc(o.country || '?')}</b>${o.network ? ' · ' + esc(o.network) : ''}${o.cause ? ' · ' + esc(o.cause) : ''}${o.end ? '' : ' · <b>ongoing</b>'}<br>${wLink(o.url, o.description)} <span class="meta">${esc(o.start.slice(0, 16).replace('T', ' '))} UTC</span>`));
+    const routing = (b.routing || []).map((x) => wRow(`routing ${esc(x.country)}: ${x.v4Now} IPv4 prefixes vs ${x.v4Baseline} usual (${(x.change * 100).toFixed(1)}%)`));
+    const ioda = b.ioda.length ? wRow('IODA top: ' + b.ioda.slice(0, 8).map((x) => esc(x.name)).join(', ')) : '';
+    $('#w-blackout').innerHTML = (rows.join('') || '<p>No outages reported.</p>') + routing.join('') + ioda;
+  }).catch((e) => ($('#w-blackout').textContent = 'Failed: ' + e.message));
+  api('/api/hazards?days=7').then((r) => {
+    const g = r.result.slice(0, 10).map((h) => wRow(`<span class="chip">${esc(h.level)}</span>${wLink(h.url, h.name)} <span class="meta">${esc(h.countries || '')} ${esc(h.severity || '')}</span>`));
+    const ts = (r.bulletins || []).filter((x) => x.source !== 'NWS').map((x) => wRow(`<span class="chip">tsunami</span>${esc(x.category)}: ${wLink(x.url, x.title)}`));
+    const nws = (r.bulletins || []).filter((x) => x.source === 'NWS').slice(0, 6).map((x) => wRow(`<span class="chip">US ${esc(x.category.toLowerCase())}</span>${wLink(x.url, x.title)} <span class="meta">${esc(x.area.slice(0, 90))}</span>`));
+    $('#w-hazards').innerHTML = [...ts, ...g, ...nws].join('') || '<p>No alerts.</p>';
+  }).catch((e) => ($('#w-hazards').textContent = 'Failed: ' + e.message));
+  api('/api/cloud').then((r) => {
+    const c = r.result;
+    const rows = c.incidents.slice(0, 12).map((i) => wRow(`<span class="chip">${esc(i.impact)}</span><b>${esc(i.service)}</b> ${wLink(i.url, i.title)}`));
+    $('#w-cloud').innerHTML = rows.join('') || '<p>No open incidents on the checked platforms.</p>';
+  }).catch((e) => ($('#w-cloud').textContent = 'Failed: ' + e.message));
+}
+async function loadCalendar() {
+  try {
+    const r = await api('/api/calendar?days=14');
+    const items = r.result.items;
+    $('#cal-meta').textContent = `${r.result.from} to ${r.result.to} · ${items.length} items`;
+    let day = '', html = '';
+    for (const i of items) {
+      if (i.date !== day) { html += `<h3 style="margin:14px 0 4px">${esc(i.date)}</h3>`; day = i.date; }
+      const t = i.url ? `<a href="${safeUrl(i.url)}" target="_blank" rel="noopener noreferrer">${esc(i.title)}</a>` : esc(i.title);
+      html += `<div style="padding:3px 0">${i.watched ? '★ ' : ''}<span class="chip">${esc(i.kind)}</span>${t} <span class="meta">${esc(i.detail)}</span></div>`;
+    }
+    $('#calendar').innerHTML = html || 'Nothing scheduled in the window.';
+  } catch (e) { $('#calendar').textContent = 'Calendar failed: ' + e.message; }
+}
+async function loadLive() {
+  const s = await api('/api/live');
+  $('#live').innerHTML = s.length ? s.map(renderSignal).join('') : '<p class="meta">Nothing flagged yet. Bluesky surges need about 20 minutes of history after the server starts.</p>';
+}
+$('#con-go').onclick = async () => {
+  const a = $('#con-a').value.trim(), b = $('#con-b').value.trim();
+  if (!a || !b) return;
+  $('#con-out').textContent = 'Searching…';
+  try {
+    const r = await api(`/api/connect?a=${encodeURIComponent(a)}&b=${encodeURIComponent(b)}`);
+    if (!r.path) { $('#con-out').textContent = r.note || 'No path.'; return; }
+    $('#con-out').innerHTML = `<b>${r.path.length - 1} hop(s)</b><ol class="ev">${r.path.map((p) => `<li>${p.via ? `<span class="meta">${p.via.direction === 'out' ? '→' : '←'} ${esc(p.via.rel)}</span> ` : ''}<b>${esc(p.name)}</b> <span class="chip">${esc(p.kind)}</span></li>`).join('')}</ol>`;
+  } catch (e) { $('#con-out').textContent = 'Failed: ' + e.message; }
+};
+async function loadGraph() {
+  const g = await api('/api/graph?limit=180');
+  const deg = {};
+  g.edges.forEach((e) => { deg[e.src] = (deg[e.src] || 0) + 1; deg[e.dst] = (deg[e.dst] || 0) + 1; });
+  const nodes = g.nodes.filter((n) => deg[n.id]).map((n, i) => ({ ...n, x: Math.cos(i) * 200 + Math.random() * 40, y: Math.sin(i) * 200 + Math.random() * 40, vx: 0, vy: 0, deg: deg[n.id] }));
+  const idx = Object.fromEntries(nodes.map((n, i) => [n.id, i]));
+  const edges = g.edges.filter((e) => idx[e.src] !== undefined && idx[e.dst] !== undefined).map((e) => ({ ...e, a: idx[e.src], b: idx[e.dst] }));
+  $('#graph-meta').textContent = `${nodes.length} connected entities · ${edges.length} links`;
+  for (let it = 0; it < 300; it++) {
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j]; let dx = a.x - b.x, dy = a.y - b.y; const d2 = dx * dx + dy * dy + .01; const f = 900 / d2;
+      a.vx += dx * f; a.vy += dy * f; b.vx -= dx * f; b.vy -= dy * f;
+    }
+    for (const e of edges) { const a = nodes[e.a], b = nodes[e.b]; const dx = b.x - a.x, dy = b.y - a.y; a.vx += dx * .02; a.vy += dy * .02; b.vx -= dx * .02; b.vy -= dy * .02; }
+    for (const n of nodes) { n.vx -= n.x * .004; n.vy -= n.y * .004; n.x += n.vx * .5; n.y += n.vy * .5; n.vx *= .6; n.vy *= .6; }
+  }
+  graphState = { nodes, edges, hover: -1 };
+  drawGraph();
+}
+function drawGraph() {
+  const c = $('#graph'); const dpr = devicePixelRatio || 1;
+  const w = c.clientWidth, h = c.clientHeight; c.width = w * dpr; c.height = h * dpr;
+  const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+  const { nodes, edges, hover } = graphState;
+  if (!nodes.length) { ctx.fillStyle = getComputedStyle(document.body).color; ctx.fillText('No linked entities yet. Run a dossier or footprint scan.', 16, 24); return; }
+  const xs = nodes.map((n) => n.x), ys = nodes.map((n) => n.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const sx = (w - 160) / (maxX - minX || 1), sy = (h - 60) / (maxY - minY || 1);
+  graphState.tx = (n) => [30 + (n.x - minX) * sx, 30 + (n.y - minY) * sy];
+  const line = getComputedStyle(document.documentElement).getPropertyValue('--line');
+  ctx.strokeStyle = line; ctx.lineWidth = 1;
+  for (const e of edges) { const [x1, y1] = graphState.tx(nodes[e.a]); const [x2, y2] = graphState.tx(nodes[e.b]); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+  const text = getComputedStyle(document.documentElement).getPropertyValue('--text');
+  nodes.forEach((n, i) => {
+    const [x, y] = graphState.tx(n); const r = 3 + Math.min(9, Math.sqrt(n.deg) * 2);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = KIND_COLORS[n.kind] || '#94a3b8'; ctx.fill();
+    if (i === hover || n.deg >= 4) { ctx.fillStyle = text; ctx.font = '11px system-ui'; ctx.fillText(n.name.slice(0, 40), x + r + 3, y + 4); }
+  });
+}
+$('#graph').addEventListener('mousemove', (e) => {
+  if (!graphState?.tx) return;
+  const rect = e.target.getBoundingClientRect(); const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let best = -1, bd = 144;
+  graphState.nodes.forEach((n, i) => { const [x, y] = graphState.tx(n); const d = (x - mx) ** 2 + (y - my) ** 2; if (d < bd) { bd = d; best = i; } });
+  if (best !== graphState.hover) { graphState.hover = best; drawGraph(); $('#graph-hover').textContent = best >= 0 ? `${graphState.nodes[best].kind}: ${graphState.nodes[best].name}` : 'Hover a node to see it; click to open its neighbors.'; }
+});
+$('#graph').addEventListener('click', async () => {
+  if (!graphState || graphState.hover < 0) return;
+  const n = graphState.nodes[graphState.hover];
+  const r = await api('/api/entity?id=' + encodeURIComponent(n.id));
+  $('#graph-hover').innerHTML = `<b>${esc(n.name)}</b> (${esc(n.kind)}) → ${r.neighbors.slice(0, 12).map((x) => `<span class="chip">${esc(x.rel)}</span>${esc(x.name)}`).join(' · ')}`;
+});
+addEventListener('resize', () => { if (graphState && !$('#tab-graph').hidden) drawGraph(); });
+
+/* deep links: #map, #forecasts, #graph, #investigate */
+
+/* ================================================================== shared helpers */
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+const fmtN = (n) => Number(n).toLocaleString('en-US');
+const ago2 = (iso) => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m}m ago` : m < 1440 ? `${Math.round(m / 60)}h ago` : `${Math.round(m / 1440)}d ago`; };
+const goTab = (t) => document.querySelector(`nav button[data-tab="${t}"]`)?.click();
+async function postJson(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', 'x-oculon': '1' }, body: JSON.stringify(body) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || r.statusText);
+  return j;
+}
+function toast(kicker, text, onClick) {
+  let box = document.querySelector('.toasts');
+  if (!box) { box = document.createElement('div'); box.className = 'toasts'; document.body.appendChild(box); }
+  const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = `<div class="k">${esc(kicker)}</div><div class="t">${esc(text)}</div>`;
+  t.onclick = () => { onClick?.(); t.remove(); };
+  box.prepend(t); while (box.children.length > 4) box.lastChild.remove();
+  setTimeout(() => t.remove(), 9000);
+}
+document.querySelectorAll('[data-go]').forEach((a) => { if (!a.dataset.bound) { a.dataset.bound = '1'; a.addEventListener('click', () => { goTab(a.dataset.go); scrollTo({ top: 0, behavior: 'smooth' }); }); } });
+
+/* ================================================================== share card (PNG for posts) */
+async function shareCard({ kicker, title, score, lines = [], foot = '' }) {
+  await document.fonts?.ready;
+  const W = 1200, H = 675, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, W, H);
+  const g = x.createRadialGradient(W * .82, H * .1, 10, W * .82, H * .1, 700); g.addColorStop(0, 'rgba(0,240,255,.28)'); g.addColorStop(1, 'rgba(0,240,255,0)'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.strokeStyle = 'rgba(0,240,255,.06)'; x.lineWidth = 1; for (let i = 0; i < W; i += 60) { x.beginPath(); x.moveTo(i, 0); x.lineTo(i, H); x.stroke(); } for (let j = 0; j < H; j += 60) { x.beginPath(); x.moveTo(0, j); x.lineTo(W, j); x.stroke(); }
+  x.strokeStyle = '#00f0ff'; x.lineWidth = 6; x.beginPath(); x.arc(92, 88, 22, 0, 7); x.stroke(); x.fillStyle = '#00f0ff'; x.beginPath(); x.arc(92, 88, 8, 0, 7); x.fill();
+  x.fillStyle = '#fff'; x.font = '600 26px "Space Grotesk", sans-serif'; x.letterSpacing = '10px'; x.fillText('OCULON', 132, 98); x.letterSpacing = '0px';
+  x.fillStyle = '#00f0ff'; x.font = '18px "Space Mono", monospace'; x.fillText(String(kicker).toUpperCase().slice(0, 70), 70, 190);
+  // title: shrink the type until it fits in three lines (four at the smallest size)
+  const maxW = score != null ? 900 : 1060;
+  let size = 56, shown = [];
+  for (; size >= 38; size -= 4) {
+    x.font = `300 ${size}px "Space Grotesk", sans-serif`;
+    const words = String(title).split(/\s+/), out = []; let line = '';
+    for (const w of words) { const t2 = line ? `${line} ${w}` : w; if (x.measureText(t2).width > maxW) { out.push(line); line = w; } else line = t2; }
+    if (line) out.push(line);
+    shown = out;
+    if (out.length <= 3 || (size <= 42 && out.length <= 4)) break;
+  }
+  if (shown.length > 4) { shown = shown.slice(0, 4); shown[3] = shown[3].replace(/\s*\S*$/, '') + '…'; }
+  const lh = Math.round(size * 1.16);
+  x.fillStyle = '#fff';
+  shown.forEach((l, i) => x.fillText(l, 70, 250 + i * lh));
+  if (score != null) { x.fillStyle = score >= 75 ? '#00f0ff' : 'rgba(0,240,255,.15)'; x.fillRect(1010, 160, 120, 120); x.strokeStyle = '#00f0ff'; x.lineWidth = 2; x.strokeRect(1010, 160, 120, 120); x.fillStyle = score >= 75 ? '#001418' : '#00f0ff'; x.font = '700 54px "Space Mono", monospace'; x.textAlign = 'center'; x.fillText(String(Math.round(score)), 1070, 238); x.font = '13px "Space Mono", monospace'; x.fillText('SCORE', 1070, 266); x.textAlign = 'left'; }
+  x.font = '20px "Space Grotesk", sans-serif';
+  let ly = 250 + (shown.length - 1) * lh + 58;
+  for (const l of lines) {
+    if (ly > H - 104) break; // keep clear of the footer rule
+    x.fillStyle = '#00f0ff'; x.fillRect(70, ly - 13, 6, 6); x.fillStyle = '#9fd8e2';
+    let t3 = String(l); while (x.measureText(t3).width > 1040 && t3.length > 10) t3 = t3.slice(0, -2); if (t3 !== String(l)) t3 += '…';
+    x.fillText(t3, 90, ly - 4); ly += 34;
+  }
+  x.strokeStyle = 'rgba(255,255,255,.12)'; x.beginPath(); x.moveTo(70, H - 78); x.lineTo(W - 70, H - 78); x.stroke();
+  x.fillStyle = '#7aa9b0'; x.font = '15px "Space Mono", monospace'; x.fillText((foot || 'public sources · oculon').slice(0, 110), 70, H - 44);
+  const slug = String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 48).replace(/-$/, '');
+  c.toBlob((b) => { const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = `oculon-${slug || 'card'}.png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); });
+  toast('share card', 'PNG saved to your downloads');
+}
+const signalCard = (s) => shareCard({ kicker: `${s.module} · ${String(s.createdAt || s.at || '').slice(0, 16).replace('T', ' ')} UTC`, title: s.title, score: s.score, lines: (s.evidence || []).slice(0, 3).map((e) => `${e.source}: ${e.text}`), foot: `sources: ${[...new Set((s.evidence || []).map((e) => e.source))].join(', ') || s.module}` });
+
+/* ================================================================== entity profile */
+function openEntity(id) {
+  document.querySelectorAll('nav button').forEach((x) => x.setAttribute('aria-selected', 'false'));
+  document.querySelectorAll('main > section').forEach((s) => { s.hidden = s.id !== 'tab-entity'; });
+  history.replaceState(null, '', '#entity:' + encodeURIComponent(id));
+  scrollTo({ top: 0 });
+  loadEntity(id);
+}
+async function loadEntity(id) {
+  const body = document.getElementById('ent-body'); body.innerHTML = '<div class="ov-sk" style="height:300px"></div>';
+  try {
+    const p = await api(`/api/profile?id=${encodeURIComponent(id)}`);
+    const groups = {}; p.neighbors.forEach((n) => { (groups[n.kind] ??= []).push(n); });
+    const attrs = Object.entries(p.attrs || {}).filter(([, v]) => v !== null && v !== '' && typeof v !== 'object');
+    const obsKinds = {}; p.observations.forEach((o2) => { (obsKinds[`${o2.module} · ${o2.kind}`] ??= []).push(o2); });
+    body.innerHTML = `<div class="ent-h"><div><span class="kind">${esc(p.kind)}</span><h1>${esc(p.name)}</h1><div class="id">${esc(p.id)} · first seen ${esc(p.firstSeen.slice(0, 10))} · updated ${esc(ago2(p.lastSeen))}</div></div>
+      <div class="row"><button class="icon-btn" id="ent-back">← Back</button>${/^(company|org)$/.test(p.kind) ? '<button class="icon-btn" id="ent-dossier">Dossier</button>' : ''}<button class="go" id="ent-share">Share card</button></div></div>
+      <div class="ov-kpis"><div class="ov-kpi"><span>Links</span><b>${p.neighbors.length}</b></div><div class="ov-kpi"><span>Signals</span><b>${p.signals.length}</b></div><div class="ov-kpi"><span>Observations</span><b>${p.observations.length}</b></div><div class="ov-kpi"><span>Sources</span><b>${p.sources.length}</b></div><div class="ov-kpi"><span>Strongest signal</span><b>${p.signals.length ? Math.max(...p.signals.map((s) => Math.round(s.score))) : '—'}</b></div><div class="ov-kpi"><span>Linked kinds</span><b>${Object.keys(groups).length}</b></div></div>
+      <div class="ov-grid">
+        <article class="ov w2"><div class="ovh"><span>Signals naming it</span></div><div class="ovb">${p.signals.slice(0, 12).map((s) => `<div class="ov-out"><div class="t"><span>${esc(s.title)}</span><span>${Math.round(s.score)} · ${esc(s.module)}</span></div>${s.evidence[0] ? `<p>${esc(s.evidence[0].source)} · ${esc(s.evidence[0].text)}</p>` : ''}</div>`).join('') || '<p class="meta">No signals mention it yet.</p>'}</div></article>
+        <article class="ov w2"><div class="ovh"><span>Connected to</span><span class="meta">click to open</span></div><div class="ovb">${Object.entries(groups).sort((a, b) => b[1].length - a[1].length).map(([k, list]) => `<div class="pal-sec" style="padding-left:0">${esc(k)} · ${list.length}</div>${list.slice(0, 8).map((n) => `<div class="nb" data-ent="${esc(n.id)}"><span>${esc(n.name)}</span><span>${esc(n.rel)} · ${esc(n.source)}</span></div>`).join('')}`).join('') || '<p class="meta">No links yet.</p>'}</div></article>
+        <article class="ov w2"><div class="ovh"><span>Observations</span></div><div class="ovb">${Object.entries(obsKinds).slice(0, 6).map(([k, list]) => { const vals = list.filter((o2) => o2.value != null).reverse(); const mx = Math.max(1, ...vals.map((o2) => Math.abs(o2.value))); return `<div class="pal-sec" style="padding-left:0">${esc(k)} · ${list.length}</div>${vals.length > 1 ? `<div class="ov-bars" style="height:40px">${vals.slice(-30).map((o2) => `<i style="height:${Math.max(4, Math.abs(o2.value) / mx * 100)}%" title="${esc(o2.at)} ${o2.value}"></i>`).join('')}</div>` : ''}<div class="meta">latest ${esc(list[0].at.slice(0, 16).replace('T', ' '))}${list[0].value != null ? ` · ${list[0].value}` : ''} · ${esc(list[0].source)}</div>`; }).join('') || '<p class="meta">No observations stored.</p>'}</div></article>
+        <article class="ov w2"><div class="ovh"><span>Attributes and sources</span></div><div class="ovb">${attrs.slice(0, 14).map(([k, v]) => `<div class="attr"><span>${esc(k)}</span><span>${esc(String(v))}</span></div>`).join('')}<div style="margin-top:12px">${p.sources.map((s) => `<span class="ov-chip">${esc(s)}</span>`).join('')}</div></div></article>
+      </div>`;
+    body.querySelectorAll('[data-ent]').forEach((el) => el.addEventListener('click', () => openEntity(el.dataset.ent)));
+    document.getElementById('ent-back').onclick = () => history.length > 1 ? history.back() : goTab('overview');
+    document.getElementById('ent-share').onclick = () => shareCard({ kicker: `${p.kind} profile`, title: p.name, lines: [`${p.neighbors.length} links · ${p.signals.length} signals · ${p.observations.length} observations`, ...p.signals.slice(0, 2).map((s) => s.title)], foot: `sources: ${p.sources.slice(0, 8).join(', ')}` });
+    const d = document.getElementById('ent-dossier'); if (d) d.onclick = () => runInvestigate('dossier', p.name);
+  } catch (e) { body.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+addEventListener('hashchange', () => { if (location.hash.startsWith('#entity:')) loadEntity(decodeURIComponent(location.hash.slice(8))); });
+function runInvestigate(kind, q) {
+  goTab('investigate');
+  const sel = document.getElementById('inv-kind'); sel.value = kind; sel.dispatchEvent(new Event('change'));
+  document.getElementById('inv-q').value = q;
+  document.getElementById('inv-go').click();
+}
+async function runConsoleIn(cmd) {
+  goTab('investigate');
+  const out = document.getElementById('inv-out');
+  out.innerHTML = `<p class="meta loading">Running oculon ${esc(cmd)}…</p>`;
+  try { const r = await api(`/api/console?cmd=${encodeURIComponent(cmd)}`); out.innerHTML = `<h3>oculon ${esc(cmd)}</h3><pre>${esc(r.output)}</pre>`; }
+  catch (e) { out.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+
+/* ================================================================== command palette (Ctrl+K) */
+(function palette() {
+  const bg = document.createElement('div'); bg.className = 'pal-bg'; bg.hidden = true;
+  bg.innerHTML = `<div class="pal" role="dialog" aria-label="Command palette"><input id="pal-q" placeholder="Search entities, run a module, jump to a tab… (CVE, 0x…, AS123, domain, place, company)" autocomplete="off" spellcheck="false"><div class="pal-list" id="pal-list"></div><div class="pal-foot"><span>↑↓ move</span><span>↵ run</span><span>esc close</span></div></div>`;
+  document.body.appendChild(bg);
+  const input = bg.querySelector('#pal-q'), list = bg.querySelector('#pal-list');
+  let items = [], sel = 0, seq = 0;
+  const tabs = [...document.querySelectorAll('nav button')].map((b) => ({ icon: '→', title: b.textContent, hint: 'tab', run: () => b.click() }));
+  const actionsFor = (q) => {
+    const a = [];
+    if (/^CVE-\d{4}-\d{4,7}$/i.test(q)) a.push({ icon: '$', title: `CVE details for ${q.toUpperCase()}`, hint: 'oculon cve', run: () => runConsoleIn(`cve ${q}`) });
+    if (/^0x[0-9a-fA-F]{40}$/.test(q)) a.push(
+      { icon: '◎', title: 'Robinhood Chain token check', hint: 'heron', run: () => { goTab('robinhood'); rhCheck(q); } },
+      { icon: '◎', title: 'Robinhood Chain deployer history', hint: 'oculon deployer', run: () => runConsoleIn(`deployer ${q}`) },
+      { icon: '$', title: 'Wallet portfolio and risk', hint: 'magpie', run: () => runInvestigate('wallet', q) },
+      { icon: '$', title: 'Token contract (Ethereum)', hint: 'magpie', run: () => runInvestigate('token', q) },
+      { icon: '!', title: 'Sanctions screening', hint: 'ofac', run: () => runInvestigate('sanctions', q) });
+    if (/^AS\d{1,10}$/i.test(q) || /^[A-Z]{2}$/.test(q)) a.push({ icon: '$', title: `Routing of ${q.toUpperCase()}`, hint: 'oculon bgp', run: () => runConsoleIn(`bgp ${q}`) });
+    if (/^\d{4}-\d\d-\d\d$/.test(q)) a.push({ icon: '⟲', title: `Time machine: ${q}`, hint: 'rewind', run: () => runInvestigate('rewind', q) });
+    if (/^IMO\s?\d{7}$/i.test(q)) a.push({ icon: '!', title: `Sanctions screening ${q}`, hint: 'ofac', run: () => runInvestigate('sanctions', q) });
+    if (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(q)) a.push({ icon: '$', title: `Pre-release footprint of ${q}`, hint: 'ferret', run: () => runInvestigate('footprint', q) });
+    if (q.length >= 2 && !/^0x/i.test(q)) a.push(
+      { icon: '$', title: `Dossier: ${q}`, hint: 'hound', run: () => runInvestigate('dossier', q) },
+      { icon: '$', title: `Hype phase: ${q}`, hint: 'cricket', run: () => runInvestigate('hype', q) },
+      { icon: '$', title: `Company health: ${q}`, hint: 'health', run: () => runInvestigate('health', q) },
+      { icon: '$', title: `Launch radar: ${q}`, hint: 'launches', run: () => runInvestigate('launches', q) },
+      { icon: '$', title: `Contradictions: ${q}`, hint: 'sources', run: () => runInvestigate('contradictions', q) },
+      { icon: '◐', title: `Night lights: ${q}`, hint: 'condor', run: () => runInvestigate('lights', q) });
+    return a;
+  };
+  const render = () => {
+    let sec = '';
+    list.innerHTML = items.map((it, i) => { const head = it.sec !== sec ? `<div class="pal-sec">${esc((sec = it.sec))}</div>` : ''; return `${head}<div class="pal-it ${i === sel ? 'on' : ''}" data-i="${i}"><span class="i">${esc(it.icon)}</span><span class="t">${esc(it.title)}${it.sub ? `<small>${esc(it.sub)}</small>` : ''}</span><span class="k">${esc(it.hint)}</span></div>`; }).join('') || '<div class="pal-sec">Nothing matches. Try a company, a CVE, a 0x address or a place.</div>';
+    list.querySelectorAll('.pal-it').forEach((el) => { el.onmouseenter = () => { sel = Number(el.dataset.i); list.querySelectorAll('.pal-it').forEach((x, j) => x.classList.toggle('on', j === sel)); }; el.onclick = () => runSel(); });
+    list.querySelector('.pal-it.on')?.scrollIntoView({ block: 'nearest' });
+  };
+  const update = async () => {
+    const q = input.value.trim(), my = ++seq;
+    const ql = q.toLowerCase();
+    items = [...actionsFor(q).map((a) => ({ ...a, sec: 'Run' })), ...tabs.filter((t) => !q || t.title.toLowerCase().includes(ql)).slice(0, q ? 4 : 20).map((t) => ({ ...t, sec: 'Go to' }))];
+    sel = 0; render();
+    if (q.length >= 2) {
+      try {
+        const ents = await (await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=8`)).json();
+        if (my !== seq) return;
+        items = [...ents.map((e) => ({ icon: '●', title: e.name, sub: `${e.kind} · ${e.links} links`, hint: 'open', sec: 'Entities', run: () => openEntity(e.id) })), ...items];
+        render();
+      } catch {}
+    }
+  };
+  const open = () => { bg.hidden = false; input.value = ''; update(); setTimeout(() => input.focus(), 10); };
+  const close = () => { bg.hidden = true; };
+  const runSel = () => { const it = items[sel]; if (!it) return; close(); it.run(); };
+  window.openPalette = open;
+  input.addEventListener('input', () => { clearTimeout(input._t); input._t = setTimeout(update, 120); });
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') { sel = Math.min(items.length - 1, sel + 1); render(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp') { sel = Math.max(0, sel - 1); render(); e.preventDefault(); }
+    else if (e.key === 'Enter') { runSel(); e.preventDefault(); }
+    else if (e.key === 'Escape') close();
+  });
+  bg.addEventListener('click', (e) => { if (e.target === bg) close(); });
+  addEventListener('keydown', (e) => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '');
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); bg.hidden ? open() : close(); }
+    else if (e.key === '/' && !typing && bg.hidden) { e.preventDefault(); open(); }
+    else if (e.key === 'Escape' && !bg.hidden) close();
+  });
+  const btn = document.createElement('button'); btn.className = 'icon-btn'; btn.id = 'pal-btn'; btn.title = 'Search and run (Ctrl+K)'; btn.innerHTML = '⌕ <span class="kbd">Ctrl K</span>'; btn.onclick = open;
+  document.querySelector('header .toplink')?.before(btn);
+})();
+
+/* ================================================================== Robinhood Chain tab */
+let rhTimer = null;
+function rhVerdictHtml(t) {
+  const v = t.verdict || 'UNKNOWN';
+  return `<div class="row" style="justify-content:space-between;align-items:baseline"><div style="font-size:30px;font-weight:300">${esc(t.symbol || t.name || (t.address.slice(0, 8) + '…'))}</div><span class="sc2 ${v === 'DANGER' ? 'hi' : v === 'CAUTION' ? 'mid' : ''}" style="padding:4px 12px;font:700 13px var(--mono);border:1px solid var(--line)">${esc(v)}</span></div>
+    <div class="ov-chain" style="margin-top:12px"><div>Holders<b>${t.holders == null ? '?' : fmtN(t.holders)}</b></div><div>Top 10<b>${t.top10Share == null ? '?' : Math.round(t.top10Share * 100) + '%'}</b></div><div>Verified<b>${t.verified == null ? '?' : t.verified ? 'yes' : 'no'}</b></div></div>
+    ${t.reasons.map((r) => `<div class="ov-kv"><span>${esc(r)}</span><span>flag</span></div>`).join('') || '<p class="meta">No risk flags.</p>'}
+    <div class="ov-kv"><span>Deployer <span class="elink" data-dep="${esc(t.deployer.address)}">${esc(t.deployer.address.slice(0, 10))}…</span></span><span>${t.deployer.otherTokens} other · ${t.deployer.dead} dead</span></div>
+    ${(t.pools || []).slice(0, 3).map((p) => `<div class="ov-kv"><span>${esc(p.pool.name)}</span><span>liq $${fmtN(Math.round(p.pool.liquidityUsd))}</span></div>`).join('')}
+    <div class="meta" style="margin-top:8px;word-break:break-all">${esc(t.address)}</div>`;
+}
+async function rhCheck(addr) {
+  document.getElementById('rh-addr').value = addr;
+  const box = document.getElementById('rh-verdict'); box.innerHTML = '<div class="ov-sk"></div>';
+  document.getElementById('rh-share').hidden = true;
+  try {
+    const r = await api(`/api/rhtoken?address=${encodeURIComponent(addr)}`);
+    const t = r.result; box.innerHTML = rhVerdictHtml(t);
+    box.querySelectorAll('[data-dep]').forEach((el) => el.onclick = () => runConsoleIn(`deployer ${el.dataset.dep}`));
+    const sh = document.getElementById('rh-share'); sh.hidden = false;
+    sh.onclick = () => shareCard({ kicker: `Robinhood Chain token · ${t.verdict}`, title: `${t.symbol || t.address.slice(0, 10)} on Robinhood Chain: ${t.verdict}`, lines: t.reasons.length ? t.reasons : ['no risk flags'], foot: 'sources: blockscout, geckoterminal · heuristics, not an audit' });
+  } catch (e) { box.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+}
+async function loadRobinhood() {
+  document.getElementById('rh-upd').textContent = new Date().toUTCString().slice(17, 25) + ' UTC';
+  try {
+    const r = await api('/api/robinhood'); const st = r.result.stats;
+    if (st) { document.getElementById('rk-block').textContent = fmtN(st.blocks); document.getElementById('rk-txs').textContent = fmtN(st.transactionsToday); document.getElementById('rk-addr').textContent = fmtN(st.addresses); document.getElementById('rk-gas').textContent = `${st.gasAverage}`; }
+    const fresh = r.result.fresh;
+    document.getElementById('rk-flag').textContent = `${fresh.filter((p) => p.flags.length).length}/${fresh.length}`;
+    document.getElementById('rh-poolsn').textContent = `${fresh.length} pools`;
+    document.getElementById('rh-pools').innerHTML = fresh.slice(0, 14).map((p) => `<div class="ov-pool" data-tok="${esc(p.pool.token)}" style="cursor:pointer"><span>${esc(p.pool.name)} <span class="meta">· ${p.ageHours.toFixed(1)}h · liq $${fmtN(Math.round(p.pool.liquidityUsd))}</span></span><span class="f ${p.flags.length ? 'bad' : ''}">${esc(p.flags[0] || `${p.pool.buys24h}/${p.pool.sells24h} b/s`)}</span></div>`).join('');
+    document.querySelectorAll('#rh-pools [data-tok]').forEach((el) => el.onclick = () => rhCheck(el.dataset.tok));
+    document.getElementById('rh-trend').innerHTML = r.result.trending.slice(0, 10).map((p) => `<div class="ov-pool" data-tok="${esc(p.pool.token)}" style="cursor:pointer"><span>${esc(p.pool.name)}</span><span style="color:${(p.pool.change24h ?? 0) < 0 ? 'var(--bad)' : '#3fd16b'}">${p.pool.change24h == null ? '' : (p.pool.change24h > 0 ? '+' : '') + p.pool.change24h.toFixed(1) + '%'} · $${fmtN(Math.round(p.pool.volume24h || 0))} vol</span></div>`).join('');
+    document.querySelectorAll('#rh-trend [data-tok]').forEach((el) => el.onclick = () => rhCheck(el.dataset.tok));
+  } catch (e) { document.getElementById('rh-pools').innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  api('/api/rh/deployers?limit=12').then((d) => {
+    document.getElementById('rk-dep').textContent = d.length;
+    document.getElementById('rh-deps').innerHTML = `<table><tr><th>deployer</th><th>tokens</th><th>dead</th><th>verdict</th></tr>${d.map((x) => `<tr data-dep="${esc(x.address)}" style="cursor:pointer"><td class="num">${esc(x.address.slice(0, 10))}…${esc(x.address.slice(-4))}</td><td class="num">${x.tokens}</td><td class="num">${x.dead ?? '—'}</td><td class="num" style="color:${x.verdict === 'DANGER' ? 'var(--bad)' : x.verdict === 'CAUTION' ? 'var(--accent)' : 'inherit'}">${esc(x.verdict)}</td></tr>`).join('')}</table>`;
+    document.querySelectorAll('#rh-deps [data-dep]').forEach((el) => el.onclick = () => runConsoleIn(`deployer ${el.dataset.dep}`));
+  }).catch(() => {});
+  api('/api/watch').then((w) => {
+    const rh = w.filter((x) => /@robinhood$/i.test(x.target));
+    document.getElementById('rh-watch').innerHTML = rh.map((x) => { const a = x.target.split('@')[0]; return `<div class="ov-pool" data-tok="${esc(a)}" style="cursor:pointer"><span>${esc(x.label || a.slice(0, 12) + '…')}</span><span class="meta">${x.lastRun ? 'checked ' + esc(ago2(x.lastRun)) : 'not run yet'}</span></div>`; }).join('') || '<p class="meta">No Robinhood Chain tokens on the watchlist. Add one with oculon watch add token 0x…@robinhood.</p>';
+    document.querySelectorAll('#rh-watch [data-tok]').forEach((el) => el.onclick = () => rhCheck(el.dataset.tok));
+  }).catch(() => {});
+  api('/api/signals?limit=200').then((s) => {
+    const h = s.filter((x) => x.module === 'heron').slice(0, 8);
+    document.getElementById('rh-sigs').innerHTML = h.map((x) => `<div class="ov-out"><div class="t"><span>${esc(x.title)}</span><span>${Math.round(x.score)} · ${esc(ago2(x.createdAt))}</span></div></div>`).join('') || '<p class="meta">No Heron signals yet.</p>';
+  }).catch(() => {});
+}
+document.getElementById('rh-refresh').onclick = loadRobinhood;
+document.getElementById('rh-check').onclick = () => { const v = document.getElementById('rh-addr').value.trim(); if (/^0x[0-9a-fA-F]{40}$/.test(v)) rhCheck(v); else toast('token check', 'Enter a 0x… address with 40 hex characters'); };
+document.getElementById('rh-addr').addEventListener('keydown', (e) => { if (e.key === 'Enter') document.getElementById('rh-check').click(); });
+rhTimer = setInterval(() => { if (!document.getElementById('tab-robinhood').hidden && document.getElementById('rh-auto').checked && !document.hidden) loadRobinhood(); }, 60000);
+
+/* ================================================================== signal inbox */
+let inbox = [], ibMods = new Set();
+const readSet = new Set(store.get('oculon-read', []));
+const votes = store.get('oculon-votes', {});
+const saveRead = () => store.set('oculon-read', [...readSet].slice(-3000));
+function inboxBadge() {
+  const n = inbox.filter((s) => !readSet.has(s.id)).length;
+  const b = document.querySelector('nav button[data-tab="inbox"]'); if (b) b.textContent = n ? `Inbox · ${n}` : 'Inbox';
+  const c = document.getElementById('ib-count'); if (c) c.textContent = `${inbox.length} signals · ${n} unread`;
+}
+function renderInbox() {
+  const min = Number(document.getElementById('ib-min').value), unread = document.getElementById('ib-unread').checked, q = document.getElementById('ib-q').value.trim().toLowerCase();
+  document.getElementById('ib-minv').textContent = min;
+  const mods = [...new Set(inbox.map((s) => s.module))].sort();
+  document.getElementById('ib-mods').innerHTML = mods.map((m) => `<button data-m="${esc(m)}" class="${ibMods.has(m) ? 'on' : ''}">${esc(m)} ${inbox.filter((s) => s.module === m).length}</button>`).join('');
+  document.querySelectorAll('#ib-mods button').forEach((b) => b.onclick = () => { ibMods.has(b.dataset.m) ? ibMods.delete(b.dataset.m) : ibMods.add(b.dataset.m); renderInbox(); });
+  const list = inbox.filter((s) => s.score >= min && (!unread || !readSet.has(s.id)) && (!ibMods.size || ibMods.has(s.module)) && (!q || `${s.title} ${(s.evidence || []).map((e) => e.text).join(' ')}`.toLowerCase().includes(q))).slice(0, 150);
+  document.getElementById('ib-list').innerHTML = list.map((s, i) => { const n = Math.round(s.score); return `<div class="ib ${readSet.has(s.id) ? '' : 'unread'} ${s._new ? 'new' : ''}" data-id="${esc(s.id)}" style="animation-delay:${Math.min(i, 15) * 25}ms"><div class="sc2 ${n >= 75 ? 'hi' : n >= 55 ? 'mid' : ''}">${n}</div><div><h4>${esc(s.title)}</h4><div class="m">${esc(s.module)} · ${esc(ago2(s.createdAt))}${s.entity ? ` · <span class="elink" data-ent="${esc(s.entity)}">open entity</span>` : ''}</div>${(s.evidence || []).slice(0, 2).map((e) => `<div class="ev2"><b>${esc(e.source)}</b>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(e.text)}</a>` : esc(e.text)}</div>`).join('')}</div><div class="acts"><button data-v="useful" class="${votes[s.id] === 'useful' ? 'voted' : ''}">Useful</button><button data-v="noise" class="${votes[s.id] === 'noise' ? 'voted' : ''}">Noise</button><button data-share>Share</button><button data-read>${readSet.has(s.id) ? 'Unread' : 'Read'}</button></div></div>`; }).join('') || '<p class="meta">Nothing matches these filters.</p>';
+  inbox.forEach((s) => { delete s._new; });
+  document.querySelectorAll('#ib-list .ib').forEach((el) => {
+    const s = inbox.find((x) => x.id === el.dataset.id);
+    el.querySelector('h4').onclick = () => { readSet.add(s.id); saveRead(); el.classList.remove('unread'); inboxBadge(); if (s.entity) openEntity(s.entity); };
+    el.querySelector('[data-ent]')?.addEventListener('click', () => openEntity(s.entity));
+    el.querySelector('[data-read]').onclick = () => { readSet.has(s.id) ? readSet.delete(s.id) : readSet.add(s.id); saveRead(); renderInbox(); inboxBadge(); };
+    el.querySelector('[data-share]').onclick = () => signalCard(s);
+    el.querySelectorAll('[data-v]').forEach((b) => b.onclick = async () => {
+      try { await postJson('/api/feedback', { signalId: s.id, verdict: b.dataset.v }); votes[s.id] = b.dataset.v; store.set('oculon-votes', votes); readSet.add(s.id); saveRead(); renderInbox(); inboxBadge(); toast('vote saved', `${b.dataset.v} · moves the ${s.module} alert bar`); }
+      catch (e) { toast('vote failed', e.message); }
+    });
+  });
+}
+async function loadInbox() {
+  inbox = (await api('/api/signals?limit=200')).filter((s) => s.module !== 'live');
+  renderInbox(); inboxBadge();
+}
+['ib-min', 'ib-unread', 'ib-q'].forEach((id) => document.getElementById(id).addEventListener('input', renderInbox));
+document.getElementById('ib-allread').onclick = () => { inbox.forEach((s) => readSet.add(s.id)); saveRead(); renderInbox(); inboxBadge(); };
+
+/* ================================================================== live stream + browser alerts */
+const notifyBtn = document.getElementById('ib-notify');
+const notifyOn = () => store.get('oculon-notify', false) && 'Notification' in window && Notification.permission === 'granted';
+const syncNotifyBtn = () => { notifyBtn.textContent = notifyOn() ? 'Alerts on' : 'Enable alerts'; notifyBtn.classList.toggle('on', notifyOn()); };
+notifyBtn.onclick = async () => {
+  if (!('Notification' in window)) return toast('alerts', 'This browser does not support notifications');
+  if (notifyOn()) { store.set('oculon-notify', false); return syncNotifyBtn(); }
+  const p = await Notification.requestPermission();
+  store.set('oculon-notify', p === 'granted'); syncNotifyBtn();
+  if (p === 'granted') toast('alerts on', 'Signals scoring 75+ will notify you while this app is open');
+};
+syncNotifyBtn();
+if ('EventSource' in window) {
+  const es = new EventSource('/api/stream');
+  es.addEventListener('signal', (ev) => {
+    const s = JSON.parse(ev.data);
+    if (s.module === 'live') return;
+    s._new = true; inbox.unshift(s); inboxBadge();
+    if (!document.getElementById('tab-inbox').hidden) renderInbox();
+    if (s.score >= 65) toast(`new signal · ${s.module} · ${Math.round(s.score)}`, s.title, () => { goTab('inbox'); });
+    if (s.score >= 75 && notifyOn() && document.hidden) { try { new Notification(`Oculon · ${s.module} ${Math.round(s.score)}`, { body: s.title, icon: '/assets/icon-192.png', tag: s.id }); } catch {} }
+  });
+}
+
+/* ================================================================== timeline */
+let tlData = [], tlPlay = null;
+async function loadTimeline() {
+  tlData = await api(`/api/timeline?hours=${document.getElementById('tl-hours').value}`);
+  drawTimeline();
+}
+function drawTimeline() {
+  const c = document.getElementById('tl-chart'), dpr = devicePixelRatio || 1, W = c.clientWidth, H = 180;
+  c.width = W * dpr; c.height = H * dpr; const x = c.getContext('2d'); x.scale(dpr, dpr); x.clearRect(0, 0, W, H);
+  const hours = Number(document.getElementById('tl-hours').value), end = Date.now(), start = end - hours * 3600000;
+  const n = Math.min(hours, 168), bucket = (end - start) / n, counts = Array(n).fill(0), maxs = Array(n).fill(0);
+  for (const s of tlData) { const i = Math.min(n - 1, Math.floor((Date.parse(s.at) - start) / bucket)); if (i >= 0) { counts[i]++; maxs[i] = Math.max(maxs[i], s.score); } }
+  const mx = Math.max(1, ...counts), bw = W / n;
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#00f0ff';
+  counts.forEach((v, i) => { const h = (v / mx) * (H - 30); x.fillStyle = accent; x.globalAlpha = .3 + .7 * (v / mx); x.fillRect(i * bw + 1, H - 20 - h, Math.max(1, bw - 2), h); if (maxs[i] >= 85) { x.globalAlpha = 1; x.fillStyle = '#ff6b6b'; x.fillRect(i * bw + 1, H - 22 - h, Math.max(1, bw - 2), 2); } });
+  x.globalAlpha = 1;
+  const r = Number(document.getElementById('tl-range').value) / 100, t = start + r * (end - start), px = r * W;
+  x.strokeStyle = '#fff'; x.lineWidth = 1.5; x.beginPath(); x.moveTo(px, 0); x.lineTo(px, H - 20); x.stroke();
+  x.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim(); x.font = '11px "Space Mono", monospace';
+  for (let k = 0; k <= 4; k++) { const tt = start + (k / 4) * (end - start); x.textAlign = k === 0 ? 'left' : k === 4 ? 'right' : 'center'; x.fillText(new Date(tt).toUTCString().slice(5, 22), (k / 4) * W, H - 4); }
+  x.textAlign = 'left';
+  const win = Math.max(bucket * 3, 3 * 3600000), inWin = tlData.filter((s) => Math.abs(Date.parse(s.at) - t) <= win / 2).sort((a, b) => b.score - a.score);
+  document.getElementById('tl-at').textContent = `${new Date(t).toUTCString().slice(0, 22)} UTC`;
+  document.getElementById('tl-win').textContent = `${inWin.length} signals within ±${Math.round(win / 7200000)}h · ${tlData.length} in window`;
+  document.getElementById('tl-list').innerHTML = inWin.slice(0, 40).map((s) => `<div class="tl-it"><span class="d">${esc(s.at.slice(5, 16).replace('T', ' '))}</span><span class="s">${Math.round(s.score)}</span><span>${s.entity ? `<span class="elink" data-ent="${esc(s.entity)}">${esc(s.title)}</span>` : esc(s.title)} <span class="meta">· ${esc(s.module)}</span></span></div>`).join('') || '<p class="meta">No signals near this moment.</p>';
+  document.querySelectorAll('#tl-list [data-ent]').forEach((el) => el.onclick = () => openEntity(el.dataset.ent));
+}
+document.getElementById('tl-range').addEventListener('input', drawTimeline);
+document.getElementById('tl-hours').addEventListener('change', loadTimeline);
+document.getElementById('tl-play').onclick = () => {
+  const b = document.getElementById('tl-play'), r = document.getElementById('tl-range');
+  if (tlPlay) { clearInterval(tlPlay); tlPlay = null; b.textContent = '▶ Play'; return; }
+  if (Number(r.value) >= 100) r.value = 0;
+  b.textContent = '❚❚ Pause';
+  tlPlay = setInterval(() => { r.value = Math.min(100, Number(r.value) + 0.5); drawTimeline(); if (Number(r.value) >= 100) { clearInterval(tlPlay); tlPlay = null; b.textContent = '▶ Play'; } }, 60);
+};
+addEventListener('resize', () => { if (!document.getElementById('tab-timeline').hidden) drawTimeline(); });
+
+/* ================================================================== sources health */
+async function loadSources() {
+  const s = await api('/api/sources');
+  const fresh = s.hosts.filter((h) => h.state === 'fresh').length, today = s.hosts.filter((h) => h.state !== 'stale').length;
+  const full = s.keys.filter((k) => k.set === k.total).length, none = s.keys.filter((k) => !k.set).length;
+  const near = s.quota.filter((q) => q.budget && q.used / q.budget >= 0.8).length;
+  document.getElementById('src-kpis').innerHTML = `<div class="ov-kpi"><span>Hosts in cache</span><b>${s.hosts.length}</b></div><div class="ov-kpi"><span>Answered · 1h</span><b>${fresh}</b></div><div class="ov-kpi"><span>Answered · 24h</span><b>${today}</b></div><div class="ov-kpi"><span>Key groups complete</span><b>${full}/${s.keys.length}</b></div><div class="ov-kpi"><span>Key groups empty</span><b>${none}</b></div><div class="ov-kpi"><span>Budgets above 80%</span><b>${near}</b></div>`;
+  document.getElementById('src-hosts').innerHTML = `<div class="hosts">${s.hosts.map((h) => `<div class="host" title="${esc(h.cachedResponses)} cached responses"><span class="st ${h.state}"></span><span>${esc(h.host)}</span><span>${esc(ago2(h.lastFetch))}</span></div>`).join('')}</div>`;
+  document.getElementById('src-keys').innerHTML = s.keys.map((k) => `<div class="keyrow"><div>${esc(k.group)}<small>${k.missing.length ? 'missing: ' + esc(k.missing.join(', ')) : 'all set'}</small></div><b class="${k.set === k.total ? 'full' : k.set ? 'part' : 'none'}">${k.set}/${k.total}</b></div>`).join('');
+  const qs = s.quota.filter((q) => q.budget).sort((a, b) => b.used / b.budget - a.used / a.budget);
+  const el = document.getElementById('src-quota');
+  el.innerHTML = `<div class="ov-qgrid">${qs.slice(0, 24).map((x) => `<div class="ov-q"><div class="t"><span>${esc(x.source)}</span><span>${x.used} / ${x.budget}</span></div><div class="ov-meter"><i data-w="${Math.max(1.5, Math.min(100, (x.used / x.budget) * 100)).toFixed(1)}"></i></div></div>`).join('')}</div>`;
+  setTimeout(() => el.querySelectorAll('[data-w]').forEach((i) => { i.style.width = `${i.dataset.w}%`; }), 60);
+}
+document.getElementById('src-refresh').onclick = loadSources;
+
+/* ================================================================== accuracy */
+async function loadAccuracy() {
+  const [a, f] = await Promise.all([api('/api/accuracy'), api('/api/forecasts')]);
+  const s = a.scoops, cal = a.calibration, sb = a.forecasts;
+  document.getElementById('acc-kpis').innerHTML = `<div class="ov-kpi"><span>Signals checked</span><b>${s.checked}</b></div><div class="ov-kpi"><span>Later in the media</span><b>${s.covered}</b></div><div class="ov-kpi"><span>Oculon first</span><b>${s.oculonFirst}</b></div><div class="ov-kpi"><span>Median lead</span><b>${s.medianLeadHours == null ? '—' : (s.medianLeadHours > 0 ? '+' : '') + s.medianLeadHours + 'h'}</b></div><div class="ov-kpi"><span>Best radar bar</span><b>${cal?.best ? cal.best.threshold : '—'}</b></div><div class="ov-kpi"><span>Forecasts open</span><b>${sb.open}/${sb.total}</b></div>`;
+  document.getElementById('acc-scoops').innerHTML = `<p class="meta" style="margin:0 0 10px">A negative lead means the media covered it before Oculon flagged it. This is measured honestly; most Wikipedia spikes follow the news.</p>${(s.best.length ? s.best : s.pending).slice(0, 8).map((x) => `<div class="ov-kv"><span>${esc(x.subject)}</span><span>${x.leadHours == null ? 'pending' : (x.leadHours > 0 ? '+' : '') + x.leadHours.toFixed(1) + 'h'}</span></div>`).join('')}`;
+  document.getElementById('acc-cal').innerHTML = cal ? `<p class="meta" style="margin:0 0 10px">${cal.samples} radar items over ${cal.days} days, ${cal.materialized} became news. Computed ${esc(ago2(cal.computedAt))}.</p><table class="cal-t"><tr><th>score ≥</th><th>flagged</th><th>hits</th><th>precision</th><th>recall</th><th>F1</th></tr>${cal.rows.map((r) => `<tr class="${cal.best && r.threshold === cal.best.threshold ? 'best' : ''}"><td>${r.threshold}</td><td>${r.flagged}</td><td>${r.hits}</td><td>${r.precision ?? '—'}</td><td>${r.recall ?? '—'}</td><td>${r.f1 ?? '—'}</td></tr>`).join('')}</table>` : '<p class="meta">No calibration yet. Run oculon calibrate.</p>';
+  const el = document.getElementById('acc-fc');
+  el.innerHTML = `<div class="ov-chain"><div>Resolved<b>${sb.resolved}</b></div><div>Brier · Oculon<b>${sb.brierModel ?? '—'}</b></div><div>Brier · market<b>${sb.brierMarket ?? '—'}</b></div></div>${f.forecasts.slice(0, 8).map((x) => `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div style="font-size:14.5px">${esc(x.question)}</div><div class="ov-prob"><span>Oculon</span><div class="ov-meter"><i data-w="${(x.pModel * 100).toFixed(1)}"></i></div><span>${Math.round(x.pModel * 100)}%</span></div><div class="ov-prob mk"><span>Market</span><div class="ov-meter"><i data-w="${(x.pMarket * 100).toFixed(1)}"></i></div><span>${Math.round(x.pMarket * 100)}%</span></div><div class="meta">${x.resolvedAt ? `resolved ${esc(x.result ?? '')}` : 'open'} · ${esc(x.method)} · ${esc(x.createdAt.slice(0, 10))}</div></div>`).join('') || '<p class="meta">No forecasts yet.</p>'}`;
+  setTimeout(() => el.querySelectorAll('[data-w]').forEach((i) => { i.style.width = `${i.dataset.w}%`; }), 60);
+}
+
+/* ================================================================== overview: drag to reorder, hide and restore cards */
+(function ovLayout() {
+  const grid = document.querySelector('#tab-overview .ov-grid'); if (!grid) return;
+  const cards = [...grid.querySelectorAll('.ov')];
+  cards.forEach((c) => { c.dataset.key = c.querySelector('.ovb')?.id || c.querySelector('.ovh span')?.textContent; });
+  const layout = store.get('oculon-ov-layout', { order: [], hidden: [] });
+  const apply = () => {
+    const byKey = new Map(cards.map((c) => [c.dataset.key, c]));
+    [...layout.order.filter((k) => byKey.has(k)), ...cards.map((c) => c.dataset.key).filter((k) => !layout.order.includes(k))].forEach((k) => grid.appendChild(byKey.get(k)));
+    cards.forEach((c) => { c.hidden = layout.hidden.includes(c.dataset.key); });
+    let bar = document.getElementById('ov-hidden'); if (!bar) { bar = document.createElement('div'); bar.id = 'ov-hidden'; bar.className = 'ov-hidden'; grid.after(bar); }
+    bar.innerHTML = (layout.hidden.length ? `hidden cards: ${layout.hidden.map((k) => `<button data-k="${esc(k)}">+ ${esc(byKey.get(k)?.querySelector('.ovh span')?.textContent || k)}</button>`).join('')}` : 'Drag cards to reorder, × to hide.') + ' <button data-reset>Reset layout</button>';
+    bar.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { layout.hidden = layout.hidden.filter((k) => k !== b.dataset.k); store.set('oculon-ov-layout', layout); apply(); });
+    bar.querySelector('[data-reset]').onclick = () => { layout.order = []; layout.hidden = []; store.set('oculon-ov-layout', layout); cards.forEach((c) => grid.appendChild(c)); apply(); };
+  };
+  let dragging = null;
+  cards.forEach((c) => {
+    c.draggable = true;
+    const x = document.createElement('button'); x.className = 'pin'; x.title = 'Hide card'; x.textContent = '×';
+    x.onclick = (e) => { e.stopPropagation(); layout.hidden.push(c.dataset.key); store.set('oculon-ov-layout', layout); apply(); };
+    c.querySelector('.ovh')?.appendChild(x);
+    c.addEventListener('dragstart', () => { dragging = c; c.classList.add('dragging'); });
+    c.addEventListener('dragend', () => { c.classList.remove('dragging'); cards.forEach((d) => d.classList.remove('drop')); dragging = null; layout.order = [...grid.querySelectorAll('.ov')].map((d) => d.dataset.key); store.set('oculon-ov-layout', layout); });
+    c.addEventListener('dragover', (e) => { e.preventDefault(); if (dragging && dragging !== c) c.classList.add('drop'); });
+    c.addEventListener('dragleave', () => c.classList.remove('drop'));
+    c.addEventListener('drop', (e) => { e.preventDefault(); c.classList.remove('drop'); if (!dragging || dragging === c) return; const r = c.getBoundingClientRect(); grid.insertBefore(dragging, e.clientX > r.left + r.width / 2 ? c.nextSibling : c); });
+  });
+  apply();
+})();
+
+/* ================================================================== PWA */
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+
+const fromHash = () => document.querySelector(`nav button[data-tab="${CSS.escape(location.hash.slice(1))}"]`)?.click();
+document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => history.replaceState(null, '', '#' + b.dataset.tab)));
+addEventListener('hashchange', fromHash);
+if (location.hash.startsWith('#entity:')) openEntity(decodeURIComponent(location.hash.slice(8)));
+else if (location.hash) fromHash();
+loadInbox().catch(() => {});
+if (!loaded.overview && !document.getElementById('tab-overview').hidden) { loaded.overview = true; loadOverview(); }
+
+/* ---------- motion ---------- */
+(function motion() {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Spotlights follow the pointer inside each card; drift offsets are staggered.
+  const wire = (root) => root.querySelectorAll('.card').forEach((el, i) => {
+    if (el.dataset.fx) return; el.dataset.fx = '1'; el.style.setProperty('--i', i);
+    el.addEventListener('pointermove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', `${e.clientX - r.left}px`); el.style.setProperty('--my', `${e.clientY - r.top}px`); });
+  });
+  wire(document);
+  // "Loading…" placeholders shimmer until their content arrives.
+  const shimmer = () => document.querySelectorAll('main *').forEach((el) => { if (el.children.length === 0 && /^(Loading|Rewriting|Running|Asking|Searching)…?\.{0,3}$/.test(el.textContent.trim())) el.classList.add('loading'); else el.classList.remove('loading'); });
+  // Numbers in KPI tiles count up when they are written.
+  const countUp = (b) => {
+    if (b.dataset.anim) return; // our own frames trigger the observer; ignore them
+    const m =/^([+-]?)([\d,]+(?:\.\d+)?)(.*)$/.exec(b.textContent.trim()); if (!m || b.dataset.counted === b.textContent) return;
+    const to = Number(m[2].replace(/,/g, '')), dec = (m[2].split('.')[1] || '').length, sign = m[1], tail = m[3];
+    if (!isFinite(to) || reduce) { b.dataset.counted = b.textContent; return; }
+    const t0 = performance.now(), d = 1100;
+    const fmt = (v) => sign + v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + tail;
+    const final = fmt(to);
+    const step = (t) => { const k = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - k, 3); b.textContent = fmt(to * e); if (k < 1) requestAnimationFrame(step); else { b.textContent = final; b.dataset.counted = final; delete b.dataset.anim; } };
+    b.dataset.counted = final; b.dataset.anim = '1'; requestAnimationFrame(step);
+  };
+  let pending = false;
+  new MutationObserver(() => { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; wire(document); shimmer(); document.querySelectorAll('.kpi b, .ov-kpi b').forEach(countUp); }); }).observe(document.querySelector('main'), { childList: true, subtree: true, characterData: true });
+  shimmer();
+  // Page-wide drifting points behind the panels.
+  if (window.OculonFX) {
+    const lq = document.createElement('canvas'); lq.id = 'liquidbg'; lq.setAttribute('aria-hidden', 'true'); document.body.prepend(lq);
+    OculonFX.liquid(lq, { base: '#000000', mid: '#001a26', hi: '#00c8e0', intensity: 0.85, scale: 0.3 });
+   
+  }
+  const c = document.createElement('canvas'); c.id = 'bgfx'; c.setAttribute('aria-hidden', 'true'); document.body.prepend(c);
+  if (reduce) return;
+  const x = c.getContext('2d'); let W, H, pts;
+  const size = () => { W = c.width = innerWidth; H = c.height = innerHeight; pts = Array.from({ length: Math.round(W * H / 24000) }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .2, vy: (Math.random() - .5) * .2, r: Math.random() * 1.2 + .3 })); };
+  size(); addEventListener('resize', size);
+  const frame = () => {
+    const light = document.documentElement.dataset.theme === 'light';
+    x.clearRect(0, 0, W, H);
+    for (const p of pts) { p.x = (p.x + p.vx + W) % W; p.y = (p.y + p.vy + H) % H; x.fillStyle = light ? 'rgba(0,0,0,.25)' : 'rgba(255,255,255,.35)'; x.beginPath(); x.arc(p.x, p.y, p.r, 0, 7); x.fill(); }
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) { const a = pts[i], b = pts[j], d = Math.hypot(a.x - b.x, a.y - b.y); if (d < 120) { x.strokeStyle = light ? `rgba(0,0,0,${(1 - d / 120) * .08})` : `rgba(0,240,255,${(1 - d / 120) * .08})`; x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke(); } }
+    requestAnimationFrame(frame);
+  };
+  frame();
+})();
+</script>
+</body>
+</html>

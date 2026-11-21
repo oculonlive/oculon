@@ -1,0 +1,15 @@
+node_modules
+dist
+data
+design
+referensi
+.git
+.github
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+*.log
+*.tgz
+test

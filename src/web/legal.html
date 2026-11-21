@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Oculon Legal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:clip}
+a{color:inherit}
+header{position:sticky;top:0;z-index:5;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(20px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}
+header nav a.on{color:#fff;border-bottom:2px solid var(--y);padding-bottom:4px}
+main{max-width:860px;margin:0 auto;padding:80px clamp(20px,5vw,40px) 120px}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+h1{margin:14px 0 10px;font-size:clamp(44px,6vw,72px);font-weight:300;letter-spacing:-.04em;line-height:1}
+h2{margin:56px 0 12px;font-size:26px;font-weight:400;padding-top:24px;border-top:1px solid var(--line)}
+p,li{font-size:17px;line-height:1.75;color:var(--soft);font-weight:300}
+ul{padding-left:20px}
+code{font:.86em var(--mono);background:#111;border:1px solid #1d1d1d;padding:1px 6px;color:#fff}
+.sum{border:1px solid #2a2a2a;background:#070707;padding:22px 24px;margin-top:28px}
+.sum p{margin:0}
+.doc{display:none}.doc.on{display:block}
+footer{border-top:1px solid var(--line)}footer .in{max-width:860px;margin:0 auto;padding:26px clamp(20px,5vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}
+footer a{color:var(--mut)}
+/* motion, shared with the landing page and docs */
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.36}
+header,main,footer{position:relative;z-index:1}
+header{position:sticky}
+header::after{content:'';position:absolute;left:-30%;bottom:-1px;width:30%;height:1px;background:linear-gradient(90deg,transparent,var(--y),transparent);animation:hscan 6s linear infinite}
+@keyframes hscan{to{left:100%}}
+.logo{background:linear-gradient(90deg,#fff 40%,var(--y) 50%,#fff 60%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 7s linear infinite}
+@keyframes shim{from{background-position:100% 0}to{background-position:-200% 0}}
+header nav a{transition:color .2s}header nav a:hover{color:#fff}header nav a.on{border-bottom-color:var(--y);text-shadow:0 0 18px rgba(0,240,255,.6)}
+.band{position:relative;z-index:1;height:150px;margin-bottom:-150px;pointer-events:none;overflow:hidden}
+.band canvas{position:absolute;inset:0;width:100%;height:100%}
+.band canvas{-webkit-mask-image:linear-gradient(180deg,transparent,#000 30%,#000 65%,transparent);mask-image:linear-gradient(180deg,transparent,#000 30%,#000 65%,transparent)}
+h1{animation:rise .9s cubic-bezier(.2,.8,.2,1) both;text-shadow:0 0 50px rgba(0,240,255,.2)}
+@keyframes rise{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}
+.sum{border-color:rgba(0,240,255,.35);background:rgba(0,14,18,.7);backdrop-filter:blur(8px);box-shadow:0 0 40px rgba(0,240,255,.08);animation:rise 1s .15s cubic-bezier(.2,.8,.2,1) both}
+.rv{opacity:0;transform:translateY(20px);transition:opacity .8s ease,transform .8s ease}.rv.in{opacity:1;transform:none}
+h2{position:relative}h2::before{content:'';position:absolute;left:0;top:-1px;height:1px;width:0;background:var(--y);transition:width 1.2s ease}h2.in::before{width:120px}
+code{background:rgba(0,20,24,.8);border-color:rgba(0,240,255,.2)}
+footer{background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.rv{opacity:1;transform:none}}
+/* ---------- at-a-glance cards ---------- */
+.glance{margin-top:22px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.gc{border:1px solid #1f2a2d;background:rgba(4,8,9,.85);backdrop-filter:blur(6px);padding:18px 18px 16px;position:relative;overflow:hidden;transition:border-color .3s,transform .35s;animation:gcin .6s cubic-bezier(.2,.8,.2,1) both}
+.gc:nth-child(2){animation-delay:.06s}.gc:nth-child(3){animation-delay:.12s}.gc:nth-child(4){animation-delay:.18s}.gc:nth-child(5){animation-delay:.24s}.gc:nth-child(6){animation-delay:.3s}.gc:nth-child(7){animation-delay:.36s}
+@keyframes gcin{from{opacity:0;transform:translateY(14px)}}
+.gc:hover{border-color:rgba(0,240,255,.5);transform:translateY(-3px)}
+.gc::after{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--y),transparent);transform:translateX(-100%);transition:transform .7s}
+.gc:hover::after{transform:translateX(100%)}
+.gc .ic{font:600 13px var(--mono);color:var(--y);letter-spacing:.04em}
+.gc h3{margin:10px 0 6px;font-size:17px;font-weight:500}
+.gc p{margin:0 !important;font-size:14px !important;line-height:1.55 !important;color:var(--mut) !important}
+.gc a{color:#fff}
+.gc.wide{grid-column:1/-1}
+.live-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.live-h .lbl{color:var(--y)}
+.live-h span:last-child{font:12px var(--mono);color:var(--mut)}
+.srcs{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.srcs span{font:12px var(--mono);border:1px solid rgba(0,240,255,.28);background:rgba(0,240,255,.04);color:#cffaff;padding:4px 9px;animation:gcin .4s ease both}
+.srcs span b{font-weight:400;color:var(--mut);margin-left:6px}
+.dotl{display:inline-block;width:7px;height:7px;border-radius:50%;background:#3fd16b;box-shadow:0 0 8px #3fd16b;margin-right:8px;animation:blink 1.6s ease-in-out infinite}
+@keyframes blink{50%{opacity:.25}}
+@media (max-width:760px){.glance{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/">OCULON</a><nav><a href="/privacy" id="n-privacy">Privacy</a><a href="/terms" id="n-terms">Terms</a><a href="/docs">Docs</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+<article class="doc" id="privacy">
+  <div class="lbl">Legal · Privacy</div>
+  <h1>Privacy</h1>
+  <div class="sum"><p>Oculon is software you run yourself. It has no account system, no telemetry and no analytics. What it stores stays on the machine that runs it.</p></div>
+  <div class="glance">
+    <div class="gc"><div class="ic">00</div><h3>No telemetry</h3><p>No analytics, crash reports or usage pings. Nothing goes to the authors.</p></div>
+    <div class="gc"><div class="ic">~/</div><h3>Stored locally</h3><p>One SQLite file in <code>~/.oculon</code> or your <code>OCULON_HOME</code>.</p></div>
+    <div class="gc"><div class="ic">KEY</div><h3>Keys stay yours</h3><p>Read from your <code>.env</code> and sent only to the service each key belongs to.</p></div>
+    <div class="gc"><div class="ic">AI</div><h3>LLMs only if you add a key</h3><p>ask, case and the brief go to the providers you configured. No key, nothing sent.</p></div>
+    <div class="gc"><div class="ic">127</div><h3>Localhost by default</h3><p><code>oculon serve</code> listens on 127.0.0.1. Writes need a same-origin request.</p></div>
+    <div class="gc"><div class="ic">0 cookies</div><h3>No cookies</h3><p>Only your theme choice, kept in your browser's local storage.</p></div>
+    <div class="gc wide"><div class="live-h"><span class="lbl"><i class="dotl"></i>Services this install contacted today</span><span class="srcn">loading…</span></div><div class="srcs"></div><p style="margin-top:12px !important">Read from this install's daily usage counters (<code>oculon quota</code>). Requests go only to these services, each under its own terms.</p></div>
+  </div>
+  <h2>Who this covers</h2>
+  <p>This notice describes how the Oculon software (CLI, SDK, MCP server, this web app and the Telegram bot) handles information. Whoever runs an Oculon install is responsible for that install and for any public deployment of these pages.</p>
+  <h2>What Oculon stores</h2>
+  <ul>
+    <li>A local SQLite database with signals, entities, links, cached API responses, watchlist items, geofences, case files and feedback votes, in <code>~/.oculon</code> or the folder set by <code>OCULON_HOME</code>.</li>
+    <li>API keys you add to your <code>.env</code> file. They are read locally and sent only to the service each key belongs to.</li>
+    <li>Nothing is sent to the Oculon authors. There is no usage reporting, crash reporting or tracking.</li>
+  </ul>
+  <h2>What leaves your machine</h2>
+  <ul>
+    <li><strong>Queries to public data sources.</strong> When a module runs, it calls the sources it needs (for example USGS, Cloudflare Radar, Blockscout or GeckoTerminal) with the inputs you gave it, such as an address, a domain or a place name. Each source handles those requests under its own policy.</li>
+    <li><strong>Questions to language models.</strong> Commands such as <code>ask</code>, <code>case</code> and the daily brief send your question and the collected evidence to the LLM providers you configured keys for (Groq, Google Gemini, Mistral, OpenRouter, NVIDIA or Anthropic). Without a key, nothing is sent.</li>
+    <li><strong>Telegram.</strong> If you run the bot, alerts and answers go to the chats you allow-listed, through Telegram's servers.</li>
+    <li><strong>This web page.</strong> The landing page, app and docs load fonts from Google Fonts, map libraries from cdnjs and map outlines from jsDelivr, so your browser contacts those services when it opens them.</li>
+  </ul>
+  <h2>Cookies and browser storage</h2>
+  <p>The pages set no cookies. The app remembers your light or dark theme in your browser's local storage, and nothing else.</p>
+  <h2>Who can reach an install</h2>
+  <p><code>oculon serve</code> listens on <code>127.0.0.1</code> by default, so only the same machine can open it. Actions that change data accept only same-origin requests with a custom header. If you put an install behind a public domain, you decide who can reach it.</p>
+  <h2>Removing data</h2>
+  <p>Delete the Oculon data folder to remove everything it stored. <code>oculon gc</code> trims the cache without removing your watchlist or cases.</p>
+  <h2>Changes</h2>
+  <p>Changes to this notice ship with the software and appear in its documentation.</p>
+</article>
+
+<article class="doc" id="terms">
+  <div class="lbl">Legal · Terms</div>
+  <h1>Terms</h1>
+  <div class="sum"><p>Oculon is free, open-source software under the MIT licence, provided as is. It reports what public sources say. You decide what to do with it.</p></div>
+  <div class="glance">
+    <div class="gc"><div class="ic">MIT</div><h3>Free and open</h3><p>Use, copy, modify and distribute, including commercially. Keep the notice.</p></div>
+    <div class="gc"><div class="ic">AS IS</div><h3>No warranty</h3><p>Provided as is. Sources can be late, wrong or offline.</p></div>
+    <div class="gc"><div class="ic">!=</div><h3>Not advice</h3><p>Scores, verdicts and forecasts are automated readings, not financial or legal advice.</p></div>
+    <div class="gc"><div class="ic">≈</div><h3>Heuristics, not audits</h3><p>Token and deployer verdicts list their reasons so you can judge them.</p></div>
+    <div class="gc"><div class="ic">OK</div><h3>Use it fairly</h3><p>Lawful use, no targeting private people, no overloading the sources.</p></div>
+    <div class="gc"><div class="ic">PD</div><h3>Public-domain imagery</h3><p>NASA GIBS imagery and Natural Earth outlines on these pages.</p></div>
+    <div class="gc wide"><div class="live-h"><span class="lbl"><i class="dotl"></i>Third-party sources used today</span><span class="srcn">loading…</span></div><div class="srcs"></div><p style="margin-top:12px !important">Read from this install's daily usage counters (<code>oculon quota</code>). Requests go only to these services, each under its own terms.</p></div>
+  </div>
+  <h2>Licence</h2>
+  <p>Oculon is released under the MIT licence. You may use, copy, modify and distribute it, including commercially, provided the copyright and licence notice are kept. The software is provided "as is", without warranty of any kind.</p>
+  <h2 id="sources">Data sources</h2>
+  <p>Oculon reads public and free-tier sources run by other organisations. Their data stays subject to their own terms, rate limits and attribution rules. You are responsible for keeping your use within those terms, including for any API keys you add. Every Oculon result names the sources behind it and whether each answer was live or cached.</p>
+  <h2>Not advice</h2>
+  <p>Signals, scores, verdicts and forecasts are automated readings of public data. They are not financial, legal, security or investment advice. Token and deployer verdicts on Robinhood Chain and other chains are heuristics over pool and explorer data, not contract audits. A DANGER or OK verdict can be wrong.</p>
+  <h2>Accuracy and availability</h2>
+  <p>Sources can be late, wrong, rate-limited or offline, and free tiers can change. When a source fails, Oculon labels it and returns the rest of the result. Language-model output can be mistaken; answers cite the evidence they used so you can check it.</p>
+  <h2>Acceptable use</h2>
+  <ul>
+    <li>Use Oculon lawfully, and respect the privacy of the people and organisations you research.</li>
+    <li>Do not use it to harass, stalk or target private individuals, or to evade sanctions or other legal obligations.</li>
+    <li>Do not overload the sources it reads. The daily budgets exist to keep usage within their free limits.</li>
+  </ul>
+  <h2>Imagery and map data</h2>
+  <p>Satellite and night imagery on these pages comes from NASA GIBS (Black Marble, Blue Marble). Country outlines come from Natural Earth via world-atlas. Both are public domain.</p>
+  <h2>Changes</h2>
+  <p>These terms ship with the software and may change between versions.</p>
+</article>
+</main>
+<footer><div class="in"><span>© <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/docs">Docs</a> · <a href="/app">App</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#001a26', hi: '#00c8e0', intensity: 0.8, scale: 0.3 }); }
+const rvio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); rvio.unobserve(e.target); } }), { threshold: 0.1 });
+const which = location.pathname.replace(/\/$/, '').endsWith('terms') ? 'terms' : 'privacy';
+document.getElementById(which).classList.add('on');
+document.getElementById(`n-${which}`).classList.add('on');
+document.title = `Oculon ${which === 'terms' ? 'Terms' : 'Privacy'}`;
+document.getElementById('year').textContent = new Date().getFullYear();
+document.querySelectorAll('.doc.on h2, .doc.on p, .doc.on ul').forEach((el) => { if (el.closest('.sum') || el.closest('.glance')) return; el.classList.add('rv'); rvio.observe(el); });
+if (location.hash) setTimeout(() => document.getElementById(location.hash.slice(1))?.scrollIntoView(), 50);
+
+// Live card: the services this install actually called today, from its quota counters.
+fetch('/api/quota').then((r) => r.json()).then((q) => {
+  const used = q.filter((x) => x.used > 0).sort((a, b) => b.used - a.used);
+  document.querySelectorAll('.doc.on .srcn').forEach((el) => { el.textContent = used.length + ' services · today'; });
+  document.querySelectorAll('.doc.on .srcs').forEach((el) => { el.innerHTML = used.map((x, i) => '<span style="animation-delay:' + Math.min(i, 30) * 25 + 'ms">' + x.source.replace(/[&<>]/g, '') + '<b>' + x.used + '</b></span>').join('') || '<span>none yet today</span>'; });
+}).catch(() => { document.querySelectorAll('.srcn').forEach((el) => { el.textContent = 'unavailable'; }); });
+</script>
+</body>
+</html>

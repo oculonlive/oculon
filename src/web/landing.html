@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Oculon</title>
+<meta name="description" content="Open-source intelligence engine: routing, vulnerabilities, ships, satellites and Robinhood Chain, with sources on every answer.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#000;--bg2:#060606;--line:#222;--line2:#1a1a1a;--text:#fff;--soft:#cfcfcf;--mut:#9a9a9a;--dim:#5e5e5e;--y:#00f0ff;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace;--pad:clamp(20px,4vw,60px)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:clip}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1480px;margin:0 auto;padding:0 var(--pad)}
+.mono{font-family:var(--mono)}.mut{color:var(--mut)}.y{color:var(--y)}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+.big{margin:0;font-size:clamp(44px,6vw,84px);line-height:.96;font-weight:300;letter-spacing:-.045em}
+.lead{margin:0;font-size:clamp(17px,1.5vw,21px);line-height:1.6;font-weight:300;color:var(--soft)}
+.head{display:grid;grid-template-columns:1.3fr .7fr;gap:60px;align-items:end}
+.sec{padding-top:clamp(90px,10vw,150px)}
+.btn{display:inline-block;background:var(--y);color:#001418;padding:14px 22px;font-weight:600;border:0;font:600 15px var(--sans);cursor:pointer}
+.btn.o{background:rgba(0,10,14,.55);color:#cffaff;border:1px solid rgba(0,240,255,.45);font:14px var(--mono)}
+/* nav + hero */
+nav.top{position:absolute;left:0;right:0;top:0;z-index:5}
+nav.top .wrap{display:flex;justify-content:space-between;align-items:center;padding-top:28px}
+.logo{font-size:20px;font-weight:600;letter-spacing:.42em}
+.links{display:flex;gap:clamp(18px,3vw,44px);font-size:15px;font-weight:500;align-items:center}
+.hero{position:relative;height:min(940px,100vh);min-height:640px;overflow:hidden}
+.hero img{position:absolute;left:50%;top:-40px;transform:translateX(-50%);width:max(1800px,120vw);filter:grayscale(1) brightness(1.7) contrast(1.35)}
+.hero .shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.65),transparent 30%,transparent 50%,#000)}
+.hero .copy{position:absolute;left:0;right:0;bottom:clamp(40px,7vh,70px)}
+.hero .copy .wrap{display:flex;justify-content:space-between;align-items:flex-end;gap:40px;flex-wrap:wrap}
+.hero h1{margin:0;font-size:clamp(72px,11vw,156px);line-height:.86;font-weight:300;letter-spacing:-.05em}
+.hero p{margin:0;font-size:19px;line-height:1.6;font-weight:300;color:var(--soft);max-width:430px}
+.credit{position:absolute;right:var(--pad);top:100px;text-align:right}
+/* tape + stats */
+.tape{border-top:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;overflow:hidden;font:12.5px var(--mono);white-space:nowrap}
+.tape b{padding:16px 24px;background:var(--y);color:#000;letter-spacing:.12em;flex:none;position:relative;z-index:1}
+.tape .run{display:flex;gap:44px;padding:16px 28px;color:var(--soft);animation:tape 60s linear infinite}
+@keyframes tape{to{transform:translateX(-50%)}}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+.stats>div{padding:36px var(--pad) 36px 40px;border-right:1px solid var(--line)}.stats>div:first-child{padding-left:var(--pad)}.stats>div:last-child{border-right:0}
+.stats .v{font-size:clamp(40px,4.4vw,64px);font-weight:300;margin-top:8px}
+/* terminal */
+.term{background:var(--bg2);border:1px solid #262626;font:13px/1.78 var(--mono);color:#bdbdbd;overflow:hidden;min-width:0}
+.tbar{min-height:42px;border-bottom:1px solid var(--line);display:flex;align-items:stretch;background:#0b0b0b;overflow-x:auto}
+.tab{padding:0 18px;display:flex;align-items:center;gap:10px;border:0;border-right:1px solid #1e1e1e;color:#6e6e6e;font:12px var(--mono);background:none;cursor:pointer;white-space:nowrap}
+.tab[aria-selected=true]{color:#fff;background:var(--bg2);box-shadow:inset 0 2px 0 var(--y)}
+.tab[aria-selected=true]::before{content:'●';color:var(--y)}
+.tmeta{margin-left:auto;padding:0 18px;display:flex;align-items:center;color:#555;font:12px var(--mono);white-space:nowrap}
+.tbody{padding:18px 22px;overflow:auto;max-height:620px}
+.tbody pre{margin:0;font:inherit;white-space:pre}
+.pr{color:var(--y)}.w{color:#fff}.d{color:var(--dim)}.b{color:#fff;font-weight:700}
+.tag{display:inline-block;padding:0 7px;line-height:19px;font-size:11.5px;font-weight:700;background:var(--y);color:#000}
+.cursor{display:inline-block;width:9px;height:17px;background:var(--y);vertical-align:-3px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.prompt{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding:12px 22px;background:#080808}
+.prompt input{flex:1;background:none;border:0;outline:0;color:#fff;font:13px var(--mono);min-width:0}
+.prompt button{background:none;border:1px solid #333;color:#ddd;font:12px var(--mono);padding:6px 12px;cursor:pointer}
+/* terminal window (console + heron) */
+.terminal{border-radius:12px;border:1px solid #2a2a2a;background:linear-gradient(180deg,#0d0d0d,#070707);box-shadow:0 50px 140px -40px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.03) inset,0 0 90px -30px rgba(0,240,255,.14);overflow:hidden;min-width:0;font-family:var(--mono)}
+.terminal-bar{display:flex;align-items:center;gap:14px;height:42px;padding:0 14px;border-bottom:1px solid #1d1d1d;background:rgba(255,255,255,.018)}
+.lights{display:flex;gap:7px;flex:none}.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}.lights i:nth-child(2){background:#00f0ff}.lights i:nth-child(3){background:#28c840}
+.terminal-title{margin:0 auto;font-size:12px;color:#777;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.terminal-replay{background:none;border:1px solid #2e2e2e;color:#8a8a8a;border-radius:999px;font:11px/1 var(--mono);padding:6px 11px;cursor:pointer;flex:none}
+.terminal-replay:hover{color:#fff;border-color:#555}
+.t-tabs{display:flex;align-items:center;gap:2px;padding:6px 10px 0;border-bottom:1px solid #1d1d1d;overflow-x:auto;scrollbar-width:none}
+.t-tab{background:none;border:0;border-bottom:2px solid transparent;color:#6e6e6e;font:500 12px/1 var(--mono);padding:8px 11px 10px;cursor:pointer;white-space:nowrap}
+.t-tab:hover{color:#fff}.t-tab.is-active{color:#fff;border-bottom-color:var(--y)}
+.t-meta{margin-left:auto;padding:0 6px 4px;font-size:11.5px;color:#555;white-space:nowrap}
+.terminal-body{margin:0;padding:20px 22px 24px;height:600px;overflow:auto;font:12.5px/1.75 var(--mono);color:#b9b9b9;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#2a2a2a transparent}
+.terminal-body::-webkit-scrollbar{width:8px;height:8px}.terminal-body::-webkit-scrollbar-thumb{background:#262626;border-radius:8px}.terminal-body::-webkit-scrollbar-track{background:transparent}
+.t-line{display:block;white-space:pre}
+.rhgrid .terminal{display:flex;flex-direction:column}.rhgrid .terminal-body{flex:1;height:auto !important;min-height:480px;max-height:640px}
+.tl-cmd{margin-top:2px;color:#fff}.tl-cmd:not(:first-child){margin-top:12px}
+.t-path{color:#7fb4e8;user-select:none}.t-prompt{color:var(--y);user-select:none}.t-cmd{color:#fff}
+.tl-strong{color:#fff;font-weight:700}.tl-dim{color:#5c5c5c}
+.t-ok{color:#3fd16b}.t-warn{color:#00f0ff}.t-bad{color:#ff6b6b}.t-id{color:#8cc4ff}.t-date{color:#7a7a7a}.t-num{color:#7df9ff}
+.t-score{display:inline-block;min-width:30px;text-align:center;border:1px solid #3a3a3a;color:#cfcfcf;border-radius:4px;line-height:18px;font-weight:700}
+.t-score.mid{border-color:#00f0ff;color:#00f0ff}.t-score.hi{background:#ff6b6b;border-color:#ff6b6b;color:#000}
+.caret{display:inline-block;width:8px;height:1.1em;vertical-align:-3px;background:#fff;margin-left:2px;animation:blink 1s steps(1) infinite}
+.t-input{display:flex;align-items:center;gap:10px;border-top:1px solid #1d1d1d;padding:12px 22px;background:rgba(255,255,255,.015);font:12.5px var(--mono)}
+.t-input input{flex:1;background:none;border:0;outline:0;color:#fff;font:12.5px var(--mono);min-width:0}
+.t-input input::placeholder{color:#4a4a4a}
+.t-input button{background:none;border:1px solid #2e2e2e;color:#bbb;border-radius:999px;font:11px var(--mono);padding:6px 12px;cursor:pointer}
+.t-input button:hover{color:#fff;border-color:#555}
+.note{margin-top:16px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font:12px var(--mono);color:var(--dim);letter-spacing:.06em}
+/* robinhood */
+.rh{margin-top:clamp(90px,9vw,130px);border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:radial-gradient(ellipse 900px 520px at 85% 10%,rgba(0,240,255,.09),transparent 70%),#030303;padding-bottom:110px}
+.chain{margin-top:64px;display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line)}
+.chain>div{padding:26px 28px;border-right:1px solid var(--line)}.chain>div:last-child{border-right:0}
+.chain .v{font:clamp(20px,2vw,30px) var(--mono);margin-top:10px}
+.rhhead{padding-top:120px;grid-template-columns:1.05fr 1fr;gap:80px}
+.rhgrid{margin-top:16px;display:grid;grid-template-columns:1fr 460px;gap:16px}
+.box{border:1px solid #262626;background:var(--bg2)}
+.verdict{font:700 15px var(--mono);padding:6px 12px;letter-spacing:.08em;border:1px solid #555}
+.verdict.DANGER{background:var(--y);color:#000;border-color:var(--y)}.verdict.CAUTION{color:var(--y);border-color:var(--y)}
+.trio{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);margin-top:20px;border:1px solid var(--line)}
+.trio>div{background:var(--bg2);padding:14px}.trio .v{font-size:28px;margin-top:4px;font-weight:300}
+.pools .row{display:flex;justify-content:space-between;gap:12px;padding:11px 20px;border-bottom:1px solid #141414;font:12.5px var(--mono);cursor:pointer}
+.pools .row:hover{background:#0d0d0d}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:60px;margin-top:60px}
+.three h3{font-size:24px;font-weight:400;margin:12px 0 0}
+.cd{font-size:15px;line-height:1.55;color:var(--mut);margin-top:10px;font-weight:300}
+/* modules */
+.mods{margin-top:64px;display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+.card{background:#000;padding:28px}
+.card .cmd{font:13px var(--mono);color:var(--y)}
+.card h3{font-size:24px;font-weight:400;margin:16px 0 0;line-height:1.15}
+.card .cr{margin-top:18px;padding-top:14px;border-top:1px solid #1f1f1f;font:12px/1.6 var(--mono);color:var(--soft)}
+.src{font:11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:12px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.tile{position:relative;height:520px;overflow:hidden;background:#050505}
+.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.tile .fade{position:absolute;inset:0;background:linear-gradient(0deg,#000,transparent 55%)}
+.tile .t{position:absolute;left:28px;bottom:28px;right:28px}
+.tile .t div:last-child{font-size:30px;margin-top:10px;line-height:1.1}
+.tile canvas{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%)}
+.surf{margin-top:64px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.auto{display:grid;grid-template-columns:1.2fr 1fr;gap:80px;align-items:center}
+.mapbox{position:relative;height:480px;border:1px solid var(--line);overflow:hidden}
+.mapbox canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);max-width:100%}
+.facts>div{display:flex;justify-content:space-between;padding:16px 0;border-bottom:1px solid #333;font-size:17px}
+footer{border-top:1px solid var(--line)}
+
+@media (max-width:1100px){.rhgrid{grid-template-columns:minmax(0,1fr)}.mods{grid-template-columns:repeat(2,minmax(0,1fr))}.auto{grid-template-columns:minmax(0,1fr);gap:40px}}
+@media (max-width:820px){.head,.rhhead,.three,.surf,.tiles{grid-template-columns:minmax(0,1fr)}.head{gap:24px}.stats,.chain{grid-template-columns:repeat(2,minmax(0,1fr))}.stats>div,.stats>div:first-child{padding:26px 20px;border-bottom:1px solid var(--line)}.chain>div{border-bottom:1px solid var(--line)}.links .opt{display:none}.tile{height:380px}.credit{display:none}}
+@media (max-width:520px){.mods{grid-template-columns:minmax(0,1fr)}.hero h1{font-size:60px}.tbody{padding:14px}.terminal-body{height:440px;font-size:10.5px;padding:14px}.t-tab{font-size:10.5px;padding:8px 6px 10px}.t-input{padding:10px 14px}.t-input .t-path{display:none}.t-meta{display:none}}
+/* ---------- motion ---------- */
+#bgfx{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.8}
+body>header,body>main,body>footer,.tape,.stats{position:relative;z-index:1}
+.hero img{animation:kb 22s ease-in-out infinite alternate;transform-origin:60% 40%}
+#herofx{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.hero h1 .ln{display:block;overflow:hidden;padding-bottom:.08em}.hero h1 .ln>span{display:inline-block;animation:rise 1.2s cubic-bezier(.2,.8,.2,1) both}.hero h1 .ln:nth-child(2)>span{animation-delay:.15s}
+@keyframes rise{from{transform:translateY(110%)}to{transform:none}}
+.hero .hin{animation:fadeup 1.2s .5s ease both}.hero nav.top{animation:fadein 1.2s .2s ease both}.credit{animation:fadein 1.5s .8s ease both}
+@keyframes fadeup{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:none}}@keyframes fadein{from{opacity:0}to{opacity:1}}
+.btn{transition:box-shadow .3s,transform .3s}.btn:hover{box-shadow:0 0 0 1px var(--y),0 0 30px rgba(0,240,255,.35);transform:translateY(-1px)}
+.credit .y{animation:blink 1.4s steps(1) infinite}
+@keyframes kb{0%{transform:translateX(-50%) scale(1)}50%{transform:translateX(-54%) translateY(-3%) scale(1.16)}100%{transform:translateX(-47%) translateY(1%) scale(1.08)}}
+.hero .scan{position:absolute;left:0;right:0;height:180px;background:linear-gradient(180deg,transparent,rgba(0,240,255,.07),transparent);animation:scan 9s linear infinite;pointer-events:none}
+@keyframes scan{0%{top:-200px}100%{top:100%}}
+.hero .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:90px 90px;animation:gridmove 30s linear infinite;mask-image:linear-gradient(180deg,#000,transparent 70%)}
+@keyframes gridmove{to{background-position:90px 90px}}
+.tile img{animation:kb2 38s ease-in-out infinite alternate}
+.tile:nth-child(3) img{animation-duration:44s;animation-direction:alternate-reverse}
+@keyframes kb2{from{transform:scale(1)}to{transform:scale(1.14) translate(-2%,-2%)}}
+.rh{position:relative;overflow:hidden;background:#030303cc}
+.rh::before{content:'';position:absolute;width:1100px;height:700px;left:55%;top:-200px;background:radial-gradient(ellipse at center,rgba(0,240,255,.12),transparent 65%);animation:glow 18s ease-in-out infinite alternate;pointer-events:none}
+.rh::after{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(0,240,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,.04) 1px,transparent 1px);background-size:60px 60px;animation:gridmove 24s linear infinite;mask-image:radial-gradient(ellipse at 70% 20%,#000,transparent 70%);pointer-events:none}
+.rh>.wrap{position:relative;z-index:1}
+@keyframes glow{0%{transform:translate(0,0)}50%{transform:translate(-30%,25%)}100%{transform:translate(-55%,5%)}}
+.card{position:relative;overflow:hidden;isolation:isolate}
+.card::before{content:'';position:absolute;width:420px;height:420px;left:var(--mx,-30%);top:var(--my,-60%);transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(0,240,255,.10),transparent 60%);transition:left .25s,top .25s;z-index:-1;animation:drift 14s ease-in-out infinite alternate;animation-delay:calc(var(--i,0) * -1.7s)}
+.card:hover::before{animation-play-state:paused}
+@keyframes drift{0%{left:-10%;top:-20%}50%{left:110%;top:40%}100%{left:20%;top:120%}}
+.card::after{content:'';position:absolute;inset:0;border:1px solid transparent;background:linear-gradient(120deg,transparent 30%,rgba(0,240,255,.5),transparent 70%) border-box;-webkit-mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .3s;background-size:300% 300%;animation:sweep 3s linear infinite}
+.card:hover::after{opacity:1}
+@keyframes sweep{to{background-position:300% 0}}
+.box,.stats>div,.chain>div{position:relative;overflow:hidden}
+.stats>div::after,.chain>div::after{content:'';position:absolute;left:-40%;top:0;bottom:0;width:40%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.035),transparent);animation:shine 7s ease-in-out infinite;animation-delay:calc(var(--i,0) * 1.1s)}
+@keyframes shine{0%,60%{left:-40%}100%{left:120%}}
+.rv{opacity:0;transform:translateY(28px);transition:opacity .9s ease,transform .9s ease}
+.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}.rv{opacity:1;transform:none}}
+/* ---------- live world ---------- */
+.world{margin-top:64px;position:relative;border:1px solid var(--line);background:#020202cc;overflow:hidden}
+.world canvas{display:block;width:100%}
+.wlegend{position:absolute;left:24px;bottom:22px;display:flex;gap:22px;flex-wrap:wrap;font:12px var(--mono);color:var(--soft)}
+.wlegend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:8px;vertical-align:0}
+.wside{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--line);border-top:0}
+.wside>div{padding:24px 26px;border-right:1px solid var(--line);min-width:0}.wside>div:last-child{border-right:0}
+.wside .row{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #141414;font-size:14px;color:var(--soft)}
+.wside .row span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wside .row span:last-child{font-family:var(--mono);color:#fff;flex:none}
+/* ---------- signal stream ---------- */
+.stream{margin-top:64px;display:grid;grid-template-columns:1fr 1fr;gap:16px;height:640px;overflow:hidden;mask-image:linear-gradient(180deg,transparent,#000 12%,#000 88%,transparent)}
+.lane{display:flex;flex-direction:column;gap:16px;animation:lane 70s linear infinite}
+.lane.b{animation-duration:85s;animation-direction:reverse}
+.stream:hover .lane{animation-play-state:paused}
+@keyframes lane{to{transform:translateY(-50%)}}
+.sig{border:1px solid #232323;background:#070707;padding:20px 22px}
+.sig .top{display:flex;gap:12px;align-items:center;font:12px var(--mono);color:var(--mut)}
+.sig .sc{min-width:34px;text-align:center;border:1px solid #3a3a3a;color:#ddd;font-weight:700;line-height:22px}
+.sig .sc.hi{background:var(--y);border-color:var(--y);color:#000}.sig .sc.mid{border-color:var(--y);color:var(--y)}
+.sig h4{margin:12px 0 0;font-size:19px;font-weight:400;line-height:1.35}
+.sig .ev{margin-top:10px;font-size:13.5px;color:var(--mut);line-height:1.5}
+.sig .ev b{font:500 11px var(--mono);color:#8cc4ff;letter-spacing:.04em;margin-right:6px}
+/* ---------- pipeline ---------- */
+.pipe{margin-top:64px;display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative;border:1px solid var(--line)}
+.pipe>div{padding:34px 30px 40px;border-right:1px solid var(--line);position:relative;background:#030303aa}.pipe>div:last-child{border-right:0}
+.pipe .n{font:13px var(--mono);color:var(--y)}
+.pipe h3{font-size:30px;font-weight:300;margin:18px 0 0;letter-spacing:-.02em}
+.pipe p{font-size:15px;line-height:1.6;color:var(--mut);margin:12px 0 0;font-weight:300}
+.pipe code{font:12px var(--mono);color:var(--soft)}
+.pipe>.flow{position:absolute;left:0;right:0;top:-1px;height:2px;overflow:hidden;padding:0;border:0;background:none}
+.flow i{position:absolute;top:0;width:120px;height:2px;background:linear-gradient(90deg,transparent,var(--y),transparent);animation:flow 4s linear infinite}
+.flow i:nth-child(2){animation-delay:-1.3s}.flow i:nth-child(3){animation-delay:-2.6s}
+@keyframes flow{from{left:-120px}to{left:100%}}
+/* ---------- sources wall ---------- */
+.wall{margin-top:56px;display:flex;flex-direction:column;gap:14px;overflow:hidden;mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+.wall .r{display:flex;gap:14px;width:max-content;animation:tape 80s linear infinite}
+.wall .r:nth-child(2){animation-duration:95s;animation-direction:reverse}
+.wall .r:nth-child(3){animation-duration:110s}
+.wall span{border:1px solid #262626;padding:12px 18px;font:14px var(--mono);color:var(--soft);white-space:nowrap;background:#060606}
+/* ---------- quota ---------- */
+.quota{margin-top:64px;display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line)}
+.quota>div{background:#000;padding:20px 24px}
+.quota .t{display:flex;justify-content:space-between;font:13px var(--mono)}
+.quota .t span:last-child{color:var(--mut)}
+.quota .bar{margin-top:12px;height:4px;background:#161616;overflow:hidden}
+.quota .bar i{display:block;height:100%;width:0;background:var(--y);transition:width 1.6s cubic-bezier(.2,.8,.2,1)}
+/* ---------- footer ---------- */
+footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparent;padding-top:90px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.38}
+.finale{position:relative;z-index:1;overflow:hidden;isolation:isolate}
+#liquidend{position:absolute;inset:0;width:100%;height:100%;z-index:-2}
+.finale-fade{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,#000 0%,rgba(0,0,0,.35) 22%,rgba(0,0,0,.15) 55%,rgba(0,0,0,.55) 100%);pointer-events:none}
+.finale .fgrid a{color:#e6fbff}.finale .fgrid h5{color:#bfefff}.finale .fgrid,.finale .fbottom{text-shadow:0 1px 12px rgba(0,0,0,.8)}.finale .fbrand p,.finale .fbottom{color:#9fd8e2}
+.finale .fstatus{background:rgba(0,0,0,.45);backdrop-filter:blur(8px)}
+#herofx{mix-blend-mode:screen}
+.hero .tint{position:absolute;inset:0;background:#00e5ff;mix-blend-mode:multiply;opacity:.92;pointer-events:none}
+.hero h1{text-shadow:0 0 60px rgba(0,240,255,.25)}
+.hero .liq{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:screen;opacity:.55;pointer-events:none}
+.fgrid{display:grid;grid-template-columns:1.6fr repeat(4,1fr);gap:40px}
+.fgrid h5{margin:0 0 18px;font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:400}
+.fgrid a{display:block;color:var(--soft);font-size:15px;padding:6px 0}
+.fgrid a:hover{color:#fff}
+.fbrand p{color:var(--mut);font-size:15px;line-height:1.6;max-width:340px;margin:18px 0 0;font-weight:300}
+.fstatus{margin-top:22px;display:inline-flex;align-items:center;gap:10px;border:1px solid #262626;padding:8px 14px;font:12px var(--mono);color:var(--soft)}
+.fstatus i{width:8px;height:8px;border-radius:50%;background:#3fd16b;box-shadow:0 0 10px #3fd16b;animation:blink 2s ease-in-out infinite}
+.fword{font-size:clamp(60px,17vw,300px);font-weight:600;letter-spacing:.04em;overflow:hidden;line-height:.8;margin:90px 0 0;text-align:center;background:linear-gradient(100deg,rgba(255,255,255,.08) 20%,#00f0ff 40%,#fff 50%,#00f0ff 60%,rgba(255,255,255,.08) 80%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;user-select:none;animation:wordflow 7s linear infinite;filter:drop-shadow(0 0 40px rgba(0,240,255,.25))}
+@keyframes wordflow{from{background-position:150% 0}to{background-position:-150% 0}}
+.fbottom{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:26px 0 30px;border-top:1px solid var(--line);font:12px var(--mono);color:var(--dim);letter-spacing:.06em}
+.fbottom a{color:var(--mut)}
+@media (max-width:1100px){.fgrid{grid-template-columns:repeat(3,minmax(0,1fr))}.fbrand{grid-column:1/-1}.pipe{grid-template-columns:repeat(2,minmax(0,1fr))}.pipe>div:nth-child(2){border-right:0}.pipe>div:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+@media (max-width:820px){.wside,.stream,.quota{grid-template-columns:minmax(0,1fr)}.wside>div{border-right:0;border-bottom:1px solid var(--line)}.stream{height:560px}.lane.b{display:none}.fgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:520px){.pipe{grid-template-columns:minmax(0,1fr)}.pipe>div{border-right:0;border-bottom:1px solid var(--line)}}
+/* ---------- right now (bento) ---------- */
+.bento{margin-top:64px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(250px,auto);gap:16px}
+.bx{position:relative;border:1px solid #1f2a2d;background:linear-gradient(160deg,rgba(0,240,255,.05),rgba(0,0,0,.6) 40%),rgba(4,8,9,.82);backdrop-filter:blur(8px);padding:22px 24px;overflow:hidden;isolation:isolate;transition:border-color .3s,transform .4s}
+.bx:hover{border-color:rgba(0,240,255,.5);transform:translateY(-3px)}
+.bx::before{content:'';position:absolute;inset:-1px;background:conic-gradient(from var(--a,0deg),transparent 0 80%,rgba(0,240,255,.55) 90%,transparent 100%);z-index:-1;animation:spin 6s linear infinite;opacity:.0;transition:opacity .3s;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;padding:1px}
+.bx:hover::before{opacity:1}
+@property --a{syntax:'<angle>';inherits:false;initial-value:0deg}
+@keyframes spin{to{--a:360deg}}
+.bx-wide{grid-column:span 2}.bx-tall{grid-row:span 2}
+.bx-h{display:flex;justify-content:space-between;gap:12px;align-items:baseline}
+.bx-h .src{margin:0}
+.bx-b{margin-top:16px}
+.sk{height:120px;background:linear-gradient(90deg,#0b1416 30%,#13262a 50%,#0b1416 70%);background-size:300% 100%;animation:skel 1.4s linear infinite}
+@keyframes skel{from{background-position:100% 0}to{background-position:-200% 0}}
+.big-num{font-size:46px;font-weight:300;letter-spacing:-.03em;line-height:1}
+.big-num small{font-size:16px;color:var(--mut);margin-left:6px;letter-spacing:0}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px;color:var(--soft)}
+.kv span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kv span:last-child{font-family:var(--mono);color:#fff;flex:none;font-size:13px}
+.kev{display:grid;grid-template-columns:minmax(0,1fr) 120px 92px;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.kev b{font:600 13px var(--mono);color:#8cf6ff}.kev div{font-size:14px;color:var(--soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meter{height:5px;background:#0f1d20;position:relative;overflow:hidden}.meter i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#00a8b8,#00f0ff);box-shadow:0 0 12px #00f0ff;transition:width 1.4s cubic-bezier(.2,.8,.2,1)}
+.due{font:12px var(--mono);text-align:right;color:var(--mut)}.due.hot{color:#ff6b6b}
+.kp{display:flex;align-items:flex-end;gap:3px;height:90px;margin-top:14px}
+.kp i{flex:1;background:linear-gradient(180deg,#00f0ff,#00505c);min-height:2px;transform-origin:bottom;animation:grow 1s cubic-bezier(.2,.8,.2,1) both}
+.kp i.storm{background:linear-gradient(180deg,#ff6b6b,#5c1f22)}
+@keyframes grow{from{transform:scaleY(0)}}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;background:#3fd16b;box-shadow:0 0 10px #3fd16b;vertical-align:1px}
+.dot.warn{background:#00f0ff;box-shadow:0 0 10px #00f0ff;animation:blink 1.4s ease-in-out infinite}.dot.bad{background:#ff6b6b;box-shadow:0 0 10px #ff6b6b;animation:blink 1s ease-in-out infinite}
+.out{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.out .t{display:flex;justify-content:space-between;gap:12px;font-size:15px;color:#fff}.out .t span:last-child{font:12px var(--mono);color:var(--mut);flex:none}
+.out p{margin:6px 0 0;font-size:13.5px;color:var(--mut);line-height:1.5}
+.cal{display:grid;grid-template-columns:62px minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+.cal .d{font:12px/1.3 var(--mono);color:#8cf6ff;text-transform:uppercase}
+.cal .k{font:10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.cal .ti{font-size:14px;color:#fff;margin-top:2px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* ---------- narratives ---------- */
+.narr{margin-top:64px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.nr{border:1px solid #1f2a2d;background:rgba(4,8,9,.82);padding:22px 24px;position:relative;overflow:hidden;transition:border-color .3s,transform .4s}
+.nr:hover{border-color:rgba(0,240,255,.5);transform:translateY(-3px)}
+.nr .ph{display:inline-block;font:10.5px var(--mono);letter-spacing:.12em;border:1px solid rgba(0,240,255,.5);color:#8cf6ff;padding:2px 8px}
+.nr .ph.GROWING{background:#00f0ff;color:#001418}.nr .ph.FADING{border-color:#333;color:var(--mut)}
+.nr h3{margin:14px 0 0;font-size:22px;font-weight:400;line-height:1.2}
+.nr .bars{display:flex;align-items:flex-end;gap:4px;height:46px;margin-top:16px}
+.nr .bars i{flex:1;background:linear-gradient(180deg,#00f0ff,#00434d);min-height:2px;transform-origin:bottom;animation:grow 1.1s cubic-bezier(.2,.8,.2,1) both}
+.nr .meta{display:flex;justify-content:space-between;font:12px var(--mono);color:var(--mut);margin-top:10px}
+.nr .lt{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06);font-size:13.5px;color:var(--soft);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* ---------- graph ---------- */
+.gbox{margin-top:64px;position:relative;height:620px;border:1px solid #1f2a2d;background:radial-gradient(ellipse at 50% 50%,rgba(0,240,255,.06),rgba(0,0,0,.7) 70%);overflow:hidden}
+.gbox canvas{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+.glegend{position:absolute;left:20px;bottom:18px;display:flex;flex-wrap:wrap;gap:16px;font:12px var(--mono);color:var(--soft)}
+.glegend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
+.gcount{position:absolute;left:20px;top:18px}
+.gtip{position:absolute;pointer-events:none;background:rgba(0,12,15,.92);border:1px solid rgba(0,240,255,.45);padding:10px 12px;font:12.5px var(--mono);color:#e6fbff;max-width:320px;word-break:break-all}
+.gtip b{display:block;font:10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#8cf6ff;margin-bottom:4px}
+/* ---------- forecasts ---------- */
+.fc{margin-top:64px;display:grid;grid-template-columns:1.1fr 1fr;gap:16px}
+.fc-card,.fc-proof{border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:28px 30px;position:relative;overflow:hidden}
+.fc-q{font-size:28px;font-weight:300;line-height:1.2;margin-top:12px;letter-spacing:-.01em}
+.prob{margin-top:22px}.prob .row{display:grid;grid-template-columns:110px minmax(0,1fr) 60px;gap:14px;align-items:center;padding:8px 0;font:13px var(--mono);color:var(--soft)}
+.prob .bar{height:10px;background:#0f1d20;position:relative;overflow:hidden}.prob .bar i{position:absolute;left:0;top:0;bottom:0;width:0;transition:width 1.6s cubic-bezier(.2,.8,.2,1)}
+.prob .m i{background:linear-gradient(90deg,#00a8b8,#00f0ff);box-shadow:0 0 14px #00f0ff}.prob .k i{background:#3a4a4d}
+.prob .row span:last-child{text-align:right;color:#fff}
+.why{margin-top:18px;font-size:15px;line-height:1.6;color:var(--soft)}
+.evl{margin-top:14px}.evl div{font-size:13.5px;color:var(--mut);padding:7px 0;border-top:1px solid rgba(255,255,255,.06)}.evl b{font:500 11px var(--mono);color:#8cc4ff;margin-right:8px}
+.steps{margin-top:16px;display:flex;flex-direction:column;gap:12px}
+.step{display:grid;grid-template-columns:28px minmax(0,1fr);gap:12px;align-items:start;opacity:0;transform:translateX(-12px);transition:opacity .6s,transform .6s}
+.step.in{opacity:1;transform:none}
+.step .ck{width:24px;height:24px;border:1px solid #00f0ff;color:#00f0ff;display:grid;place-items:center;font:12px var(--mono);box-shadow:0 0 14px rgba(0,240,255,.3)}
+.step p{margin:0;font:13px/1.6 var(--mono);color:var(--soft);word-break:break-all}
+.verified{display:inline-flex;align-items:center;gap:10px;margin-top:22px;border:1px solid #00f0ff;padding:10px 16px;font:600 13px var(--mono);letter-spacing:.12em;color:#00f0ff;box-shadow:0 0 30px rgba(0,240,255,.25),inset 0 0 20px rgba(0,240,255,.08)}
+.hash{margin-top:16px;font:11.5px var(--mono);color:var(--dim);word-break:break-all}
+/* ---------- uses + faq ---------- */
+.uses{margin-top:64px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.use{border:1px solid #1f2a2d;background:rgba(4,8,9,.82);padding:28px 26px 30px;position:relative;overflow:hidden;transition:border-color .3s,transform .4s}
+.use:hover{border-color:rgba(0,240,255,.55);transform:translateY(-4px)}
+.use::after{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,#00f0ff,transparent);transform:translateX(-100%);transition:transform .8s}
+.use:hover::after{transform:translateX(100%)}
+.use-i{font:13px var(--mono);color:#00f0ff}
+.use h3{margin:16px 0 0;font-size:26px;font-weight:300;letter-spacing:-.02em}
+.use p{font-size:15px;line-height:1.6;color:var(--mut);font-weight:300;margin:12px 0 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:20px}
+.chips span{font:12px var(--mono);border:1px solid rgba(0,240,255,.3);color:#bff8ff;padding:4px 9px;background:rgba(0,240,255,.04)}
+.faq{margin-top:56px;border-top:1px solid #1f2a2d}
+.faq details{border-bottom:1px solid #1f2a2d;padding:0 4px}
+.faq summary{list-style:none;cursor:pointer;display:flex;justify-content:space-between;gap:20px;padding:26px 0;font-size:22px;font-weight:300}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';font:300 28px var(--mono);color:#00f0ff;transition:transform .3s}
+.faq details[open] summary::after{transform:rotate(45deg)}
+.faq details p{margin:0 0 26px;max-width:820px;font-size:17px;line-height:1.7;color:var(--soft);font-weight:300;animation:fadeup .5s ease both}
+.faq a{color:#fff;text-decoration-color:#00f0ff}
+.faq code{font:.88em var(--mono);color:#fff;background:#0b1416;border:1px solid #1f2a2d;padding:1px 6px}
+@media (max-width:1100px){.bento{grid-template-columns:repeat(2,minmax(0,1fr))}.narr,.uses{grid-template-columns:repeat(2,minmax(0,1fr))}.fc{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.bento,.narr,.uses{grid-template-columns:minmax(0,1fr)}.bx-wide{grid-column:auto}.bx-tall{grid-row:auto}.kev{grid-template-columns:minmax(0,1fr) 70px}.kev .due{display:none}.gbox{height:460px}.fc-q{font-size:22px}}
+</style>
+</head>
+<body>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<canvas id="bgfx" aria-hidden="true"></canvas>
+
+<header class="hero">
+  <img src="/assets/night-emea.jpg" alt="">
+  <div class="tint"></div><div class="grid"></div><canvas id="herofx" aria-hidden="true"></canvas><div class="scan"></div><div class="shade"></div>
+  <nav class="top"><div class="wrap"><a class="logo" href="/">OCULON</a>
+    <div class="links"><a class="opt" href="#console">Console</a><a class="opt" href="#robinhood">Robinhood Chain</a><a class="opt" href="#modules">Modules</a><a href="/docs">Docs</a><a class="btn o" href="/app" style="padding:9px 14px;font-size:13px">Open app</a></div></div></nav>
+  <div class="lbl credit"><span class="y">●</span> SCAN <span id="clock">--:--:--</span> UTC<br><span id="scanning">NASA Black Marble · Europe · Africa · Asia</span></div>
+  <div class="copy"><div class="wrap">
+    <h1><span class="ln"><span>See</span></span><span class="ln"><span>everything.</span></span></h1>
+    <div class="hin" style="padding-bottom:12px"><p>An open-source intelligence engine for the physical and digital world. Routing tables to shipping lanes to fresh pools on Robinhood Chain. Self-hosted, sourced, silent until it matters.</p>
+      <div style="margin-top:26px;display:flex;gap:12px;flex-wrap:wrap"><a class="btn" href="/app">Open the app</a><span class="btn o"><span class="y">$</span> npm i -g oculon</span></div></div>
+  </div></div>
+</header>
+
+<div class="tape" id="tape" hidden><b>LIVE TAPE</b><div class="run" id="tape-run"></div></div>
+
+<div class="stats">
+  <div><div class="lbl">BGP hijacks · 48h</div><div class="v" id="s-hijacks">—</div></div>
+  <div><div class="lbl">Exploited CVEs · 7d</div><div class="v" id="s-kev">—</div></div>
+  <div><div class="lbl">Robinhood Chain txs today</div><div class="v" id="s-rh">—</div></div>
+  <div><div class="lbl">MCP tools for agents</div><div class="v" id="s-mcp">—</div></div>
+</div>
+
+<main>
+<section class="sec wrap" id="console">
+  <div class="head"><div><div class="lbl">01 · Console</div><h2 class="big" style="margin-top:18px">The whole engine,<br>one prompt away.</h2></div>
+  <p class="lead">Every module answers from the terminal in plain text, with the sources it used and whether each one was live or cached. Add <span class="mono" style="color:#fff;white-space:nowrap">--json</span> and the same answer feeds a script, a dashboard or an agent.</p></div>
+  <div class="terminal" id="console-term" style="margin-top:64px">
+    <div class="terminal-bar"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><span class="terminal-title" data-title>~/ops — oculon</span><button type="button" class="terminal-replay" id="creplay">Replay</button></div>
+    <div class="t-tabs" role="tablist" id="ctabs">
+      <button type="button" class="t-tab is-active" role="tab" data-cmd="bgp">Routing</button>
+      <button type="button" class="t-tab" role="tab" data-cmd="vulns">Exploits</button>
+      <button type="button" class="t-tab" role="tab" data-cmd="rh">Robinhood Chain</button>
+      <button type="button" class="t-tab" role="tab" data-cmd="hazards">Disasters</button>
+      <button type="button" class="t-tab" role="tab" data-cmd="cloud">Cloud</button>
+      <button type="button" class="t-tab" role="tab" data-cmd="defi">DeFi</button>
+      <span class="t-meta" id="cmeta"></span>
+    </div>
+    <pre class="terminal-body" id="cout" aria-live="polite"></pre>
+    <form class="t-input" id="cform"><span class="t-path">~/ops</span><span class="t-prompt">❯</span><span class="t-cmd">oculon</span><input id="cin" autocomplete="off" spellcheck="false" placeholder="cve CVE-2026-40217   bgp AS31452   token 0x… --chain robinhood" aria-label="Command"><button>Run ↵</button></form>
+  </div>
+  <div class="note"><span>REAL OUTPUT FROM THIS INSTALL · READ-ONLY COMMANDS · CACHED 10 MIN</span><span>--json · --no-color · did-you-mean on typos</span></div>
+</section>
+
+<section class="rh" id="robinhood"><div class="wrap">
+  <div class="head rhhead"><div><div class="lbl y">02 · Home chain</div><h2 class="big" style="margin-top:18px">Every launch on<br>Robinhood Chain,<br>traced to a wallet.</h2></div>
+  <p class="lead">Oculon grew up inside the Robinhood Chain ecosystem, so its deepest module lives there. Heron watches pools the minute they open, follows each token back to the wallet that deployed it, directly or through a launchpad, and counts how many of that wallet's launches are already dead.</p></div>
+  <div class="chain">
+    <div><div class="lbl">Block height</div><div class="v" id="c-blocks">—</div></div>
+    <div><div class="lbl">Transactions today</div><div class="v" id="c-txs">—</div></div>
+    <div><div class="lbl">Addresses</div><div class="v" id="c-addr">—</div></div>
+    <div><div class="lbl">Average gas</div><div class="v" id="c-gas">—</div></div>
+  </div>
+  <div class="rhgrid">
+    <div class="terminal">
+      <div class="terminal-bar"><span class="lights" aria-hidden="true"><i></i><i></i><i></i></span><span class="terminal-title" data-title>~/ops — oculon</span><span class="t-meta" style="padding:0">heron</span></div>
+      <pre class="terminal-body" id="rh-out" style="height:560px"></pre>
+      <form class="t-input" id="rh-form"><span class="t-path">~/ops</span><span class="t-prompt">❯</span><span class="t-cmd">check</span><input id="rh-in" autocomplete="off" spellcheck="false" placeholder="0x… Robinhood Chain token address" aria-label="Token address"><button>Check ↵</button></form>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="box" style="padding:26px">
+        <div class="lbl">Token verdict</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-top:12px"><div id="v-sym" style="font-size:40px;font-weight:500;letter-spacing:-.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">—</div><div class="verdict" id="v-verdict">…</div></div>
+        <div class="trio"><div><div class="lbl" style="font-size:10.5px">Holders</div><div class="v" id="v-holders">—</div></div><div><div class="lbl" style="font-size:10.5px">Top 10</div><div class="v" id="v-top">—</div></div><div><div class="lbl" style="font-size:10.5px">Verified</div><div class="v" id="v-ver">—</div></div></div>
+        <div id="v-reasons" style="margin-top:18px;font-size:15px;line-height:1.7;color:var(--soft)"></div>
+      </div>
+      <div class="box pools" style="flex:1"><div class="lbl" style="padding:16px 20px;border-bottom:1px solid #1e1e1e;display:flex;justify-content:space-between"><span>Newest pools · click to check</span><span class="y">oculon rh</span></div><div id="pools"></div></div>
+    </div>
+  </div>
+  <div class="three">
+    <div><div class="mono y" style="font-size:13px">01</div><h3>Pool tape</h3><div class="cd">Trending and newly created pools, each with flags: thin liquidity, buys without sells, a 60% drop inside an hour, valuation far above liquidity.</div></div>
+    <div><div class="mono y" style="font-size:13px">02</div><h3>Deployer memory</h3><div class="cd">Every token a wallet launched, including through launchpad factories. Most of its launches dead means a serial launcher, and the verdict says so.</div></div>
+    <div><div class="mono y" style="font-size:13px">03</div><h3>Wallet context</h3><div class="cd">Balance, activity and contract status on Robinhood Chain next to EVM and Solana, plus sanctions checks on the wallet and its counterparties.</div></div>
+  </div>
+</div></section>
+
+<section class="sec wrap rv" id="world">
+  <div class="head"><div><div class="lbl">03 · Live world</div><h2 class="big" style="margin-top:18px">The planet,<br>refreshed every scan.</h2></div>
+  <p class="lead">Earthquakes from USGS, military aircraft from ADS-B, storms, fires and volcanoes from NASA EONET. Every point below is on the map because a public source reported it, at the position it reported.</p></div>
+  <div class="world"><canvas id="worldmap"></canvas>
+    <div class="lbl" style="position:absolute;left:24px;top:20px" id="w-time">Loading live layers…</div>
+    <div class="wlegend"><span><i style="background:#ff6b6b"></i>Earthquakes M4.5+ · <b id="w-nq">—</b></span><span><i style="background:#fff"></i>Military aircraft · <b id="w-na">—</b></span><span><i style="background:#00f0ff"></i>Natural events · <b id="w-ne">—</b></span></div>
+  </div>
+  <div class="wside">
+    <div><div class="lbl">Strongest quakes</div><div id="w-quakes" style="margin-top:12px"></div></div>
+    <div><div class="lbl">Military air by region</div><div id="w-air" style="margin-top:12px"></div></div>
+    <div><div class="lbl">Natural events</div><div id="w-events" style="margin-top:12px"></div></div>
+  </div>
+</section>
+
+<section class="sec wrap rv" id="signals">
+  <div class="head"><div><div class="lbl">04 · Signal stream</div><h2 class="big" style="margin-top:18px">Fused, scored,<br>and sourced.</h2></div>
+  <p class="lead">When independent sources move on the same subject, Oculon turns them into one signal with a score and the evidence behind it. This is the feed from this install, newest first. Hover to pause.</p></div>
+  <div class="stream" id="stream"><div class="lane" id="lane-a"></div><div class="lane b" id="lane-b"></div></div>
+</section>
+
+<section class="sec wrap rv" id="now">
+  <div class="head"><div><div class="lbl">00 · Right now</div><h2 class="big" style="margin-top:18px">Everything it is<br>watching, at a glance.</h2></div>
+  <p class="lead">Six of the feeds this install keeps current, pulled live as you read. Each card names its source and when it was fetched.</p></div>
+  <div class="bento">
+    <article class="bx bx-wide"><div class="bx-h"><span class="lbl">Exploited in the wild · 7d</span><span class="src">CISA KEV · EPSS</span></div><div id="n-kev" class="bx-b"><div class="sk"></div></div></article>
+    <article class="bx"><div class="bx-h"><span class="lbl">Space weather</span><span class="src">NOAA SWPC</span></div><div id="n-space" class="bx-b"><div class="sk"></div></div></article>
+    <article class="bx"><div class="bx-h"><span class="lbl">Cloud and services</span><span class="src">Status pages</span></div><div id="n-cloud" class="bx-b"><div class="sk"></div></div></article>
+    <article class="bx bx-wide"><div class="bx-h"><span class="lbl">Internet outages · 48h</span><span class="src">Cloudflare Radar · IODA</span></div><div id="n-out" class="bx-b"><div class="sk"></div></div></article>
+    <article class="bx"><div class="bx-h"><span class="lbl">DeFi pulse</span><span class="src">DefiLlama</span></div><div id="n-defi" class="bx-b"><div class="sk"></div></div></article>
+    <article class="bx"><div class="bx-h"><span class="lbl">Catalysts · next 14 days</span><span class="src">Finnhub · FRED · Polymarket</span></div><div id="n-cal" class="bx-b"><div class="sk"></div></div></article>
+  </div>
+</section>
+
+<section class="sec wrap rv" id="narratives">
+  <div class="head"><div><div class="lbl">00 · Narratives</div><h2 class="big" style="margin-top:18px">Storylines,<br>not headlines.</h2></div>
+  <p class="lead">Headlines are grouped into storylines across days, so you see what is emerging, growing or fading instead of a pile of links. Bars show items per day for the last week.</p></div>
+  <div class="narr" id="narr"></div>
+</section>
+
+
+<section class="sec wrap rv" id="modules">
+  <div class="head"><div><div class="lbl">05 · Modules</div><h2 class="big" style="margin-top:18px"><span id="m-count">42</span> modules.<br>One grammar.</h2></div>
+  <p class="lead">Verb, target, flags. The same shape works for a CVE, a ship, a company or a country, and every answer lands in one evidence graph you can query later.</p></div>
+  <div class="mods">
+    <div class="card"><div class="cmd">$ oculon darkships &lt;place&gt;</div><h3>Ships that went dark</h3><div class="cd">Vessels that switched off AIS, met at sea or loitered, with port visits.</div><div class="src">Global Fishing Watch</div></div>
+    <div class="card"><div class="cmd">$ oculon sentinel &lt;place&gt;</div><h3>10 m satellite, before and after</h3><div class="cd">Optical or radar through cloud, on any date you compare.</div><div class="src">Copernicus Sentinel-1/2</div></div>
+    <div class="card"><div class="cmd">$ oculon squawk</div><h3>Aircraft in distress</h3><div class="cd">Transponders on 7500, 7600 or 7700 right now.</div><div class="cr" id="r-squawk" hidden></div><div class="src">adsb.lol</div></div>
+    <div class="card"><div class="cmd">$ oculon blackout</div><h3>Internet shutdowns</h3><div class="cd">Outages by country, checked against routing evidence.</div><div class="src">Cloudflare Radar · IODA · RIPEstat</div></div>
+    <div class="card"><div class="cmd">$ oculon defi</div><h3>DeFi under stress</h3><div class="cd">TVL crashes, stablecoin depegs, hacks, fear and greed.</div><div class="cr" id="r-defi" hidden></div><div class="src">DefiLlama · alternative.me</div></div>
+    <div class="card"><div class="cmd">$ oculon sanctions &lt;x&gt;</div><h3>Sanctions, one hop out</h3><div class="cd">Wallets, IMO numbers and names, counterparties included.</div><div class="src">OFAC · OpenSanctions</div></div>
+    <div class="card"><div class="cmd">$ oculon markets</div><h3>Prediction market gaps</h3><div class="cd">Polymarket against Kalshi and Manifold on the same question.</div><div class="src">Polymarket · Kalshi · Manifold</div></div>
+    <div class="card"><div class="cmd">$ oculon exposure &lt;domain&gt;</div><h3>What a domain leaves open</h3><div class="cd">Open ports, software and known exploited CVEs per server.</div><div class="src">Shodan InternetDB · CISA KEV</div></div>
+    <div class="card"><div class="cmd">$ oculon case new "&lt;q&gt;"</div><h3>Case files</h3><div class="cd">A deep investigation with a citation on every finding, rerun on demand.</div><div class="src">All modules</div></div>
+    <div class="card"><div class="cmd">$ oculon rewind &lt;date&gt;</div><h3>Time machine</h3><div class="cd">What Oculon would have seen on a past day, used to tune the radar.</div><div class="src">Archives · Wayback</div></div>
+    <div class="card"><div class="cmd">$ oculon connect A to B</div><h3>How two things link</h3><div class="cd">Shortest path through companies, wallets, domains and people.</div><div class="src">Evidence graph</div></div>
+    <div class="card"><div class="cmd">$ oculon ask "&lt;q&gt;"</div><h3>An agent with every tool</h3><div class="cd">Ask in plain English; it picks modules and cites what it used.</div><div class="src">Free-tier LLMs first</div></div>
+  </div>
+</section>
+
+<section class="sec wrap rv">
+  <div class="tiles">
+    <div class="tile"><img src="/assets/redsea-bm.jpg" alt="" style="filter:grayscale(1) contrast(1.3) brightness(.8)"><div class="fade"></div><div class="t"><div class="lbl" style="color:#fff">Maritime</div><div>Ships that go dark, meet and loiter.</div></div></div>
+    <div class="tile"><canvas id="globe"></canvas><div class="fade" style="background:linear-gradient(0deg,#000,transparent 50%)"></div><div class="t"><div class="lbl" style="color:#fff">Cyber · live hijacks</div><div>Every hijacked route, traced to its origin.</div></div></div>
+    <div class="tile"><img src="/assets/night-americas.jpg" alt="" style="filter:grayscale(1) brightness(1.6) contrast(1.3)"><div class="fade"></div><div class="t"><div class="lbl" style="color:#fff">Infrastructure</div><div>Blackouts and leaks, before the headlines.</div></div></div>
+  </div>
+</section>
+
+
+<section class="sec wrap rv" id="graph">
+  <div class="head"><div><div class="lbl">00 · Evidence graph</div><h2 class="big" style="margin-top:18px">Every finding<br>is connected.</h2></div>
+  <p class="lead">Companies, domains, repos, markets, stories and on-chain events share one local graph. This is the newest slice of it from this install. Hover a node to read it; <span class="mono" style="color:#fff">oculon connect A to B</span> walks it for you.</p></div>
+  <div class="gbox"><canvas id="gcanvas"></canvas>
+    <div class="glegend" id="glegend"></div>
+    <div class="gtip" id="gtip" hidden></div>
+    <div class="lbl gcount" id="gcount"></div>
+  </div>
+</section>
+
+<section class="sec wrap rv" id="forecasts">
+  <div class="head"><div><div class="lbl">00 · Forecasts with proofs</div><h2 class="big" style="margin-top:18px">Predictions you<br>cannot quietly edit.</h2></div>
+  <p class="lead">Raven writes forecasts against live prediction markets. Tortoise hashes each one into a Merkle tree and timestamps the root on Bitcoin through OpenTimestamps, so the record of what it said, and when, can be checked by anyone.</p></div>
+  <div class="fc">
+    <div class="fc-card" id="fc-card"><div class="sk"></div></div>
+    <div class="fc-proof" id="fc-proof"><div class="sk"></div></div>
+  </div>
+</section>
+
+<section class="sec wrap rv" id="how">
+  <div class="head"><div><div class="lbl">06 · How it works</div><h2 class="big" style="margin-top:18px">Sources in.<br>Evidence out.</h2></div>
+  <p class="lead">Every answer travels the same four steps, so every answer can show where it came from and how fresh it is.</p></div>
+  <div class="pipe"><div class="flow"><i></i><i></i><i></i></div>
+    <div><div class="n">01</div><h3>Fetch</h3><p>Public APIs over plain HTTP with a local cache and a daily budget per source. When a budget is spent, the last cached answer is served and labelled.</p></div>
+    <div><div class="n">02</div><h3>Module</h3><p>Each module parses, filters and scores what changed. Baselines come from earlier scans, so a surge is measured against its own history.</p></div>
+    <div><div class="n">03</div><h3>Graph</h3><p>Signals, entities and links land in one local SQLite graph with their evidence and provenance, ready for <code>connect A to B</code>.</p></div>
+    <div><div class="n">04</div><h3>Surface</h3><p>The same result object goes to the CLI, the SDK, the MCP server, this web app and the Telegram bot.</p></div>
+  </div>
+</section>
+
+
+<section class="sec wrap rv">
+  <div class="head"><div><div class="lbl">07 · Surfaces</div><h2 class="big" style="margin-top:18px">Same answer,<br>wherever you work.</h2></div>
+  <p class="lead">The verdict you saw in the terminal is the same object your code receives, your agent calls and your phone gets pinged about. One engine, no second copy of the logic.</p></div>
+  <div class="surf">
+    <div class="term"><div class="tbar"><button class="tab" aria-selected="true">SDK · TypeScript</button></div><div class="tbody"><pre><span class="y">import</span> <span class="w">{ Oculon }</span> <span class="y">from</span> 'oculon';
+
+<span class="y">const</span> <span class="w">o</span> = <span class="y">new</span> Oculon();
+<span class="y">const</span> <span class="w">r</span> = <span class="y">await</span> o.robinhoodToken(addr);
+
+r.result.verdict   <span class="d">// 'DANGER' | 'CAUTION' | 'OK'</span>
+r.result.reasons   <span class="d">// why, in plain words</span>
+r.provenance       <span class="d">// every source used</span></pre></div></div>
+    <div class="term"><div class="tbar"><button class="tab" aria-selected="true">MCP · <span id="mcp-n">71</span> tools</button></div><div class="tbody"><pre><span class="d">// any MCP client, stdio: oculon mcp</span>
+{
+  "tool": <span class="w">"oculon_robinhood_token"</span>,
+  "arguments": {
+    "address": <span class="w">"0x…"</span>
+  }
+}
+<span class="d">// also oculon_robinhood_deployer, oculon_bgp …</span></pre></div></div>
+    <div class="box" style="overflow:hidden"><div class="tbar"><button class="tab" aria-selected="true" style="font-family:var(--sans);font-size:13px">Telegram · alerts</button></div>
+      <div style="padding:20px 22px"><div id="tg" style="background:#111;border:1px solid var(--line);padding:16px 18px;font-size:14px;line-height:1.55"><span class="mut">Latest signal appears here.</span></div>
+      <div style="display:flex;gap:8px;margin-top:10px"><span style="flex:1;text-align:center;border:1px solid #333;padding:9px;font-size:13px">Useful</span><span style="flex:1;text-align:center;border:1px solid #333;padding:9px;font-size:13px">Noise</span></div>
+      <div class="mut" style="font-size:13px;margin-top:12px;line-height:1.5">Votes move each module's alert bar.</div></div></div>
+  </div>
+</section>
+
+
+<section class="sec wrap rv" id="uses">
+  <div class="head"><div><div class="lbl">00 · Who it is for</div><h2 class="big" style="margin-top:18px">One engine,<br>four desks.</h2></div>
+  <p class="lead">The same install serves very different jobs. These are the commands each desk tends to live in.</p></div>
+  <div class="uses">
+    <div class="use"><div class="use-i">01</div><h3>Security teams</h3><p>Know which exploited CVEs touch your servers, which routes were hijacked overnight and what a domain leaves open.</p><div class="chips"><span>vulns</span><span>cve</span><span>exposure</span><span>bgp</span><span>blackout</span><span>pkg</span></div></div>
+    <div class="use"><div class="use-i">02</div><h3>Crypto and Robinhood Chain</h3><p>Read a token before you touch it, trace the wallet that launched it and screen counterparties against sanctions lists.</p><div class="chips"><span>rh</span><span>token</span><span>deployer</span><span>wallet</span><span>sanctions</span><span>defi</span></div></div>
+    <div class="use"><div class="use-i">03</div><h3>Newsrooms and researchers</h3><p>Open a case with sourced findings, rewind to what was visible on a given day and spot sources that contradict each other.</p><div class="chips"><span>case new</span><span>rewind</span><span>contradictions</span><span>narratives</span><span>podcast</span><span>connect</span></div></div>
+    <div class="use"><div class="use-i">04</div><h3>Markets and companies</h3><p>Track filings, catalysts and company health, and compare prediction markets that price the same question.</p><div class="chips"><span>calendar</span><span>edgar</span><span>filings</span><span>health</span><span>markets</span><span>launches</span></div></div>
+  </div>
+</section>
+
+<section class="sec rv" id="sources">
+  <div class="wrap"><div class="head"><div><div class="lbl">08 · Sources</div><h2 class="big" style="margin-top:18px"><span id="src-n">50+</span> public sources.<br>Named on every answer.</h2></div>
+  <p class="lead">Satellites, registries, exchanges, transponders, explorers and newsrooms. The list below is read from this install's own documentation.</p></div></div>
+  <div class="wall" id="wall"></div>
+</section>
+
+<section class="sec wrap rv" id="quota">
+  <div class="head"><div><div class="lbl">09 · Free tiers</div><h2 class="big" style="margin-top:18px">Free tiers,<br>kept free.</h2></div>
+  <p class="lead">Each source gets a daily budget below its free limit. These bars are today's real usage on this install.</p></div>
+  <div class="quota" id="quota-grid"></div>
+</section>
+
+
+<section class="sec wrap rv">
+  <div class="auto">
+    <div class="mapbox"><canvas id="leakmap"></canvas><div class="lbl" style="position:absolute;left:20px;top:18px">Route leaks · AS path by country · live</div></div>
+    <div><div class="lbl">10 · Autonomy</div><h2 style="margin:16px 0 0;font-size:clamp(40px,4vw,60px);line-height:1.02;font-weight:300;letter-spacing:-.04em">An analyst that never sleeps.</h2>
+      <p class="lead" style="margin-top:24px;font-size:19px">A shared scheduler re-checks the radar, watchlist and geofences on an interval and stays quiet unless something moved. A daily budget per source keeps every free tier free.</p>
+      <div class="facts" style="margin-top:34px;border-top:1px solid #333">
+        <div><span>Runtime dependencies</span><span class="mono">0</span></div>
+        <div><span>Modules</span><span class="mono" id="f-mod">—</span></div>
+        <div><span>Version</span><span class="mono" id="f-ver">—</span></div>
+        <div><span>Licence</span><span class="mono">MIT</span></div>
+      </div></div>
+  </div>
+</section>
+
+
+<section class="sec wrap rv" id="faq">
+  <div class="head"><div><div class="lbl">00 · Questions</div><h2 class="big" style="margin-top:18px">Before you<br>install.</h2></div>
+  <p class="lead">Short answers. The documentation has the long ones.</p></div>
+  <div class="faq">
+    <details><summary>Does it cost anything?</summary><p>No. Oculon is MIT licensed. About 20 sources work with no key, and the rest use free tiers. A daily budget per source keeps usage inside those free limits.</p></details>
+    <details><summary>Where does my data go?</summary><p>Into a local SQLite file in <code>~/.oculon</code>. Nothing is sent to the authors; there is no telemetry. Queries go only to the sources a command needs. See <a href="/privacy">Privacy</a>.</p></details>
+    <details><summary>What do I need to run it?</summary><p>Node.js 22.13 or newer. <code>npm i -g oculon</code>, then <code>oculon tour</code> shows what your install can already do.</p></details>
+    <details><summary>Can my AI agent use it?</summary><p>Yes. <code>oculon mcp</code> starts an MCP server on stdio with <span class="mcpn">71</span> tools, and the TypeScript SDK returns the same result objects as the CLI.</p></details>
+    <details><summary>Does Robinhood Chain need a key?</summary><p>No. Heron reads pool data from GeckoTerminal and contract data from Blockscout without keys.</p></details>
+    <details><summary>Are the verdicts audits?</summary><p>No. Token and deployer verdicts are heuristics over pool and explorer data, and every verdict lists the reasons behind it so you can judge them.</p></details>
+  </div>
+</section>
+
+</main>
+
+<div class="finale"><canvas id="liquidend" aria-hidden="true"></canvas><div class="finale-fade"></div>
+<section class="wrap" style="padding-top:clamp(140px,14vw,220px);padding-bottom:110px;text-align:center;position:relative;z-index:1">
+  <h2 style="margin:0;font-size:clamp(64px,9vw,132px);line-height:.9;font-weight:300;letter-spacing:-.055em">Know first.</h2>
+  <div class="mono" style="margin:44px auto 0;display:inline-flex;align-items:center;gap:18px;border:1px solid #333;padding:18px 26px;font-size:clamp(13px,1.4vw,17px);background:var(--bg2)"><span class="y">$</span><span>npm i -g oculon &amp;&amp; oculon tour</span><span class="cursor"></span></div>
+  <div style="margin-top:22px"><a class="btn" href="/docs">Read the docs</a></div>
+</section>
+
+<footer class="sitefoot"><div class="wrap">
+  <div class="fgrid">
+    <div class="fbrand"><a class="logo" href="/">OCULON</a><p>Open-source intelligence engine for the physical and digital world. Self-hosted, MIT licensed, zero runtime dependencies.</p><div class="fstatus"><i></i><span id="f-status">Engine online</span></div></div>
+    <div><h5>Product</h5><a href="#console">Console</a><a href="#robinhood">Robinhood Chain</a><a href="#world">Live world</a><a href="#modules">Modules</a><a href="/app">Open the app</a></div>
+    <div><h5>Developers</h5><a href="/docs#cli">CLI</a><a href="/docs#sdk">SDK</a><a href="/docs#mcp-server">MCP server</a><a href="/docs#telegram-bot">Telegram bot</a><a href="/docs#cli-reference">Command reference</a></div>
+    <div><h5>Resources</h5><a href="/docs">Documentation</a><a href="/docs#install">Install</a><a href="/docs#configuration">Configuration</a><a href="/docs#limits">Limits</a><a href="/report">Weekly report</a></div>
+    <div><h5>Legal</h5><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/docs#license">Licence (MIT)</a><a href="/terms#sources">Data sources</a></div>
+  </div>
+  <div class="fword" aria-hidden="true">OCULON</div>
+  <div class="fbottom"><span>© <span id="year"></span> Oculon contributors · MIT</span><span>Imagery NASA GIBS · map data Natural Earth</span></div>
+</div></footer>
+</div>
+
+<script src="/assets/fx.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const api = async (path) => { const r = await fetch(path); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; };
+const fmt = (n) => Number(n).toLocaleString('en-US');
+const short = (a) => a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '';
+const memo = {};
+const once = (path) => (memo[path] ??= api(path));
+$('year').textContent = new Date().getFullYear();
+
+/* ---- terminal engine: real CLI output, typed and revealed line by line ---- */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const PROMPT = '<span class="t-path">~/ops</span> <span class="t-prompt">❯</span> ';
+document.querySelectorAll('[data-title]').forEach((el) => { el.textContent = `~/ops — oculon — ${location.host}`; });
+const TOKEN = /(\b0 dead\b)|(\[\s*\d+\])|\b(ongoing)\b|\b(ended)\b|\b(DANGER|dead)\b|\b(CAUTION|thin liquidity|orange|tsunami)\b|\b(OK|alive)\b|\b(AS\d+)\b|\b(CVE-\d{4}-\d+|GHSA(?:-[a-z0-9]{4}){3})\b|(\b\d{4}-\d\d-\d\d(?: \d\d:\d\d)?\b)|(\$[\d,]+(?:\.\d+)?)/g;
+function paintLine(line, i) {
+  const h = esc(line);
+  if (i === 0 && line.trim()) return `<span class="tl-strong">${h}</span>`;
+  if (/^sources\s/.test(line)) return `<span class="tl-dim">${h.replace(/\b(live(?:×\d+)?)\b/g, '<span class="t-ok">$1</span>')}</span>`;
+  const out = h.replace(TOKEN, (m, zero, score, ongoing, ended, bad, warn, ok, asn, id, date, money) => {
+    if (zero) return `<span class="tl-dim">${m}</span>`;
+    if (score) { const n = Number(score.replace(/\D/g, '')); return `<span class="t-score ${n >= 75 ? 'hi' : n >= 55 ? 'mid' : ''}">${n}</span>`; }
+    if (ongoing) return `<span class="t-warn">${m}</span>`;
+    if (ended) return `<span class="tl-dim">${m}</span>`;
+    if (bad) return `<span class="t-bad">${m}</span>`;
+    if (warn) return `<span class="t-warn">${m}</span>`;
+    if (ok) return `<span class="t-ok">${m}</span>`;
+    if (asn || id) return `<span class="t-id">${m}</span>`;
+    if (date) return `<span class="t-date">${m}</span>`;
+    if (money) return `<span class="t-num">${m}</span>`;
+    return m;
+  });
+  return /^\S/.test(line) && line.length < 100 ? `<span class="tl-strong">${out}</span>` : out;
+}
+function addLine(body, html, cls = '') { const s = document.createElement('span'); s.className = `t-line ${cls}`; s.innerHTML = html || ' '; body.appendChild(s); body.scrollTop = body.scrollHeight; return s; }
+const caret = () => '<span class="caret"></span>';
+const SPIN = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏';
+/** Types `oculon <cmd>` into the terminal, waits for the real output and reveals it line by line. */
+async function runIn(term, cmd, { clear = true } = {}) {
+  const id = ++term.run;
+  const body = term.body;
+  const pending = api(`/api/console?cmd=${encodeURIComponent(cmd)}`).then((r) => ({ r }), (e) => ({ e }));
+  if (term.meta) term.meta.textContent = '';
+  if (clear) { body.innerHTML = ''; body.scrollLeft = 0; }
+  else body.querySelector('.t-line:last-child .caret')?.parentElement?.remove();
+  const line = addLine(body, `${PROMPT}<span class="t-cmd"></span>${caret()}`, 'tl-cmd');
+  const c = line.querySelector('.t-cmd');
+  const text = `oculon ${cmd}`;
+  if (REDUCE) c.textContent = text;
+  else for (let i = 0; i < text.length; i++) { if (id !== term.run) return; c.textContent = text.slice(0, i + 1); await sleep(/[\s/.-]/.test(text[i]) ? 55 : 22 + (i % 4) * 6); }
+  line.querySelector('.caret')?.remove();
+  let res = null, f = 0;
+  const spin = addLine(body, '', 'tl-dim');
+  const t0 = Date.now();
+  while (!res) {
+    spin.textContent = `${SPIN[f++ % SPIN.length]} querying live sources… ${Math.floor((Date.now() - t0) / 1000)}s`;
+    res = await Promise.race([pending, sleep(90).then(() => null)]);
+    if (id !== term.run) return;
+  }
+  spin.remove();
+  if (res.e) { addLine(body, `<span class="t-bad">${esc(res.e.message)}</span>`); addLine(body, PROMPT + caret()); return null; }
+  const lines = res.r.output.split('\n');
+  const step = REDUCE ? 0 : lines.length > 45 ? 14 : 34;
+  for (let i = 0; i < lines.length; i++) { if (id !== term.run) return; addLine(body, paintLine(lines[i], i)); if (step) await sleep(step); }
+  addLine(body, PROMPT + caret());
+  if (term.meta) term.meta.textContent = `${res.r.cached ? 'cached' : 'live'} · ${new Date(res.r.ranAt).toUTCString().slice(17, 22)} UTC`;
+  return res.r;
+}
+
+/* ---- console section: scenes advance on their own while the terminal is on screen ---- */
+const ct = { body: $('cout'), meta: $('cmeta'), run: 0 };
+const tabs = [...document.querySelectorAll('#ctabs .t-tab')];
+let scene = 0, userTook = false, inView = false, playing = false;
+function mark(i) { tabs.forEach((t, j) => { t.classList.toggle('is-active', j === i); t.setAttribute('aria-selected', String(j === i)); }); }
+async function playFrom(i) {
+  playing = true;
+  for (;;) {
+    scene = (i + tabs.length) % tabs.length; mark(scene);
+    const id = ct.run + 1;
+    await runIn(ct, tabs[scene].dataset.cmd);
+    if (ct.run !== id) return;
+    await sleep(6500);
+    if (ct.run !== id || userTook || !inView) { playing = false; return; }
+    i = scene + 1;
+  }
+}
+tabs.forEach((t, i) => t.addEventListener('click', () => { userTook = true; mark(i); scene = i; runIn(ct, t.dataset.cmd); }));
+$('creplay').addEventListener('click', () => { userTook = true; runIn(ct, tabs[scene].dataset.cmd); });
+$('cform').addEventListener('submit', (e) => { e.preventDefault(); const v = $('cin').value.trim().replace(/^oculon\s+/, ''); if (!v) return; userTook = true; mark(-1); $('cin').value = ''; runIn(ct, v); });
+new IntersectionObserver((es) => { inView = es.some((x) => x.isIntersecting); if (inView && !playing && !userTook) playFrom(scene); }, { threshold: 0.3 }).observe($('console-term'));
+
+/* ---- meta ---- */
+once('/api/meta').then((m) => { countUp($('s-mcp'), m.mcpTools); $('mcp-n').textContent = m.mcpTools; $('m-count').textContent = m.modules; $('f-mod').textContent = m.modules; $('f-ver').textContent = m.version; }).catch(() => {});
+
+/* ---- tape + telegram card from the signal feed ---- */
+// The tape shows the strongest sourced signals. Raw stream surges (module "live") are left to the app:
+// they are unvetted social hashtags and can be anything.
+api('/api/signals?limit=80').then((all) => {
+  const sigs = all.filter((s) => s.module !== 'live').sort((a, b) => b.score - a.score).slice(0, 10);
+  if (!sigs.length) return;
+  const items = sigs.map((s) => `<span><span class="y">${esc(s.module.toUpperCase())}</span> ${esc(s.title)}</span>`).join('');
+  $('tape-run').innerHTML = items + items;
+  $('tape').hidden = false;
+  const s = sigs[0];
+  const ev = s.evidence?.[0];
+  $('tg').innerHTML = `<div class="mono y" style="font-size:12px">score ${Math.round(s.score)} · ${esc(s.module)}</div><div style="margin-top:6px">${esc(s.title)}</div>${ev ? `<div class="mut" style="font-size:13px;margin-top:6px">${esc(ev.source)} · ${esc(ev.text.slice(0, 120))}</div>` : ''}`;
+}).catch(() => {});
+
+/* ---- stats ---- */
+once('/api/bgp').then((b) => countUp($('s-hijacks'), b.result.incidents.hijacks.length)).catch(() => { $('s-hijacks').textContent = 'n/a'; });
+once('/api/vulns').then((v) => countUp($('s-kev'), v.result.kev.length)).catch(() => { $('s-kev').textContent = 'n/a'; });
+
+/* ---- robinhood chain ---- */
+function setVerdict(t, label) {
+  $("v-sym").textContent = t.symbol || label || short(t.address);
+  const v = $('v-verdict'); v.textContent = t.verdict; v.className = `verdict ${t.verdict}`;
+  $('v-holders').textContent = t.holders == null ? '?' : fmt(t.holders);
+  $('v-top').textContent = t.top10Share == null ? '?' : `${Math.round(t.top10Share * 100)}%`;
+  $('v-ver').textContent = t.verified == null ? '?' : t.verified ? 'yes' : 'no';
+  $('v-reasons').innerHTML = t.reasons.length ? t.reasons.map((r) => `<div><span class="y">-</span> ${esc(r)}</div>`).join('') : '<span class="mut">No risk flags.</span>';
+}
+const rt = { body: $('rh-out'), meta: null, run: 0 };
+async function checkToken(addr, label) {
+  $('rh-in').value = addr;
+  $('v-verdict').textContent = '…'; $('v-verdict').className = 'verdict';
+  const id = rt.run + 1;
+  await runIn(rt, `token ${addr} --chain robinhood`);
+  if (rt.run !== id) return;
+  // Asked after the CLI run so the verdict card reads the responses it just cached.
+  api(`/api/rhtoken?address=${addr}`).then((r) => setVerdict(r.result, label)).catch((e) => { $('v-reasons').textContent = e.message; });
+  await runIn(rt, `deployer ${addr}`, { clear: false });
+}
+$('rh-form').addEventListener('submit', (e) => { e.preventDefault(); const v = $('rh-in').value.trim(); if (/^0x[0-9a-fA-F]{40}$/.test(v)) checkToken(v); else $('v-reasons').textContent = 'Enter a 0x… token address (40 hex characters).'; });
+
+once('/api/robinhood').then((r) => {
+  const st = r.result.stats;
+  if (st) {
+    countUp($('c-blocks'), st.blocks); countUp($('c-txs'), st.transactionsToday); countUp($('c-addr'), st.addresses);
+    $('c-gas').innerHTML = `${esc(st.gasAverage ?? '?')} <span class="mut" style="font-size:18px">gwei</span>`;
+    countUp($('s-rh'), st.transactionsToday / 1e6, { dec: 2, suffix: '<span class="mut" style="font-size:24px"> M</span>' });
+  }
+  const fresh = r.result.fresh.slice(0, 7);
+  $('pools').innerHTML = fresh.map((p) => {
+    const f = p.flags[0];
+    const right = f ? `<span class="y">${esc(f.replace('thin liquidity', 'thin'))}</span>` : `<span class="mut">${p.pool.buys24h} buys / ${p.pool.sells24h} sells</span>`;
+    return `<div class="row" data-token="${esc(p.pool.token)}" data-label="${esc(p.pool.name.split(" / ")[0])}"><span class="w">${esc(p.pool.name)}</span>${right}</div>`;
+  }).join('') || '<div class="row mut">No new pools right now.</div>';
+  document.querySelectorAll('#pools .row[data-token]').forEach((row) => row.addEventListener("click", () => checkToken(row.dataset.token, row.dataset.label)));
+  const target = fresh.find((p) => p.flags.length) ?? fresh[0] ?? r.result.trending[0];
+  if (target) checkToken(target.pool.token, target.pool.name.split(" / ")[0]);
+}).catch((e) => { $('rh-out').innerHTML = `<pre class="y">${esc(e.message)}</pre>`; $('s-rh').textContent = 'n/a'; });
+
+/* ---- module result lines ---- */
+once('/api/squawks').then((r) => { const el = $('r-squawk'); el.textContent = `${r.result.total} aircraft squawking at ${new Date(r.generatedAt).toUTCString().slice(17, 22)} UTC`; el.hidden = false; }).catch(() => {});
+once('/api/defi').then((r) => { const t = r.result.totals, d = r.result.depegs?.[0]; const el = $('r-defi'); el.textContent = `TVL $${(t.defiTvl / 1e9).toFixed(1)}B · ${t.defiTvlChange7d > 0 ? '+' : ''}${t.defiTvlChange7d.toFixed(2)}% in 7d${d ? ` · ${d.symbol} off peg ${d.offPct.toFixed(0)}%` : ''}`; el.hidden = false; }).catch(() => {});
+
+/* ---- globe + leak map from live BGP incidents ---- */
+const CC = {US:[-98,39],CA:[-106,56],MX:[-102,23],BR:[-51,-14],AR:[-64,-34],CL:[-71,-33],CO:[-74,4],PE:[-75,-9],VE:[-66,7],EC:[-78.5,-1],PA:[-80,9],HN:[-87,14.8],GT:[-90.3,15.6],CR:[-84,10],CU:[-79,21.5],DO:[-70.5,18.8],PR:[-66.5,18.2],UY:[-56,-33],PY:[-58,-23],BO:[-64,-17],
+GB:[-2,53],IE:[-8,53],FR:[2.3,46.6],ES:[-3.7,40.4],PT:[-8,39.5],DE:[10,51],NL:[5.3,52.2],BE:[4.5,50.6],LU:[6.1,49.8],CH:[8.2,46.8],AT:[14.5,47.5],IT:[12.5,42.5],PL:[19,52],CZ:[15.3,49.8],SK:[19.5,48.7],HU:[19.5,47.2],RO:[25,46],BG:[25.5,42.7],RS:[20.9,44],HR:[16,45.2],SI:[14.8,46.1],BA:[17.8,44],GR:[22,39],AL:[20,41],MK:[21.7,41.6],MD:[28.5,47.2],UA:[31,49],BY:[28,53.5],LT:[24,55.3],LV:[25,57],EE:[25.5,58.7],FI:[26,64],SE:[16,62],NO:[9,61],DK:[10,56],IS:[-19,65],RU:[60,57],TR:[35,39],CY:[33.2,35],MT:[14.4,35.9],
+AM:[45,40.2],GE:[43.5,42.2],AZ:[47.5,40.3],KZ:[67,48],KG:[74.6,41.5],TJ:[71,38.8],UZ:[64,41],TM:[59,39],IR:[53,32.5],IQ:[44,33],SY:[38.5,35],LB:[35.8,33.9],IL:[35,31.4],JO:[36.5,31],SA:[45,24],AE:[54.3,24],QA:[51.2,25.3],BH:[50.6,26],KW:[47.7,29.3],OM:[57,21],YE:[48,15.5],AF:[66,33.9],PK:[69,30],IN:[79,22],BD:[90.3,23.7],LK:[80.7,7.8],NP:[84,28.3],
+CN:[103,35],HK:[114.2,22.3],TW:[121,23.7],JP:[138,36],KR:[127.8,36.4],MN:[103,46.8],VN:[106,16],TH:[101,15],MY:[102,4],SG:[103.8,1.35],ID:[118,-2],PH:[122,12],KH:[105,12.5],MM:[96,21],LA:[102.5,19],AU:[134,-25],NZ:[172,-41],
+EG:[30,26.8],LY:[17,27],TN:[9.5,34],DZ:[3,28],MA:[-6.5,32],NG:[8,9.5],GH:[-1.2,7.9],CI:[-5.5,7.5],SN:[-14.5,14.5],GM:[-15.3,13.5],KE:[37.9,0.2],ET:[39.5,9],TZ:[35,-6.3],UG:[32.3,1.4],RW:[30,-2],CD:[23.6,-2.9],CM:[12.3,5.7],AO:[17.8,-12.3],ZA:[24,-29],ZW:[29.8,-19],ZM:[27.8,-13.1],MZ:[35.5,-18.7],MG:[46.9,-19],MU:[57.5,-20.2],SD:[30,15.5],SO:[46,5.2],DJ:[42.6,11.8]};
+const visible = (proj, p) => { const r = proj.rotate(); return d3.geoDistance(p, [-r[0], -r[1]]) < Math.PI / 2 - 0.03; };
+function canvasCtx(c, w, h) { const dpr = window.devicePixelRatio || 1; c.width = w * dpr; c.height = h * dpr; c.style.width = w + 'px'; c.style.height = h + 'px'; const x = c.getContext('2d'); x.scale(dpr, dpr); return x; }
+async function drawMaps() {
+  if (!window.d3 || !window.topojson) return;
+  const [topo, bgp] = await Promise.all([fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json').then((r) => r.json()), once('/api/bgp')]);
+  const land = topojson.merge(topo, topo.objects.countries.geometries);
+  const inc = bgp.result.incidents;
+  const hij = [];
+  for (const h of inc.hijacks) for (const v of h.victimCountries || []) if (CC[h.hijackerCountry] && CC[v] && h.hijackerCountry !== v) hij.push([CC[h.hijackerCountry], CC[v]]);
+  const leaks = [];
+  for (const l of inc.leaks.filter((x) => !x.finished)) for (let i = 1; i < (l.countries || []).length; i++) { const a = CC[l.countries[i - 1]], b = CC[l.countries[i]]; if (a && b && a !== b) leaks.push([a, b]); }
+  // Wire globe, slowly turning, with the live hijack arcs.
+  const S = Math.min(450, $('globe').parentElement.clientWidth - 20), gx = canvasCtx($('globe'), S, S), r = S / 2 * .82;
+  const proj = d3.geoOrthographic().scale(r).translate([S / 2, S / 2]).clipAngle(90), path = d3.geoPath(proj, gx), grat = d3.geoGraticule10();
+  animateWhileVisible($('globe'), (t) => {
+    proj.rotate([-10 + t / 160, -32]);
+    gx.clearRect(0, 0, S, S);
+    gx.fillStyle = '#050505'; gx.beginPath(); path({ type: 'Sphere' }); gx.fill();
+    gx.strokeStyle = 'rgba(255,255,255,.1)'; gx.lineWidth = .7; gx.beginPath(); path(grat); gx.stroke();
+    gx.strokeStyle = 'rgba(255,255,255,.55)'; gx.lineWidth = 1; gx.beginPath(); path(land); gx.stroke(); gx.beginPath(); path({ type: 'Sphere' }); gx.stroke();
+    const head = (t / 2200) % 1;
+    for (const [a, b] of hij) {
+      const ip = d3.geoInterpolate(a, b), dist = d3.geoDistance(a, b); let pen = false, tip = null; gx.beginPath();
+      for (let i = 0; i <= 60; i++) { const k = i / 60, p = ip(k); if (!visible(proj, p)) { pen = false; continue; } const q = proj(p), m = 1 + .18 * dist * Math.sin(Math.PI * k); const X = S / 2 + (q[0] - S / 2) * m, Y = S / 2 + (q[1] - S / 2) * m; pen ? gx.lineTo(X, Y) : gx.moveTo(X, Y); pen = true; if (Math.abs(k - head) < 1 / 60) tip = [X, Y]; }
+      gx.strokeStyle = 'rgba(255,255,255,.55)'; gx.lineWidth = 1; gx.stroke();
+      if (tip) { gx.fillStyle = '#00f0ff'; gx.shadowColor = '#00f0ff'; gx.shadowBlur = 12; gx.beginPath(); gx.arc(tip[0], tip[1], 2.2, 0, 7); gx.fill(); gx.shadowBlur = 0; }
+    }
+  });
+  // Dot map of live route leaks; packets run along each path.
+  const box = $('leakmap').parentElement, W = Math.min(860, box.clientWidth - 20), H = Math.round(W * .52), mx = canvasCtx($('leakmap'), W, H);
+  const mp = d3.geoNaturalEarth1().fitExtent([[10, 10], [W - 10, H - 10]], { type: 'Sphere' });
+  const dpr = devicePixelRatio || 1, base = document.createElement('canvas'); base.width = W * dpr; base.height = H * dpr; const bx = base.getContext('2d'); bx.scale(dpr, dpr);
+  const mc = document.createElement('canvas'); mc.width = 720; mc.height = 360; const mxx = mc.getContext('2d');
+  const eq = d3.geoEquirectangular().scale(720 / (2 * Math.PI)).translate([360, 180]); mxx.fillStyle = '#fff'; mxx.beginPath(); d3.geoPath(eq, mxx)(land); mxx.fill();
+  const md = mxx.getImageData(0, 0, 720, 360).data, isLand = (lon, lat) => md[((Math.floor((90 - lat) / 180 * 360)) * 720 + Math.floor((lon + 180) / 360 * 720) % 720) * 4] > 128;
+  const step = W < 600 ? 2 : 1.3; bx.fillStyle = '#3a3a3a';
+  for (let lat = -58; lat <= 82; lat += step) for (let lon = -180; lon < 180; lon += step) { if (!isLand(lon, lat)) continue; const [x, y] = mp([lon, lat]); bx.beginPath(); bx.arc(x, y, W < 600 ? 1 : 1.3, 0, 7); bx.fill(); }
+  const curves = leaks.map(([a, b]) => { const p = mp(a), q = mp(b); return { p, q, c: [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2 - Math.hypot(q[0] - p[0], q[1] - p[1]) * .28] }; });
+  const ends = [...new Set(curves.map((k) => k.q.join(',')))].map((e) => e.split(',').map(Number));
+  const at = (k, t) => [(1 - t) ** 2 * k.p[0] + 2 * (1 - t) * t * k.c[0] + t * t * k.q[0], (1 - t) ** 2 * k.p[1] + 2 * (1 - t) * t * k.c[1] + t * t * k.q[1]];
+  animateWhileVisible($('leakmap'), (t) => {
+    mx.clearRect(0, 0, W, H); mx.drawImage(base, 0, 0, W, H);
+    for (const k of curves) { mx.beginPath(); mx.moveTo(k.p[0], k.p[1]); mx.quadraticCurveTo(k.c[0], k.c[1], k.q[0], k.q[1]); mx.strokeStyle = 'rgba(255,255,255,.45)'; mx.lineWidth = 1; mx.stroke(); }
+    curves.forEach((k, i) => { for (let j = 0; j < 3; j++) { const u = ((t / 2600) + i * .13 + j / 3) % 1, [x, y] = at(k, u); mx.fillStyle = '#fff'; mx.shadowColor = '#fff'; mx.shadowBlur = 8; mx.beginPath(); mx.arc(x, y, 1.8, 0, 7); mx.fill(); } });
+    mx.shadowBlur = 0;
+    const pulse = .6 + .4 * Math.sin(t / 500);
+    for (const [x, y] of ends) { const g = mx.createRadialGradient(x, y, 0, x, y, 16 * pulse + 4); g.addColorStop(0, '#00f0ff'); g.addColorStop(1, '#00f0ff00'); mx.fillStyle = g; mx.beginPath(); mx.arc(x, y, 16 * pulse + 4, 0, 7); mx.fill(); }
+  });
+}
+drawMaps().catch(() => {});
+
+/* ================= motion ================= */
+const MOTION = !REDUCE;
+// Reveal sections as they scroll in.
+const rio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); rio.unobserve(e.target); } }), { threshold: 0.12 });
+document.querySelectorAll('.rv').forEach((el) => rio.observe(el));
+// Stagger the drifting spotlights and shine bands; cards also follow the pointer.
+document.querySelectorAll('.card,.stats>div,.chain>div').forEach((el, i) => el.style.setProperty('--i', i));
+document.querySelectorAll('.card').forEach((el) => el.addEventListener('pointermove', (e) => { const r = el.getBoundingClientRect(); el.style.setProperty('--mx', `${e.clientX - r.left}px`); el.style.setProperty('--my', `${e.clientY - r.top}px`); }));
+// Numbers count up when they arrive.
+function countUp(el, to, { dec = 0, suffix = '' } = {}) {
+  if (!MOTION) { el.innerHTML = Number(to).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + suffix; return; }
+  const t0 = performance.now(), d = 1400;
+  const tick = (t) => { const k = Math.min(1, (t - t0) / d), e = 1 - Math.pow(1 - k, 3); el.innerHTML = (to * e).toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) + suffix; if (k < 1) requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+}
+// Page-wide background: slow drifting points with faint links, behind every section.
+(function bgfx() {
+  const c = $('bgfx'); if (!c || !MOTION) return;
+  const x = c.getContext('2d'); let W, H, pts;
+  const size = () => { W = c.width = innerWidth; H = c.height = innerHeight; pts = Array.from({ length: Math.round(W * H / 26000) }, () => ({ x: Math.random() * W, y: Math.random() * H, vx: (Math.random() - .5) * .18, vy: (Math.random() - .5) * .18, r: Math.random() * 1.2 + .3 })); };
+  size(); addEventListener('resize', size);
+  const frame = () => {
+    x.clearRect(0, 0, W, H);
+    for (const p of pts) { p.x = (p.x + p.vx + W) % W; p.y = (p.y + p.vy + H) % H; x.fillStyle = 'rgba(255,255,255,.35)'; x.beginPath(); x.arc(p.x, p.y, p.r, 0, 7); x.fill(); }
+    for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) { const a = pts[i], b = pts[j], d = Math.hypot(a.x - b.x, a.y - b.y); if (d < 120) { x.strokeStyle = `rgba(0,240,255,${(1 - d / 120) * .08})`; x.beginPath(); x.moveTo(a.x, a.y); x.lineTo(b.x, b.y); x.stroke(); } }
+    requestAnimationFrame(frame);
+  };
+  frame();
+})();
+// Runs `draw(t)` every frame only while the element is on screen.
+function animateWhileVisible(el, draw) {
+  if (!MOTION) { draw(0); return; }
+  let on = false, raf = 0;
+  const loop = (t) => { draw(t); if (on) raf = requestAnimationFrame(loop); };
+  new IntersectionObserver((es) => { const v = es.some((e) => e.isIntersecting); if (v && !on) { on = true; raf = requestAnimationFrame(loop); } else if (!v) { on = false; cancelAnimationFrame(raf); } }).observe(el);
+}
+
+/* ================= live world ================= */
+let WORLD_TOPO;
+const topo = () => (WORLD_TOPO ??= fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json').then((r) => r.json()));
+async function liveWorld() {
+  if (!window.d3 || !window.topojson) return;
+  const [t, quakes, mil, ev] = await Promise.all([topo(), api('/api/quakes').catch(() => []), once('/api/military').catch(() => null), api('/api/events?days=7').catch(() => null)]);
+  const land = topojson.merge(t, t.objects.countries.geometries);
+  const box = $('worldmap').parentElement, W = box.clientWidth, H = Math.round(W * .5);
+  const c = $('worldmap'), dpr = devicePixelRatio || 1; c.width = W * dpr; c.height = H * dpr; c.style.height = H + 'px';
+  const ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
+  const proj = d3.geoNaturalEarth1().fitExtent([[16, 16], [W - 16, H - 16]], { type: 'Sphere' });
+  // Static layer: dot-matrix land, drawn once.
+  const base = document.createElement('canvas'); base.width = W * dpr; base.height = H * dpr; const bx = base.getContext('2d'); bx.scale(dpr, dpr);
+  const mc = document.createElement('canvas'); mc.width = 720; mc.height = 360; const mx = mc.getContext('2d');
+  mx.fillStyle = '#fff'; mx.beginPath(); d3.geoPath(d3.geoEquirectangular().scale(720 / (2 * Math.PI)).translate([360, 180]), mx)(land); mx.fill();
+  const md = mx.getImageData(0, 0, 720, 360).data;
+  const step = W < 700 ? 2.2 : 1.25;
+  bx.fillStyle = '#2c2c2c';
+  for (let lat = -58; lat <= 82; lat += step) for (let lon = -180; lon < 180; lon += step) { if (md[(Math.min(359, Math.floor((90 - lat) * 2)) * 720 + Math.floor((lon + 180) * 2) % 720) * 4] < 128) continue; const [px, py] = proj([lon, lat]); bx.beginPath(); bx.arc(px, py, W < 700 ? .9 : 1.25, 0, 7); bx.fill(); }
+  const qs = (quakes || []).filter((q) => q.mag >= 4.5);
+  const ac = mil?.aircraft ?? [];
+  const evs = (ev?.result?.events ?? []).filter((e) => typeof e.lat === 'number');
+  $('w-nq').textContent = qs.length; $('w-na').textContent = ac.length; $('w-ne').textContent = evs.length;
+  $('w-time').textContent = `Live layers · ${new Date().toUTCString().slice(17, 22)} UTC · USGS · adsb.lol · NASA EONET`;
+  const P = (lon, lat) => proj([lon, lat]);
+  const qp = qs.map((q, i) => ({ p: P(q.lon, q.lat), r: 2 + (q.mag - 4) * 2.4, ph: i * .7 }));
+  const ap = ac.map((a, i) => ({ p: P(a.lon, a.lat), ph: (i * 37) % 100 }));
+  const ep = evs.map((e, i) => ({ p: P(e.lon, e.lat), ph: i * 1.3, big: e.severity != null }));
+  animateWhileVisible(c, (t) => {
+    const s = t / 1000;
+    ctx.clearRect(0, 0, W, H); ctx.drawImage(base, 0, 0, W, H);
+    for (const a of ap) { const tw = .35 + .65 * Math.abs(Math.sin(s * 1.5 + a.ph)); ctx.fillStyle = `rgba(255,255,255,${tw})`; ctx.fillRect(a.p[0] - 1, a.p[1] - 1, 2, 2); }
+    for (const e of ep) { const k = (s * .5 + e.ph) % 1; ctx.strokeStyle = `rgba(0,240,255,${1 - k})`; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(e.p[0], e.p[1], 3 + k * (e.big ? 26 : 16), 0, 7); ctx.stroke(); ctx.fillStyle = '#00f0ff'; ctx.beginPath(); ctx.arc(e.p[0], e.p[1], 2.4, 0, 7); ctx.fill(); }
+    for (const q of qp) { const k = (s * .35 + q.ph) % 1; ctx.strokeStyle = `rgba(255,107,107,${(1 - k) * .9})`; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.arc(q.p[0], q.p[1], q.r + k * q.r * 4, 0, 7); ctx.stroke(); ctx.fillStyle = '#ff6b6b'; ctx.beginPath(); ctx.arc(q.p[0], q.p[1], Math.max(2, q.r * .55), 0, 7); ctx.fill(); }
+  });
+  const row = (a, b) => `<div class="row"><span>${esc(a)}</span><span>${esc(b)}</span></div>`;
+  $('w-quakes').innerHTML = qs.slice().sort((a, b) => b.mag - a.mag).slice(0, 6).map((q) => row(q.place, `M${q.mag.toFixed(1)}`)).join('') || '<div class="mut">None above M4.5 right now.</div>';
+  $('w-air').innerHTML = (mil?.result?.regions ?? []).slice().sort((a, b) => b.count - a.count).slice(0, 6).map((r) => row(r.label, `${r.count}`)).join('') || '<div class="mut">No military scan yet.</div>';
+  $('w-events').innerHTML = evs.slice(0, 6).map((e) => row(e.title, e.category.replace(/([A-Z])/g, ' $1').toLowerCase())).join('') || '<div class="mut">No open events.</div>';
+}
+liveWorld().catch(() => { $('w-time').textContent = 'Live layers unavailable right now.'; });
+
+/* ================= signal stream ================= */
+api('/api/signals?limit=120').then((all) => {
+  const sigs = all.filter((s) => s.module !== 'live').slice(0, 24);
+  if (!sigs.length) { $('stream').innerHTML = '<p class="mut">No signals yet. Run oculon radar or start the schedule with oculon serve --watch 15.</p>'; $('stream').style.height = 'auto'; return; }
+  const card = (s) => { const n = Math.round(s.score), ev = (s.evidence || []).slice(0, 2); return `<div class="sig"><div class="top"><span class="sc ${n >= 75 ? 'hi' : n >= 55 ? 'mid' : ''}">${n}</span><span>${esc(s.module)}</span><span>·</span><span>${esc((s.createdAt || s.at || '').toString().slice(0, 16).replace('T', ' '))}</span></div><h4>${esc(s.title)}</h4>${ev.map((e) => `<div class="ev"><b>${esc(e.source)}</b>${esc(String(e.text).slice(0, 130))}</div>`).join('')}</div>`; };
+  const a = sigs.filter((_, i) => i % 2 === 0).map(card).join(''), b = sigs.filter((_, i) => i % 2 === 1).map(card).join('');
+  $('lane-a').innerHTML = a + a; $('lane-b').innerHTML = b + b;
+}).catch(() => {});
+
+/* ================= sources wall + quota ================= */
+api('/api/readme').then(({ markdown }) => {
+  const names = new Set();
+  for (const line of markdown.split('\n')) {
+    if (!/^\|/.test(line) || /^\|\s*-/.test(line)) continue;
+    const cells = line.split('|').map((c) => c.trim()).filter(Boolean);
+    if (cells.length < 4 || /^sources$/i.test(cells[cells.length - 1])) continue;
+    // Drop notes in brackets first, then keep names that look like a provider or a domain.
+    const cell = cells[cells.length - 1].replace(/\([^)]*\)/g, '').replace(/`/g, '');
+    for (let n of cell.split(/,|;|\s\+\s|\band\b/)) {
+      n = n.replace(/\s+/g, ' ').trim();
+      if (!n || n.length > 32 || /[:()]/.test(n) || /^(then|via|plus|pay|optional|own|none|local|oculon)\b/i.test(n) || / sources$/i.test(n) || /^(Time Machine|HN)$/.test(n)) continue;
+      if (/^[A-Z0-9]/.test(n) || /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(n)) names.add(n);
+    }
+  }
+  const list = [...names];
+  if (list.length < 8) return;
+  $('src-n').textContent = list.length;
+  const third = Math.ceil(list.length / 3);
+  $('wall').innerHTML = [0, 1, 2].map((k) => { const part = list.slice(k * third, (k + 1) * third).map((n) => `<span>${esc(n)}</span>`).join(''); return `<div class="r">${part}${part}</div>`; }).join('');
+}).catch(() => {});
+api('/api/quota').then((q) => {
+  const top = q.filter((x) => x.budget).sort((a, b) => b.used / b.budget - a.used / a.budget).slice(0, 12);
+  $('quota-grid').innerHTML = top.map((x) => `<div><div class="t"><span>${esc(x.source)}</span><span>${fmt(x.used)} / ${fmt(x.budget)}</span></div><div class="bar"><i data-w="${Math.min(100, (x.used / x.budget) * 100).toFixed(1)}"></i></div></div>`).join('');
+  new IntersectionObserver((es, o) => { if (es.some((e) => e.isIntersecting)) { document.querySelectorAll('#quota-grid .bar i').forEach((i) => { i.style.width = `${Math.max(1.5, Number(i.dataset.w))}%`; }); o.disconnect(); } }, { threshold: .2 }).observe($('quota-grid'));
+}).catch(() => {});
+fetch('/api/meta').then((r) => { $('f-status').textContent = r.ok ? 'Engine online' : 'Engine unreachable'; }).catch(() => { $('f-status').textContent = 'Engine unreachable'; });
+
+/* ================= hero: satellite passes, radar pings, scan clock ================= */
+(function hero() {
+  const tick = () => { $('clock').textContent = new Date().toUTCString().slice(17, 25); };
+  tick(); setInterval(tick, 1000);
+  // The corner label cycles through what the engine reads (names of real modules and sources).
+  const reads = ['NASA Black Marble · Europe · Africa · Asia', 'Reading Cloudflare Radar · routing', 'Reading USGS · earthquakes', 'Reading adsb.lol · military air', 'Reading Blockscout · Robinhood Chain', 'Reading CISA KEV · exploits', 'Reading NASA EONET · storms and fires'];
+  let ri = 0;
+  $('scanning').style.transition = 'opacity .35s';
+  setInterval(() => { const el = $('scanning'); el.style.opacity = 0; setTimeout(() => { ri = (ri + 1) % reads.length; el.textContent = reads[ri]; el.style.opacity = 1; }, 350); }, 3200);
+  if (!window.OculonFX) return;
+  const heroEl = document.querySelector('.hero');
+  // Liquid ink over the night photo, then the particle stream with its scanning lens on top.
+  const liq = document.createElement('canvas'); liq.className = 'liq'; liq.setAttribute('aria-hidden', 'true');
+  heroEl.insertBefore(liq, $('herofx'));
+  OculonFX.liquid(liq, { base: '#000000', mid: '#002b3d', hi: '#00f0ff', intensity: 0.9, scale: 0.45 });
+  OculonFX.stream($('herofx'), { host: heroEl, y: 0.34, tilt: 0.18, thickness: 0.09, lens: 92, caption: 'anomaly scan · move or click' });
+  // Page background and the closing section.
+  OculonFX.liquid($('liquidbg'), { base: '#000000', mid: '#001a26', hi: '#00c8e0', intensity: 0.8, scale: 0.3 });
+  OculonFX.liquid($('liquidend'), { base: '#000000', mid: '#00384d', hi: '#00f0ff', intensity: 1, scale: 0.45 });
+})();
+
+/* ================= right now ================= */
+const ago = (iso) => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`; };
+const fetchedAt = (r) => `<div class="src" style="margin-top:14px">fetched ${esc(ago(r.generatedAt))}</div>`;
+const fillMeters = (root) => requestAnimationFrame(() => setTimeout(() => root.querySelectorAll('[data-w]').forEach((i) => { i.style.width = `${i.dataset.w}%`; }), 60));
+once('/api/vulns').then((r) => {
+  const rows = r.result.kev.slice(0, 5).map((k) => {
+    const days = k.dueDate ? Math.round((Date.parse(k.dueDate) - Date.now()) / 864e5) : null;
+    const epss = k.epss ?? null;
+    return `<div class="kev"><div><b>${esc(k.cveID || k.id)}</b> ${esc(k.vendorProject || '')} ${esc(k.product || '')}</div><div class="meter" title="EPSS ${epss ?? 'n/a'}"><i data-w="${epss == null ? 0 : Math.max(3, epss * 100).toFixed(1)}"></i></div><div class="due ${days != null && days <= 3 ? 'hot' : ''}">${days == null ? '' : days >= 0 ? `due in ${days}d` : `${-days}d overdue`}</div></div>`;
+  }).join('');
+  $('n-kev').innerHTML = `<div style="display:flex;gap:30px;align-items:baseline;margin-bottom:8px"><div class="big-num">${r.result.kev.length}<small>newly exploited</small></div><div class="big-num" style="font-size:30px">${r.result.criticalCves?.length ?? 0}<small>new critical CVEs</small></div></div>${rows}<div class="src" style="margin-top:12px">bar = EPSS, the modelled chance of exploitation in 30 days · ${esc(ago(r.generatedAt))}</div>`;
+  fillMeters($('n-kev'));
+}).catch(() => { $('n-kev').innerHTML = '<p class="mut">Unavailable right now.</p>'; });
+api('/api/space').then((r) => {
+  const s = r.result, kp = (s.kp || []).slice(-24);
+  $('n-space').innerHTML = `<div class="big-num">Kp ${esc(s.kpNow)}<small>now · max ${esc(s.kpMax24h)} in 24h</small></div><div class="kv" style="margin-top:12px"><span>Storm level</span><span>${esc(s.stormLevel || 'none')}</span></div><div class="kv"><span>Strongest flare</span><span>${esc(s.strongestFlare?.maxClass || '—')}</span></div><div class="kp">${kp.map((k, i) => `<i class="${k.kp >= 5 ? 'storm' : ''}" style="height:${Math.max(3, (k.kp / 9) * 100)}%;animation-delay:${i * 30}ms" title="${esc(k.time)} Kp ${k.kp}"></i>`).join('')}</div>${fetchedAt(r)}`;
+}).catch(() => { $('n-space').innerHTML = '<p class="mut">Unavailable right now.</p>'; });
+api('/api/cloud').then((r) => {
+  const s = r.result, deg = s.degraded || [];
+  $('n-cloud').innerHTML = `<div class="big-num">${s.checked - deg.length}<small>of ${s.checked} fully up</small></div><div style="margin-top:12px">${deg.slice(0, 4).map((d) => `<div class="kv"><span><i class="dot ${d.indicator === 'major' || d.indicator === 'critical' ? 'bad' : 'warn'}"></i>${esc(d.service)}</span><span>${esc(d.indicator)}</span></div>`).join('') || '<div class="kv"><span><i class="dot"></i>All checked services operational</span><span>ok</span></div>'}</div>${fetchedAt(r)}`;
+}).catch(() => { $('n-cloud').innerHTML = '<p class="mut">Unavailable right now.</p>'; });
+api('/api/blackout').then((r) => {
+  const o = (r.result.outages || []).slice(0, 4);
+  $('n-out').innerHTML = o.map((x) => `<div class="out"><div class="t"><span><i class="dot ${x.end ? '' : 'bad'}"></i>${esc(x.country || x.countryCode || 'Unknown')}${x.network ? ` · ${esc(x.network)}` : ''}</span><span>${x.end ? 'ended' : 'ongoing'} · ${esc((x.start || '').slice(5, 16).replace('T', ' '))}</span></div>${x.description ? `<p>${esc(x.description)}</p>` : ''}</div>`).join('') + (o.length ? '' : '<p class="mut">No confirmed outages in the window.</p>') + fetchedAt(r);
+}).catch(() => { $('n-out').innerHTML = '<p class="mut">Unavailable right now.</p>'; });
+once('/api/defi').then((r) => {
+  const t = r.result.totals, drop = r.result.tvlDrops?.[0], dep = r.result.depegs?.[0];
+  $('n-defi').innerHTML = `<div class="big-num">$${(t.defiTvl / 1e9).toFixed(1)}B<small>total value locked</small></div><div class="kv" style="margin-top:12px"><span>7 day change</span><span style="color:${t.defiTvlChange7d < 0 ? '#ff6b6b' : '#3fd16b'}">${t.defiTvlChange7d > 0 ? '+' : ''}${t.defiTvlChange7d.toFixed(2)}%</span></div>${drop ? `<div class="kv"><span>Biggest drop · ${esc(drop.name)}</span><span>${drop.change1d.toFixed(0)}% 1d</span></div>` : ''}${dep ? `<div class="kv"><span>Off peg · ${esc(dep.symbol)}</span><span>${dep.offPct.toFixed(1)}%</span></div>` : ''}${fetchedAt(r)}`;
+}).catch(() => { $('n-defi').innerHTML = '<p class="mut">Unavailable right now.</p>'; });
+api('/api/calendar?days=14').then((r) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const items = (r.result.items || []).filter((i) => i.date >= today && i.kind !== "market").slice(0, 5);
+  const fmtD = (d) => new Date(d + 'T00:00:00Z').toUTCString().slice(5, 11);
+  $('n-cal').innerHTML = items.map((i) => `<div class="cal"><div class="d">${esc(fmtD(i.date))}</div><div><div class="k">${esc(i.kind)}</div><div class="ti">${esc(i.title)}</div></div></div>`).join('') || '<p class="mut">Nothing scheduled in the window.</p>';
+  $('n-cal').insertAdjacentHTML('beforeend', fetchedAt(r));
+}).catch(() => { $('n-cal').innerHTML = '<p class="mut">Unavailable right now.</p>'; });
+
+/* ================= narratives ================= */
+api('/api/narratives').then((list) => {
+  const top = list.slice(0, 6);
+  if (!top.length) { $('narr').innerHTML = '<p class="mut">No storylines yet. They appear after a few radar runs.</p>'; return; }
+  $('narr').innerHTML = top.map((n) => { const mx = Math.max(1, ...n.daily); const l = n.latest?.[0]; return `<article class="nr"><span class="ph ${esc(n.phase)}">${esc(n.phase)}</span><h3>${esc(n.name)}</h3><div class="bars">${n.daily.map((d, i) => `<i style="height:${Math.max(4, (d / mx) * 100)}%;animation-delay:${i * 70}ms"></i>`).join('')}</div><div class="meta"><span>7 days</span><span>${n.total} items</span></div>${l ? `<div class="lt">${esc(l.title)}</div>` : ''}</article>`; }).join('');
+}).catch(() => {});
+
+/* ================= evidence graph ================= */
+(function graph() {
+  const box = $('gcanvas').parentElement, c = $('gcanvas'), x = c.getContext('2d');
+  const COLORS = { company: '#00f0ff', domain: '#7df9ff', repo: '#00b8d4', market: '#5ee7ff', story: '#e6fbff', article: '#9ab8bd', topic: '#3fd16b', aircraft: '#ff9f43', event: '#2c6e78' };
+  api('/api/graph?limit=160').then((g) => {
+    if (!g.nodes.length) { $('gcount').textContent = 'The graph fills up as modules run.'; return; }
+    let W, H, dpr;
+    const size = () => { dpr = Math.min(2, devicePixelRatio || 1); W = box.clientWidth; H = box.clientHeight; c.width = W * dpr; c.height = H * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0); };
+    size(); addEventListener('resize', size);
+    const idx = new Map(), deg = new Map();
+    for (const e of g.edges) { deg.set(e.src, (deg.get(e.src) || 0) + 1); deg.set(e.dst, (deg.get(e.dst) || 0) + 1); }
+    const nodes = g.nodes.map((n, i) => { const a = (i / g.nodes.length) * Math.PI * 2; const o = { ...n, x: W / 2 + Math.cos(a) * W * .3 * Math.random(), y: H / 2 + Math.sin(a) * H * .3 * Math.random(), vx: 0, vy: 0, r: 2.5 + Math.min(9, (deg.get(n.id) || 1) * 1.1) }; idx.set(n.id, o); return o; });
+    const links = g.edges.map((e) => ({ a: idx.get(e.src), b: idx.get(e.dst), rel: e.rel })).filter((l) => l.a && l.b);
+    const kinds = {}; nodes.forEach((n) => { kinds[n.kind] = (kinds[n.kind] || 0) + 1; });
+    $('glegend').innerHTML = Object.entries(kinds).sort((a, b) => b[1] - a[1]).map(([k, n]) => `<span><i style="background:${COLORS[k] || '#5e7b80'}"></i>${esc(k)} ${n}</span>`).join('');
+    $('gcount').textContent = `${nodes.length} entities · ${links.length} links · newest slice of this install's graph`;
+    let hover = null, mouse = null;
+    c.addEventListener('pointermove', (e) => { const r = c.getBoundingClientRect(); mouse = { x: e.clientX - r.left, y: e.clientY - r.top }; });
+    c.addEventListener('pointerleave', () => { mouse = null; hover = null; $('gtip').hidden = true; });
+    let on = false;
+    const step = (t) => {
+      // light force layout: repulsion, springs, centring, a slow swirl so it never freezes
+      for (let i = 0; i < nodes.length; i++) { const a = nodes[i]; for (let j = i + 1; j < nodes.length; j++) { const b = nodes[j], dx = a.x - b.x, dy = a.y - b.y, d2 = dx * dx + dy * dy + 0.01; if (d2 > 40000) continue; const f = 900 / d2; a.vx += dx * f * .02; a.vy += dy * f * .02; b.vx -= dx * f * .02; b.vy -= dy * f * .02; } }
+      for (const l of links) { const dx = l.b.x - l.a.x, dy = l.b.y - l.a.y, d = Math.hypot(dx, dy) || 1, f = (d - 46) * .004; l.a.vx += dx / d * f * d * .1; l.a.vy += dy / d * f * d * .1; l.b.vx -= dx / d * f * d * .1; l.b.vy -= dy / d * f * d * .1; }
+      const sw = t / 1000;
+      for (const n of nodes) { n.vx += (W / 2 - n.x) * .0009 + Math.cos(sw * .3 + n.y * .01) * .02; n.vy += (H / 2 - n.y) * .0012 + Math.sin(sw * .3 + n.x * .01) * .02; n.vx *= .86; n.vy *= .86; n.x = Math.max(12, Math.min(W - 12, n.x + n.vx)); n.y = Math.max(12, Math.min(H - 12, n.y + n.vy)); }
+      hover = null;
+      if (mouse) { let best = 18; for (const n of nodes) { const d = Math.hypot(n.x - mouse.x, n.y - mouse.y); if (d < best) { best = d; hover = n; } } }
+      x.clearRect(0, 0, W, H);
+      for (const l of links) { const lit = hover && (l.a === hover || l.b === hover); x.strokeStyle = lit ? 'rgba(0,240,255,.9)' : 'rgba(0,240,255,.14)'; x.lineWidth = lit ? 1.4 : .7; x.beginPath(); x.moveTo(l.a.x, l.a.y); x.lineTo(l.b.x, l.b.y); x.stroke();
+        // packets travelling along links
+        const u = ((t / 1600) + (l.a.x * .001)) % 1; x.fillStyle = 'rgba(125,249,255,.8)'; x.fillRect(l.a.x + (l.b.x - l.a.x) * u - 1, l.a.y + (l.b.y - l.a.y) * u - 1, 2, 2); }
+      for (const n of nodes) { const col = COLORS[n.kind] || '#5e7b80'; x.fillStyle = col; x.shadowColor = col; x.shadowBlur = n === hover ? 24 : n.kind === 'event' ? 0 : 10; x.beginPath(); x.arc(n.x, n.y, n === hover ? n.r + 3 : n.r, 0, 7); x.fill(); }
+      x.shadowBlur = 0;
+      x.font = '11px "Space Mono", monospace'; x.fillStyle = 'rgba(230,251,255,.75)';
+      for (const n of nodes) if (/^(company|domain|repo|topic|aircraft)$/.test(n.kind)) x.fillText(n.name.length > 22 ? n.name.slice(0, 21) + '…' : n.name, n.x + n.r + 5, n.y + 4);
+      const tip = $('gtip');
+      if (hover) { tip.hidden = false; tip.innerHTML = `<b>${esc(hover.kind)}</b>${esc(hover.name)}<div style="color:#5e7b80;margin-top:4px">${deg.get(hover.id) || 0} links</div>`; tip.style.left = `${Math.min(W - 330, hover.x + 16)}px`; tip.style.top = `${hover.y + 14}px`; }
+      else tip.hidden = true;
+      if (on) requestAnimationFrame(step);
+    };
+    new IntersectionObserver((es) => { const v = es.some((e) => e.isIntersecting); if (v && !on) { on = true; requestAnimationFrame(step); } else if (!v) on = false; }).observe(box);
+  }).catch(() => { $('gcount').textContent = 'Graph unavailable right now.'; });
+})();
+
+/* ================= forecasts with proofs ================= */
+api('/api/forecasts').then(async (r) => {
+  const f = r.forecasts[0];
+  if (!f) { $('fc-card').innerHTML = '<p class="mut">No forecasts yet. Raven writes them once a day from live markets.</p>'; $('fc-proof').innerHTML = ''; return; }
+  const sb = r.scoreboard;
+  $('fc-card').innerHTML = `<div class="lbl">Forecast · ${esc(f.method)} · ${esc(f.createdAt.slice(0, 10))}</div><div class="fc-q">${esc(f.question)}</div>
+    <div class="prob"><div class="row m"><span>Oculon</span><div class="bar"><i data-w="${(f.pModel * 100).toFixed(1)}"></i></div><span>${Math.round(f.pModel * 100)}%</span></div><div class="row k"><span>Market</span><div class="bar"><i data-w="${(f.pMarket * 100).toFixed(1)}"></i></div><span>${Math.round(f.pMarket * 100)}%</span></div></div>
+    <div class="why">${esc(f.rationale)}</div>
+    <div class="evl">${(f.evidence || []).slice(0, 2).map((e) => `<div><b>${esc(e.source)}</b>${esc(String(e.text).slice(0, 140))}</div>`).join('')}</div>
+    <div class="src" style="margin-top:16px">scoreboard · ${sb.total} total · ${sb.open} open · ${sb.resolved} resolved${sb.resolved ? '' : ' (scores appear once markets settle)'}</div>`;
+  fillMeters($('fc-card'));
+  try {
+    const v = await api(`/api/verify?id=${encodeURIComponent(f.id)}`);
+    const p = v.result;
+    $('fc-proof').innerHTML = `<div class="lbl">Proof · Tortoise</div><div class="steps">${(p.steps || []).map((s) => `<div class="step"><div class="ck">✓</div><p>${esc(s)}</p></div>`).join('')}</div>
+      <div class="verified">● ${esc(p.status)}${p.bitcoin?.height ? ` · BITCOIN BLOCK ${esc(p.bitcoin.height)}` : ''}</div>
+      <div class="hash">leaf ${esc(p.leaf)}${p.bitcoin?.blockHash ? `<br>block ${esc(p.bitcoin.blockHash)}` : ''}</div>`;
+    const steps = [...document.querySelectorAll('#fc-proof .step')];
+    new IntersectionObserver((es, o) => { if (es.some((e) => e.isIntersecting)) { steps.forEach((s, i) => setTimeout(() => s.classList.add('in'), 300 + i * 450)); o.disconnect(); } }, { threshold: .3 }).observe($('fc-proof'));
+  } catch { $('fc-proof').innerHTML = '<div class="lbl">Proof · Tortoise</div><p class="mut" style="margin-top:14px">Verification unavailable right now. Run oculon proof verify to check it locally.</p>'; }
+}).catch(() => {});
+document.querySelectorAll('.mcpn').forEach((el) => once('/api/meta').then((m) => { el.textContent = m.mcpTools; }).catch(() => {}));
+// Number every section label in the order it appears on the page.
+(function renumber() { let n = 0; document.querySelectorAll('main section > .head .lbl, main section > .wrap > .head .lbl, main .rh > .wrap > .head .lbl, main section > .auto .lbl').forEach((el) => { if (/^\d\d · /.test(el.textContent)) { n++; el.textContent = el.textContent.replace(/^\d\d/, String(n).padStart(2, '0')); } }); })();
+
+/* ================= live updates: new signals slide into the tape without a reload ================= */
+if ('EventSource' in window) {
+  const es = new EventSource('/api/stream');
+  es.addEventListener('signal', (ev) => {
+    const sig = JSON.parse(ev.data);
+    if (sig.module === 'live') return;
+    const run = $('tape-run'); if (!run) return;
+    const item = document.createElement('span');
+    item.innerHTML = '<span class="y">NEW · ' + esc(sig.module.toUpperCase()) + '</span> ' + esc(sig.title);
+    item.style.animation = 'fadein .8s ease both';
+    run.prepend(item);
+    $('tape').hidden = false;
+  });
+}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+</script>
+</body>
+</html>

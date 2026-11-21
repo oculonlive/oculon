@@ -1,0 +1,22 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: The command or page, what you expected, and what you got instead.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Paste the relevant output and `oculon doctor`. Remove keys and personal data first.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `oculon --version` and `node --version`.

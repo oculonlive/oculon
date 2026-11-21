@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Oculon Docs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#000;--bg2:#060606;--line:#222;--text:#fff;--soft:#cfcfcf;--mut:#9a9a9a;--dim:#5e5e5e;--y:#00f0ff;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:90px}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:clip}
+a{color:inherit}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+header{position:sticky;top:0;z-index:5;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(20px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none}
+.logo span{color:var(--mut);letter-spacing:.2em;font-weight:400;margin-left:10px}
+header nav{display:flex;gap:24px;align-items:center;font-size:14px}
+header nav a{text-decoration:none;color:var(--soft)}
+.btn{background:var(--y);color:#001418 !important;padding:9px 14px;font-weight:600;text-decoration:none}
+.layout{display:grid;grid-template-columns:280px minmax(0,1fr) 240px;min-height:calc(100vh - 66px)}
+aside.left{border-right:1px solid var(--line);padding:36px 30px;position:sticky;top:66px;height:calc(100vh - 66px);overflow:auto}
+aside.left a{display:block;text-decoration:none;color:var(--mut);font-size:15px;line-height:1.3;padding:7px 0 7px 12px;border-left:2px solid transparent;margin-left:-14px}
+aside.left a.on{color:#fff;border-left-color:var(--y)}
+aside.right{border-left:1px solid var(--line);padding:56px 26px;position:sticky;top:66px;height:calc(100vh - 66px);overflow:auto}
+aside.right a{display:block;text-decoration:none;color:var(--mut);font-size:13.5px;line-height:1.35;padding:5px 0}
+main{padding:64px clamp(20px,5vw,72px) 120px;max-width:1020px}
+main h1{margin:14px 0 18px;font-size:clamp(44px,5vw,64px);font-weight:300;letter-spacing:-.04em;line-height:1}
+main h2{margin:72px 0 16px;font-size:36px;font-weight:300;letter-spacing:-.03em;padding-top:28px;border-top:1px solid var(--line)}
+main h3{margin:36px 0 10px;font-size:22px;font-weight:400}
+main p,main li{font-size:17px;line-height:1.7;color:var(--soft);font-weight:300}
+main ul{padding-left:20px}
+main strong{color:#fff;font-weight:500}
+main a{color:#fff;text-decoration-color:var(--y);text-underline-offset:3px}
+code{font-family:var(--mono);font-size:.86em;background:#111;border:1px solid #1d1d1d;padding:1px 6px;color:#fff}
+pre{background:var(--bg2);border:1px solid #262626;padding:18px 20px;overflow:auto;font:13px/1.75 var(--mono);color:#bdbdbd}
+pre code{background:none;border:0;padding:0;color:inherit;font-size:inherit}
+pre .c{color:var(--dim)}pre .k{color:var(--y)}
+table{width:100%;border-collapse:collapse;margin:18px 0;font-size:14.5px;display:block;overflow-x:auto}
+th,td{text-align:left;padding:12px 14px;border:1px solid var(--line);vertical-align:top;line-height:1.55;color:var(--soft)}
+th{font:11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mut);background:#050505}
+td:first-child{color:#fff;white-space:nowrap}
+.intro{font-size:20px !important}
+#help pre{max-height:none}
+.skeleton{color:var(--mut);font:13px var(--mono)}
+@media (max-width:1100px){.layout{grid-template-columns:240px minmax(0,1fr)}aside.right{display:none}}
+@media (max-width:760px){.layout{grid-template-columns:minmax(0,1fr)}aside.left{display:none}header nav .opt{display:none}}
+/* motion, shared with the landing page */
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.34}
+header,.layout{position:relative;z-index:1}
+header{position:sticky}
+header::after{content:'';position:absolute;left:-30%;bottom:-1px;width:30%;height:1px;background:linear-gradient(90deg,transparent,var(--y),transparent);animation:hscan 6s linear infinite}
+@keyframes hscan{to{left:100%}}
+.logo{background:linear-gradient(90deg,#fff 40%,var(--y) 50%,#fff 60%);background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shim 7s linear infinite}
+.logo span{-webkit-text-fill-color:var(--mut)}
+@keyframes shim{from{background-position:100% 0}to{background-position:-200% 0}}
+.band{position:relative;z-index:1;height:130px;margin-bottom:-130px;pointer-events:none;overflow:hidden}
+.band canvas{position:absolute;inset:0;width:100%;height:100%}
+.band canvas{-webkit-mask-image:linear-gradient(180deg,transparent,#000 30%,#000 65%,transparent);mask-image:linear-gradient(180deg,transparent,#000 30%,#000 65%,transparent)}
+main pre,main table,th{background:rgba(6,6,6,.85)}
+main h1{animation:rv .9s cubic-bezier(.2,.8,.2,1) both}
+.rv{opacity:0;transform:translateY(22px);transition:opacity .8s ease,transform .8s ease}.rv.in{opacity:1;transform:none}
+main h2{position:relative}main h2::before{content:'';position:absolute;left:0;top:-1px;height:1px;width:0;background:var(--y);transition:width 1.2s ease}main h2.in::before{width:120px}
+aside.left a{transition:color .2s,border-color .3s,padding .3s}aside.left a:hover{color:#fff;padding-left:16px}
+aside.left a.on{text-shadow:0 0 18px rgba(0,240,255,.6)}
+@keyframes rv{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.btn{transition:box-shadow .3s}.btn:hover{box-shadow:0 0 26px rgba(0,240,255,.45)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none !important;transition:none !important}.rv{opacity:1;transform:none}}
+/* ---------- docs overview cards ---------- */
+.dhero h1{margin:14px 0 12px}
+.dhero p.lead{font-size:19px;line-height:1.65;color:var(--soft);font-weight:300;max-width:760px;margin:0}
+.dstats{margin-top:30px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:#1f2a2d;border:1px solid #1f2a2d}
+.dstats div{background:rgba(4,8,9,.88);padding:16px 18px;position:relative;overflow:hidden}
+.dstats div::after{content:'';position:absolute;top:0;bottom:0;left:-50%;width:50%;background:linear-gradient(90deg,transparent,rgba(0,240,255,.07),transparent);animation:dshine 6s ease-in-out infinite;animation-delay:calc(var(--i,0)*1.1s)}
+@keyframes dshine{0%,55%{left:-50%}100%{left:120%}}
+.dstats span{display:block;font:10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}
+.dstats b{display:block;font:300 34px var(--sans);margin-top:6px;letter-spacing:-.02em}
+.dsec{margin-top:54px}
+.dsec>h2{margin:0 0 6px;padding-top:0;border-top:0;font-size:30px}
+.dsec>p.sub{margin:0 0 20px;font-size:15.5px;color:var(--mut)}
+.qs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.qc{border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:18px 18px 16px;position:relative;overflow:hidden;transition:border-color .3s,transform .35s}
+.qc:hover{border-color:rgba(0,240,255,.5);transform:translateY(-2px)}
+.qc .n{font:12px var(--mono);color:var(--y)}
+.qc h3{margin:8px 0 6px;font-size:18px;font-weight:500}
+.qc p{margin:0;font-size:14px !important;line-height:1.55 !important;color:var(--mut) !important}
+.qc .cmd{margin-top:12px;display:flex;align-items:center;gap:10px;background:#050a0b;border:1px solid #1a2629;padding:9px 10px 9px 12px;font:12.5px var(--mono);color:#e6fbff}
+.qc .cmd code{background:none;border:0;padding:0;font-size:12.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qc .cmd .p{color:var(--y)}
+.cp{background:none;border:1px solid #2a3b3f;color:#9fd8e2;font:11px var(--mono);padding:4px 9px;cursor:pointer;flex:none;transition:all .2s}
+.cp:hover{border-color:var(--y);color:#fff}.cp.ok{border-color:#3fd16b;color:#3fd16b}
+.surf{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.sc{display:block;text-decoration:none !important;border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:16px;position:relative;overflow:hidden;transition:border-color .3s,transform .35s}
+.sc:hover{border-color:rgba(0,240,255,.55);transform:translateY(-3px)}
+.sc::after{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--y),transparent);transform:translateX(-100%);transition:transform .7s}
+.sc:hover::after{transform:translateX(100%)}
+.sc .ic{font:600 13px var(--mono);color:var(--y)}
+.sc h3{margin:10px 0 4px;font-size:17px;font-weight:500;color:#fff}
+.sc p{margin:0;font-size:13px !important;line-height:1.5 !important;color:var(--mut) !important}
+.msearch{display:flex;align-items:center;gap:10px;border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:10px 14px;margin-bottom:14px}
+.msearch input{flex:1;background:none;border:0;outline:0;color:#fff;font:14px var(--mono);min-width:0}
+.msearch input::placeholder{color:#3f5b60}
+.msearch span{font:12px var(--mono);color:var(--mut)}
+.msearch:focus-within{border-color:var(--y);box-shadow:0 0 22px rgba(0,240,255,.15)}
+.mods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.mc{border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:16px 16px 14px;position:relative;overflow:hidden;transition:border-color .3s,transform .35s;animation:mcin .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes mcin{from{opacity:0;transform:translateY(12px)}}
+.mc:hover{border-color:rgba(0,240,255,.5);transform:translateY(-2px)}
+.mc h3{margin:0;font-size:17px;font-weight:500;color:#fff}
+.mc .c{margin-top:8px;font:12px var(--mono);color:var(--y);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc p{margin:8px 0 0 !important;font-size:13.5px !important;line-height:1.5 !important;color:var(--mut) !important;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.mc .s{margin-top:10px;font:10.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:#4f7177;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mc mark{background:rgba(0,240,255,.25);color:#fff}
+.mempty{font:13px var(--mono);color:var(--mut);padding:18px 0}
+@media (max-width:1100px){.surf{grid-template-columns:repeat(3,minmax(0,1fr))}.mods{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:640px){.dstats{grid-template-columns:repeat(2,minmax(0,1fr))}.qs,.mods{grid-template-columns:minmax(0,1fr)}.surf{grid-template-columns:repeat(2,minmax(0,1fr))}}
+#doc > h1:first-child{display:none}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/">OCULON<span>DOCS</span></a><nav><a class="opt" href="/">Home</a><a class="opt" href="#cli-reference">CLI reference</a><a class="btn" href="/app">Open app</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<div class="layout">
+  <aside class="left"><div class="lbl" style="margin-bottom:14px">Guide</div><div id="toc"></div></aside>
+  <main><div class="lbl">Documentation · <span id="ver">v—</span></div><section class="dhero" id="overview-cards">
+    <h1>Oculon documentation</h1>
+    <p class="lead">An open-source intelligence engine you run yourself. Start with the four commands below, pick the surface you work in, then find the module you need.</p>
+    <div class="dstats"><div><span>Version</span><b id="ds-ver">—</b></div><div><span>Modules</span><b id="ds-mod">—</b></div><div><span>MCP tools</span><b id="ds-mcp">—</b></div><div><span>Public sources</span><b id="ds-src">—</b></div></div>
+    <div class="dsec"><h2 id="start-here">Start here</h2><p class="sub">Four commands, in the order most people run them.</p>
+      <div class="qs">
+        <div class="qc"><div class="n">01</div><h3>Install</h3><p>Needs Node.js 22.13 or newer. No runtime dependencies.</p><div class="cmd"><span class="p">$</span><code>npm i -g oculon</code><button class="cp" type="button">copy</button></div></div>
+        <div class="qc"><div class="n">02</div><h3>Take the tour</h3><p>Shows what this install knows and what to try next.</p><div class="cmd"><span class="p">$</span><code>oculon tour</code><button class="cp" type="button">copy</button></div></div>
+        <div class="qc"><div class="n">03</div><h3>Open the web app</h3><p>Overview page, console, dashboard and these docs, with the schedule and live streams running.</p><div class="cmd"><span class="p">$</span><code>oculon serve --watch 15 --live</code><button class="cp" type="button">copy</button></div></div>
+        <div class="qc"><div class="n">04</div><h3>Connect an agent</h3><p>Starts the MCP server on stdio for Claude and other MCP clients.</p><div class="cmd"><span class="p">$</span><code>oculon mcp</code><button class="cp" type="button">copy</button></div></div>
+      </div></div>
+    <div class="dsec"><h2 id="surfaces">Surfaces</h2><p class="sub">The same results in five places. Each card jumps to its section.</p>
+      <div class="surf">
+        <a class="sc" href="#cli"><div class="ic">$_</div><h3>CLI</h3><p>Every module, plain text or --json.</p></a>
+        <a class="sc" href="#sdk"><div class="ic">{ }</div><h3>SDK</h3><p>TypeScript, same result objects.</p></a>
+        <a class="sc" href="#mcp-server"><div class="ic">&lt;/&gt;</div><h3>MCP server</h3><p><span class="mcpn">71</span> tools for agents.</p></a>
+        <a class="sc" href="#dashboard-and-schedule"><div class="ic">▦</div><h3>Web and schedule</h3><p>Overview, console, dashboard.</p></a>
+        <a class="sc" href="#telegram-bot"><div class="ic">✈</div><h3>Telegram bot</h3><p>Alerts with Useful and Noise votes.</p></a>
+      </div></div>
+    <div class="dsec"><h2 id="module-finder">Module finder</h2><p class="sub">Every module from the table in <a href="#what-it-does">What it does</a>. Type to filter by name, command or source.</p>
+      <label class="msearch"><span>⌕</span><input id="mq" placeholder="robinhood, cve, ships, satellite…" autocomplete="off" spellcheck="false"><span id="mn"></span></label>
+      <div class="mods" id="mods"></div></div>
+  </section>
+<div id="doc" class="skeleton">Loading…</div>
+    <section id="help"><h2 id="cli-reference">CLI reference</h2><p>The full command list, printed by <code>oculon help</code> on this install.</p><div id="help-out" class="skeleton">Loading…</div></section>
+  </main>
+  <aside class="right"><div class="lbl" style="margin-bottom:12px">On this page</div><div id="otp"></div></aside>
+</div>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#001a26', hi: '#00c8e0', intensity: 0.8, scale: 0.3 }); }
+// Headings, tables and code blocks rise in as they scroll into view.
+const rvio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); rvio.unobserve(e.target); } }), { threshold: 0.08 });
+const reveal = () => document.querySelectorAll('#doc h2, #doc h3, #doc p, #doc pre, #doc table, #doc ul, #help h2, #help pre').forEach((el) => { if (!el.classList.contains('rv')) { el.classList.add('rv'); rvio.observe(el); } });
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const slug = (s) => s.toLowerCase().replace(/<[^>]+>/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/* Small Markdown renderer for the README: headings, paragraphs, lists, fenced code, tables, inline code, bold, links. */
+function inline(s) {
+  const codes = [];
+  s = s.replace(/`([^`]+)`/g, (_, c) => `\u0000${codes.push(c) - 1}\u0000`);
+  s = esc(s);
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_, t, u) => /^(https?:|#|\/)/.test(u) ? `<a href="${u}"${u.startsWith('http') ? ' target="_blank" rel="noopener"' : ''}>${t}</a>` : t);
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${esc(codes[i])}</code>`);
+}
+function md(src) {
+  const lines = src.replace(/\r\n/g, '\n').split('\n'); let html = '', i = 0;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^```/.test(l)) { const buf = []; i++; while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]); i++; html += `<pre><code>${buf.map((b) => { const e = esc(b); const m = e.match(/^(.*?)(\s+#\s.*)$/); return m ? `${m[1].replace(/^oculon\b/, '<span class="k">oculon</span>')}<span class="c">${m[2]}</span>` : e.replace(/^oculon\b/, '<span class="k">oculon</span>'); }).join('\n')}</code></pre>`; continue; }
+    const h = /^(#{1,4})\s+(.*)$/.exec(l);
+    if (h) { const lv = h[1].length, t = inline(h[2]); html += lv === 1 ? `<h1>${t}</h1>` : `<h${lv} id="${slug(h[2])}">${t}</h${lv}>`; i++; continue; }
+    if (/^\|/.test(l)) { const rows = []; while (i < lines.length && /^\|/.test(lines[i])) rows.push(lines[i++]); const cells = (r) => r.replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map((c) => inline(c.trim().replace(/\\\|/g, '|'))); const head = cells(rows[0]); const body = rows.slice(2).map(cells); html += `<table><thead><tr>${head.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>${body.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`; continue; }
+    if (/^\s*[-*]\s+/.test(l)) { const items = []; while (i < lines.length && /^\s*[-*]\s+/.test(lines[i])) { let item = lines[i++].replace(/^\s*[-*]\s+/, ''); while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !/^\s*[-*]\s+/.test(lines[i])) item += ' ' + lines[i++].trim(); items.push(item); } html += `<ul>${items.map((t) => `<li>${inline(t)}</li>`).join('')}</ul>`; continue; }
+    if (/^\s*\d+\.\s+/.test(l)) { const items = []; while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i])) items.push(lines[i++].replace(/^\s*\d+\.\s+/, '')); html += `<ol>${items.map((t) => `<li>${inline(t)}</li>`).join('')}</ol>`; continue; }
+    if (!l.trim()) { i++; continue; }
+    const buf = []; while (i < lines.length && lines[i].trim() && !/^(#|```|\||\s*[-*]\s|\s*\d+\.\s)/.test(lines[i])) buf.push(lines[i++]);
+    html += `<p>${inline(buf.join(' '))}</p>`;
+  }
+  return html;
+}
+function buildNav() {
+  const hs = [...document.querySelectorAll('main h2[id]')];
+  $('toc').innerHTML = hs.map((h) => `<a href="#${h.id}">${h.textContent}</a>`).join('');
+  const links = [...$('toc').querySelectorAll('a')];
+  const spy = () => {
+    let cur = hs[0];
+    for (const h of hs) if (h.getBoundingClientRect().top < 140) cur = h;
+    links.forEach((a) => a.classList.toggle('on', a.getAttribute('href') === `#${cur?.id}`));
+    const sec = []; let on = false;
+    for (const el of document.querySelectorAll('main h2[id], main h3[id]')) { if (el.tagName === 'H2') on = el === cur; else if (on) sec.push(el); }
+    $('otp').innerHTML = sec.length ? sec.map((h) => `<a href="#${h.id}">${h.textContent}</a>`).join('') : `<a href="#${cur?.id}">${cur?.textContent ?? ''}</a>`;
+  };
+  addEventListener('scroll', spy, { passive: true }); spy();
+}
+fetch('/api/readme').then((r) => r.json()).then((j) => {
+  const doc = $('doc'); doc.className = ''; doc.innerHTML = md(j.markdown);
+  const first = doc.querySelector('p'); if (first) first.classList.add('intro');
+  buildNav(); reveal();
+  if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+}).catch((e) => { $('doc').textContent = `Could not load the README: ${e.message}`; });
+fetch('/api/meta').then((r) => r.json()).then((m) => { $('ver').textContent = `v${m.version}`; }).catch(() => {});
+fetch('/api/console?cmd=help').then((r) => r.json()).then((r) => {
+  const o = $('help-out'); o.className = '';
+  o.innerHTML = `<pre><code>${esc(r.output).split('\n').map((l) => /^\S/.test(l) ? `<span style="color:#fff;font-weight:700">${l}</span>` : l.replace(/^(\s+)(oculon)\b/, '$1<span class="k">$2</span>')).join('\n')}</code></pre>`;
+  buildNav(); reveal();
+}).catch(() => { $('help-out').textContent = 'Run oculon help in a terminal for the full list.'; });
+
+/* ---------- overview cards: stats, copy buttons, module finder (all read from this install) ---------- */
+document.querySelectorAll('.dstats div').forEach((el, i) => el.style.setProperty('--i', i));
+const dCount = (el, to) => { if (window.OculonFX?.reduce) { el.textContent = to; return; } const t0 = performance.now(); const tick = (t) => { const k = Math.min(1, (t - t0) / 1200), e = 1 - Math.pow(1 - k, 3); el.textContent = Math.round(to * e); if (k < 1) requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
+fetch('/api/meta').then((r) => r.json()).then((m) => { $('ds-ver').textContent = m.version; dCount($('ds-mod'), m.modules); dCount($('ds-mcp'), m.mcpTools); document.querySelectorAll('.mcpn').forEach((el) => { el.textContent = m.mcpTools; }); }).catch(() => {});
+document.querySelectorAll('.qc .cp').forEach((b) => b.addEventListener('click', async () => {
+  const text = b.parentElement.querySelector('code').textContent;
+  try { await navigator.clipboard.writeText(text); b.textContent = 'copied'; b.classList.add('ok'); } catch { b.textContent = 'select'; }
+  setTimeout(() => { b.textContent = 'copy'; b.classList.remove('ok'); }, 1600);
+}));
+fetch('/api/readme').then((r) => r.json()).then(({ markdown }) => {
+  const lines = markdown.split('\n');
+  const start = lines.findIndex((l) => /^\|\s*Module\s*\|\s*Command\s*\|/.test(l));
+  const mods = [];
+  for (let i = start + 2; start >= 0 && i < lines.length && /^\|/.test(lines[i]); i++) {
+    const c = lines[i].replace(/^\||\|$/g, '').split(/(?<!\\)\|/).map((x) => x.trim().replace(/\\\|/g, '|'));
+    if (c.length < 4) continue;
+    const plain = (s) => s.replace(/`/g, '').replace(/\*\*/g, '');
+    const desc = plain(c[2]);
+    mods.push({ name: plain(c[0]), cmd: plain(c[1]), desc, short: desc, src: plain(c[3]) });
+  }
+  // Source count, read the same way as on the overview page.
+  const names = new Set();
+  for (const m of mods) for (let n of m.src.replace(/\([^)]*\)/g, '').split(/,|;|\s\+\s|\band\b/)) { n = n.trim(); if (n && n.length <= 32 && !/[:()]/.test(n) && !/^(then|via|plus|pay|optional|own|none|local|oculon)\b/i.test(n) && !/ sources$/i.test(n) && !/^(Time Machine|HN)$/.test(n) && (/^[A-Z0-9]/.test(n) || /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(n))) names.add(n); }
+  if (names.size) dCount($('ds-src'), names.size);
+  const hl = (s, q) => q ? esc(s).replace(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig'), '<mark>$1</mark>') : esc(s);
+  const render = () => {
+    const q = $('mq').value.trim();
+    const ql = q.toLowerCase();
+    const list = mods.filter((m) => !ql || `${m.name} ${m.cmd} ${m.desc} ${m.src}`.toLowerCase().includes(ql));
+    $("mn").textContent = `${list.length} of ${mods.length} entries`;
+    $('mods').innerHTML = list.map((m, i) => `<div class="mc" style="animation-delay:${Math.min(i, 12) * 30}ms" title="${esc(m.desc)}"><h3>${hl(m.name, q)}</h3><div class="c">${hl(m.cmd, q)}</div><p>${hl(m.short, q)}</p><div class="s">${hl(m.src, q)}</div></div>`).join('') || '<div class="mempty">No module matches that. Try a source name or a command.</div>';
+  };
+  $('mq').addEventListener('input', render);
+  render();
+}).catch(() => { $('mods').innerHTML = '<div class="mempty">Could not read the module table.</div>'; });
+</script>
+</body>
+</html>
