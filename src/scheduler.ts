@@ -75,7 +75,7 @@ export function startScheduler(o: Oculon, opts: SchedulerOptions = {}): { stop: 
       if (due('scoops', 6 * 60 * MIN)) await task('scoops', async () => void (await o.scoopsCheck(6)));
       if (due('markets', 6 * 60 * MIN)) await task('markets', async () => (await o.markets()).signals);
       if (due('bgp', 60 * MIN)) await task('bgp', async () => (await o.bgp('world')).signals);
-      if (due('defi', 60 * MIN)) await task('defi', async () => (await o.defi()).signals);
+      if (onchainEnabled() && due('defi', 60 * MIN)) await task('defi', async () => (await o.defi()).signals);
       if (due('vulns', 6 * 60 * MIN)) await task('vulns', async () => (await o.vulns({ days: 2 })).signals);
       if (due('regs', 6 * 60 * MIN)) await task('regs', async () => (await o.regs({ days: 2 })).signals);
       if (!doneToday('forecast')) {

@@ -27,6 +27,8 @@ export interface WebOptions {
   adminToken?: string;
   /** Public domain (default OCULON_DOMAIN): app.<domain> serves the dashboard and docs.<domain> the docs. */
   domain?: string;
+  /** Shared secret with the edge Worker (default OCULON_EDGE_SECRET). */
+  edgeSecret?: string;
   /** Minutes between background scans; 0 disables. */
   watchMinutes?: number;
   oculon?: Oculon;
@@ -69,7 +71,7 @@ export function consoleArgv(input: string): string[] | null {
   if (!parts.length || parts.length > 4) return null;
   const [cmd, a1, a2, a3] = parts;
   const onchain = onchainEnabled();
-  const bare = ['bgp', 'vulns', 'hazards', 'cloud', 'defi', 'squawk', 'blackout', 'regs', 'calendar', 'quota', 'help', ...(onchain ? ['rh'] : [])];
+  const bare = ['bgp', 'vulns', 'hazards', 'cloud', 'squawk', 'blackout', 'regs', 'calendar', 'quota', 'help', ...(onchain ? ['rh', 'defi'] : [])];
   if (parts.length === 1 && bare.includes(cmd!)) return [cmd!];
   if (onchain && cmd === 'deployer' && parts.length === 2 && HEX_ADDR.test(a1!)) return ['deployer', a1!];
   if (onchain && cmd === 'token' && HEX_ADDR.test(a1!) && ((parts.length === 2) || (a2 === '--chain' && /^(eth|base|arbitrum|bsc|polygon|robinhood)$/.test(a3 ?? '')))) return parts as string[];
@@ -310,7 +312,7 @@ function streamSignals(req: IncomingMessage, res: ServerResponse, o: Oculon, onl
 }
 
 /** Endpoints that only exist for the on-chain features. */
-const ONCHAIN_ROUTES = new Set(['/api/robinhood', '/api/rhtoken', '/api/deployer', '/api/rh/deployers', '/api/wallet', '/api/token']);
+const ONCHAIN_ROUTES = new Set(['/api/defi', '/api/protocol', '/api/robinhood', '/api/rhtoken', '/api/deployer', '/api/rh/deployers', '/api/wallet', '/api/token']);
 
 /** Drops on-chain signals, entities and watch items from shared views while those features are paused. */
 function withoutOnchain(path: string, out: unknown): unknown {
@@ -374,14 +376,19 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
 
   // OCULON_DOMAIN (e.g. oculon.live) turns on subdomain links and redirects for app.* and docs.*.
   const siteDomain = (opts.domain ?? process.env.OCULON_DOMAIN ?? '').trim().toLowerCase() || null;
+  // A Cloudflare Worker serves app.<domain> and docs.<domain> by forwarding to this server with the site name
+  // and the client address in headers. Those headers count only when they carry the shared edge secret.
+  const edgeSecret = (opts.edgeSecret ?? process.env.OCULON_EDGE_SECRET ?? '').trim() || null;
 
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const locked = (failed: boolean) => renderPage(lockedPage(Boolean(adminToken), failed), siteDomain);
     const url = new URL(req.url ?? '/', 'http://localhost');
-    const hostName = String(req.headers.host ?? '').split(':')[0]!.toLowerCase();
+    const viaEdge = Boolean(edgeSecret) && tokenMatches(String(req.headers['x-oculon-edge'] ?? ''), edgeSecret!);
+    const edgeSite = viaEdge ? String(req.headers['x-oculon-site'] ?? '') : '';
+    const hostName = siteDomain && /^(app|docs)$/.test(edgeSite) ? `${edgeSite}.${siteDomain}` : String(req.headers.host ?? '').split(':')[0]!.toLowerCase();
     const admin = !publicMode || isAdmin(req, adminToken);
     if (publicMode) {
-      const ip = clientIp(req);
+      const ip = (viaEdge && String(req.headers['x-oculon-client-ip'] ?? '').trim()) || clientIp(req);
       if (url.pathname === '/login' && req.method === 'POST') {
         if (!limiter.allow(ip, '/api/console')) return send(res, 429, locked(true), 'text/html; charset=utf-8');
         let raw = '';
@@ -426,7 +433,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     }
     if (req.method !== 'GET') return send(res, 405, '{"error":"method not allowed"}', 'application/json');
     // Pages: landing at /, dashboard at /app, docs at /docs. On app.* and docs.* hosts the root serves that page.
-    const sub = (req.headers.host ?? '').split('.')[0];
+    const sub = hostName.split('.')[0];
     const page = url.pathname === '/' ? (sub === 'app' ? 'app' : sub === 'docs' ? 'docs' : 'landing') : url.pathname === '/app' || url.pathname === '/app/' || url.pathname === '/index.html' ? 'app' : url.pathname === '/docs' || url.pathname === '/docs/' ? 'docs' : /^\/(privacy|terms)\/?$/.test(url.pathname) ? 'legal' : null;
     if (page) {
       // On the public domain, /app and /docs live on their own subdomains.

@@ -91,7 +91,7 @@ const BOOLEAN = new Set(['json', 'help', 'no-github', 'no-org', 'version', 'live
 /** Help without the paused on-chain commands (they come back with OCULON_ONCHAIN=1). */
 function helpText(): string {
   if (onchainEnabled()) return HELP;
-  return HELP.split('\n').filter((l) => !/oculon (rh|deployer|wallet|token)\b|@robinhood/.test(l)).join('\n');
+  return HELP.split('\n').filter((l) => !/oculon (rh|deployer|wallet|token|defi|protocol)\b|@robinhood/.test(l)).join('\n');
 }
 
 const HELP = `${c.bold('oculon')} ${c.dim(`v${VERSION}`)} — OSINT intelligence engine for AI agents

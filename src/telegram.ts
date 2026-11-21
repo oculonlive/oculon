@@ -43,7 +43,7 @@ export function formatSignal(s: Signal): string {
 
 /** Help text without the paused on-chain commands (they return with OCULON_ONCHAIN=1). */
 export function helpHtml(): string {
-  return onchainEnabled() ? HELP : HELP.split('\n').filter((l) => !/^\/(wallet|token|rh|deployer)\b/.test(l)).join('\n');
+  return onchainEnabled() ? HELP : HELP.split('\n').filter((l) => !/^\/(wallet|token|rh|deployer|defi|protocol)\b/.test(l)).join('\n');
 }
 
 export const HELP = [
@@ -186,7 +186,7 @@ export class TelegramBot {
     const o = this.oculon;
     const needArg = (example: string) => ({ html: `Usage: ${esc(cmd)} ${esc(example)}` });
 
-    if (/^\/(wallet|token|rh|deployer)$/.test(cmd) && !onchainEnabled()) return { html: esc(ONCHAIN_PAUSED_MESSAGE) };
+    if (/^\/(wallet|token|rh|deployer|defi|protocol)$/.test(cmd) && !onchainEnabled()) return { html: esc(ONCHAIN_PAUSED_MESSAGE) };
     switch (cmd) {
       case '/start':
       case '/help':
@@ -660,7 +660,7 @@ export class TelegramBot {
     const me = await this.call<{ username: string }>('getMe', {});
     this.log(`bot @${me.username} running; ${this.opts.allowedChats.length} allowed chat(s)`);
     await this.call('setMyCommands', {
-      commands: ['ask', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].map((c) => ({ command: c, description: `Oculon ${c}` })),
+      commands: ['ask', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
     }).catch(() => {});
     if (this.opts.watchMinutes && this.opts.watchMinutes > 0) {
       this.scheduler = startScheduler(this.oculon, {

@@ -390,7 +390,8 @@ nav button { white-space: nowrap; }
       <article class="ov"><div class="ovh"><span>Cloud and services</span><a data-go="world">World →</a></div><div id="ov-cloud" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Official status pages</div></article>
 <!--onchain-->      <article class="ov w2"><div class="ovh"><span>Robinhood Chain · newest pools</span><a data-go="investigate" data-kind="robinhood">Investigate →</a></div><div id="ov-rh" class="ovb"><div class="ov-sk"></div></div><div class="ovf">GeckoTerminal · Blockscout</div></article><!--/onchain-->
       <article class="ov w2"><div class="ovh"><span>Internet outages · 48h</span><a data-go="world">World →</a></div><div id="ov-out" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Cloudflare Radar · IODA</div></article>
-      <article class="ov"><div class="ovh"><span>DeFi pulse</span><a href="/docs#what-it-does">Docs →</a></div><div id="ov-defi" class="ovb"><div class="ov-sk"></div></div><div class="ovf">DefiLlama</div></article>
+<!--onchain-->      <article class="ov"><div class="ovh"><span>DeFi pulse</span><a href="/docs#what-it-does">Docs →</a></div><div id="ov-defi" class="ovb"><div class="ov-sk"></div></div><div class="ovf">DefiLlama</div></article><!--/onchain-->
+<!--offchain-->      <article class="ov"><div class="ovh"><span>Disaster alerts</span><a data-go="world">World →</a></div><div id="ov-haz" class="ovb"><div class="ov-sk"></div></div><div class="ovf">GDACS · tsunami.gov</div></article><!--/offchain-->
       <article class="ov"><div class="ovh"><span>Catalysts · 14 days</span><a data-go="calendar">Calendar →</a></div><div id="ov-cal" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Finnhub · FRED · Federal Register</div></article>
       <article class="ov w2"><div class="ovh"><span>Narratives</span><a data-go="signals">Signals →</a></div><div id="ov-narr" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Storylines across days</div></article>
       <article class="ov w2"><div class="ovh"><span>Forecast and proof</span><a data-go="forecasts">Forecasts →</a></div><div id="ov-fc" class="ovb"><div class="ov-sk"></div></div><div class="ovf">Raven · Tortoise · OpenTimestamps</div></article>
@@ -741,10 +742,14 @@ async function loadOverview() {
     const o = (r.result.outages || []).slice(0, 4);
     document.getElementById('ov-out').innerHTML = o.map((x) => `<div class="ov-out"><div class="t"><span><i class="ov-dot ${x.end ? '' : 'bad'}"></i>${esc(x.country || x.countryCode || 'Unknown')}${x.network ? ` · ${esc(x.network)}` : ''}</span><span>${x.end ? 'ended' : 'ongoing'} · ${esc((x.start || '').slice(5, 16).replace('T', ' '))}</span></div>${x.description ? `<p>${esc(x.description)}</p>` : ''}</div>`).join('') || '<p class="meta">No confirmed outages in the window.</p>';
   }).catch(ovFail('ov-out'));
-  api('/api/defi').then((r) => {
+/*onchain*/  api('/api/defi').then((r) => {
     const t = r.result.totals, drop = r.result.tvlDrops?.[0], dep = r.result.depegs?.[0];
     document.getElementById('ov-defi').innerHTML = `<div class="ov-big">$${(t.defiTvl / 1e9).toFixed(1)}B<small>TVL</small></div><div class="ov-kv" style="margin-top:10px"><span>7 day change</span><span style="color:${t.defiTvlChange7d < 0 ? 'var(--bad)' : '#3fd16b'}">${t.defiTvlChange7d > 0 ? '+' : ''}${t.defiTvlChange7d.toFixed(2)}%</span></div>${drop ? `<div class="ov-kv"><span>Drop · ${esc(drop.name)}</span><span>${drop.change1d.toFixed(0)}% 1d</span></div>` : ''}${dep ? `<div class="ov-kv"><span>Off peg · ${esc(dep.symbol)}</span><span>${dep.offPct.toFixed(1)}%</span></div>` : ''}<div class="ov-kv"><span>DEX volume 24h</span><span>$${(t.dexVolume24h / 1e9).toFixed(2)}B</span></div>`;
-  }).catch(ovFail('ov-defi'));
+  }).catch(ovFail('ov-defi'));/*/onchain*//*offchain*/
+  api('/api/hazards').then((r) => {
+    const alerts = (r.result || []).slice(0, 4), bulls = (r.bulletins || []).slice(0, 2);
+    document.getElementById('ov-haz').innerHTML = `<div class="ov-big">${(r.result || []).length}<small>alerts</small></div><div style="margin-top:10px">${alerts.map((a) => `<div class="ov-kv"><span><i class="ov-dot ${/red/i.test(a.level) ? 'bad' : 'warn'}"></i>${esc(a.type)} · ${esc(a.name)}</span><span>${esc(a.level)}</span></div>`).join('')}${bulls.map((b) => `<div class="ov-kv"><span>tsunami · ${esc(b.area)}</span><span>${esc(b.category)}</span></div>`).join('')}</div>`;
+  }).catch(ovFail('ov-haz'));/*/offchain*/
   api('/api/calendar?days=14').then((r) => {
     const today = new Date().toISOString().slice(0, 10);
     const items = (r.result.items || []).filter((i) => i.date >= today && i.kind !== 'market').slice(0, 5);

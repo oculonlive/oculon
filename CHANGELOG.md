@@ -4,7 +4,7 @@ All notable changes are listed here. Versions follow [semantic versioning](https
 
 ## Unreleased
 
-- On-chain features (Robinhood Chain pools, token and deployer checks; wallet and token checks) are paused. Their code and tests stay in place; `OCULON_ONCHAIN=1` turns them back on.
+- On-chain features (Robinhood Chain pools, token and deployer checks; wallet and token checks; DeFi) are paused. Their code and tests stay in place; `OCULON_ONCHAIN=1` turns them back on.
 - Public installs serve the dashboard at `app.<domain>` and the docs at `docs.<domain>` when `OCULON_DOMAIN` is set.
 
 ## 0.1.0 · first public release
@@ -22,6 +22,6 @@ All notable changes are listed here. Versions follow [semantic versioning](https
 
 ### Surfaces
 
-- CLI with `--json` on every command, TypeScript SDK, MCP server with 66 tools, Telegram bot with Useful/Noise feedback.
+- CLI with `--json` on every command, TypeScript SDK, MCP server with 64 tools, Telegram bot with Useful/Noise feedback.
 - Web app: overview page with a live console, docs, and a dashboard with Overview, Inbox, Timeline, Sources and Accuracy tabs, entity pages, Ctrl+K command palette, share cards, live updates and PWA install.
 - Public mode for internet-facing installs: read-only API, rate limits and an owner sign-in.

@@ -136,3 +136,21 @@ test('pages drop on-chain blocks unless switched on, and point app and docs link
     delete process.env.OCULON_ONCHAIN;
   }
 });
+
+test('edge Worker headers pick the subdomain page only with the shared secret', async () => {
+  const oculon = new Oculon({ dbPath: ':memory:', fetch: mockFetch([]).fetch, throttle: false, now: () => NOW });
+  const { server, stop } = createWebServer({ port: 0, oculon, domain: 'example.org', edgeSecret: 'edge-secret' });
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const viaEdge = await (await fetch(base + '/', { headers: { 'x-oculon-edge': 'edge-secret', 'x-oculon-site': 'app' } })).text();
+    assert.match(viaEdge, /id="tab-overview"/, 'app.<domain> serves the dashboard');
+    const docs = await (await fetch(base + '/', { headers: { 'x-oculon-edge': 'edge-secret', 'x-oculon-site': 'docs' } })).text();
+    assert.match(docs, /<title>Oculon Docs<\/title>/);
+    const forged = await (await fetch(base + '/', { headers: { 'x-oculon-edge': 'wrong', 'x-oculon-site': 'app' } })).text();
+    assert.doesNotMatch(forged, /id="tab-overview"/, 'a forged header gets the overview page');
+  } finally {
+    await stop();
+    oculon.close();
+  }
+});

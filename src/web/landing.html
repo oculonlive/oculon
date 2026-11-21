@@ -378,7 +378,8 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
 <!--offchain-->      <button type="button" class="t-tab" role="tab" data-cmd="blackout">Outages</button><!--/offchain-->
       <button type="button" class="t-tab" role="tab" data-cmd="hazards">Disasters</button>
       <button type="button" class="t-tab" role="tab" data-cmd="cloud">Cloud</button>
-      <button type="button" class="t-tab" role="tab" data-cmd="defi">DeFi</button>
+<!--onchain-->      <button type="button" class="t-tab" role="tab" data-cmd="defi">DeFi</button><!--/onchain-->
+<!--offchain-->      <button type="button" class="t-tab" role="tab" data-cmd="regs">Regulations</button><!--/offchain-->
       <span class="t-meta" id="cmeta"></span>
     </div>
     <pre class="terminal-body" id="cout" aria-live="polite"></pre>
@@ -448,7 +449,8 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
     <article class="bx"><div class="bx-h"><span class="lbl">Space weather</span><span class="src">NOAA SWPC</span></div><div id="n-space" class="bx-b"><div class="sk"></div></div></article>
     <article class="bx"><div class="bx-h"><span class="lbl">Cloud and services</span><span class="src">Status pages</span></div><div id="n-cloud" class="bx-b"><div class="sk"></div></div></article>
     <article class="bx bx-wide"><div class="bx-h"><span class="lbl">Internet outages · 48h</span><span class="src">Cloudflare Radar · IODA</span></div><div id="n-out" class="bx-b"><div class="sk"></div></div></article>
-    <article class="bx"><div class="bx-h"><span class="lbl">DeFi pulse</span><span class="src">DefiLlama</span></div><div id="n-defi" class="bx-b"><div class="sk"></div></div></article>
+<!--onchain-->    <article class="bx"><div class="bx-h"><span class="lbl">DeFi pulse</span><span class="src">DefiLlama</span></div><div id="n-defi" class="bx-b"><div class="sk"></div></div></article><!--/onchain-->
+<!--offchain-->    <article class="bx"><div class="bx-h"><span class="lbl">Disaster alerts</span><span class="src">GDACS · tsunami.gov</span></div><div id="n-haz" class="bx-b"><div class="sk"></div></div></article><!--/offchain-->
     <article class="bx"><div class="bx-h"><span class="lbl">Catalysts · next 14 days</span><span class="src">Finnhub · FRED · Polymarket</span></div><div id="n-cal" class="bx-b"><div class="sk"></div></div></article>
   </div>
 </section>
@@ -468,7 +470,8 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
     <div class="card"><div class="cmd">$ oculon sentinel &lt;place&gt;</div><h3>10 m satellite, before and after</h3><div class="cd">Optical or radar through cloud, on any date you compare.</div><div class="src">Copernicus Sentinel-1/2</div></div>
     <div class="card"><div class="cmd">$ oculon squawk</div><h3>Aircraft in distress</h3><div class="cd">Transponders on 7500, 7600 or 7700 right now.</div><div class="cr" id="r-squawk" hidden></div><div class="src">adsb.lol</div></div>
     <div class="card"><div class="cmd">$ oculon blackout</div><h3>Internet shutdowns</h3><div class="cd">Outages by country, checked against routing evidence.</div><div class="src">Cloudflare Radar · IODA · RIPEstat</div></div>
-    <div class="card"><div class="cmd">$ oculon defi</div><h3>DeFi under stress</h3><div class="cd">TVL crashes, stablecoin depegs, hacks, fear and greed.</div><div class="cr" id="r-defi" hidden></div><div class="src">DefiLlama · alternative.me</div></div>
+<!--onchain-->    <div class="card"><div class="cmd">$ oculon defi</div><h3>DeFi under stress</h3><div class="cd">TVL crashes, stablecoin depegs, hacks, fear and greed.</div><div class="cr" id="r-defi" hidden></div><div class="src">DefiLlama · alternative.me</div></div><!--/onchain-->
+<!--offchain-->    <div class="card"><div class="cmd">$ oculon fires &lt;place&gt;</div><h3>Fires from orbit</h3><div class="cd">Active fires and thermal hotspots near a place, from every satellite feed that is delivering.</div><div class="src">NASA FIRMS</div></div><!--/offchain-->
 <!--onchain-->    <div class="card"><div class="cmd">$ oculon sanctions &lt;x&gt;</div><h3>Sanctions, one hop out</h3><div class="cd">Wallets, IMO numbers and names, counterparties included.</div><div class="src">OFAC · OpenSanctions</div></div><!--/onchain-->
 <!--offchain-->    <div class="card"><div class="cmd">$ oculon sanctions &lt;x&gt;</div><h3>Sanctions screening</h3><div class="cd">Names and IMO numbers against OFAC and worldwide lists, with related entities.</div><div class="src">OFAC · OpenSanctions</div></div><!--/offchain-->
     <div class="card"><div class="cmd">$ oculon markets</div><h3>Prediction market gaps</h3><div class="cd">Polymarket against Kalshi and Manifold on the same question.</div><div class="src">Polymarket · Kalshi · Manifold</div></div>
@@ -805,7 +808,7 @@ document.querySelectorAll('#mcp-n2').forEach((el) => once('/api/meta').then((m) 
 
 /* ---- module result lines ---- */
 once('/api/squawks').then((r) => { const el = $('r-squawk'); el.textContent = `${r.result.total} aircraft squawking at ${new Date(r.generatedAt).toUTCString().slice(17, 22)} UTC`; el.hidden = false; }).catch(() => {});
-once('/api/defi').then((r) => { const t = r.result.totals, d = r.result.depegs?.[0]; const el = $('r-defi'); el.textContent = `TVL $${(t.defiTvl / 1e9).toFixed(1)}B · ${t.defiTvlChange7d > 0 ? '+' : ''}${t.defiTvlChange7d.toFixed(2)}% in 7d${d ? ` · ${d.symbol} off peg ${d.offPct.toFixed(0)}%` : ''}`; el.hidden = false; }).catch(() => {});
+/*onchain*/once('/api/defi').then((r) => { const t = r.result.totals, d = r.result.depegs?.[0]; const el = $('r-defi'); el.textContent = `TVL $${(t.defiTvl / 1e9).toFixed(1)}B · ${t.defiTvlChange7d > 0 ? '+' : ''}${t.defiTvlChange7d.toFixed(2)}% in 7d${d ? ` · ${d.symbol} off peg ${d.offPct.toFixed(0)}%` : ''}`; el.hidden = false; }).catch(() => {});/*/onchain*/
 
 /* ---- globe + leak map from live BGP incidents ---- */
 const CC = {US:[-98,39],CA:[-106,56],MX:[-102,23],BR:[-51,-14],AR:[-64,-34],CL:[-71,-33],CO:[-74,4],PE:[-75,-9],VE:[-66,7],EC:[-78.5,-1],PA:[-80,9],HN:[-87,14.8],GT:[-90.3,15.6],CR:[-84,10],CU:[-79,21.5],DO:[-70.5,18.8],PR:[-66.5,18.2],UY:[-56,-33],PY:[-58,-23],BO:[-64,-17],
@@ -1026,10 +1029,14 @@ api('/api/blackout').then((r) => {
   const o = (r.result.outages || []).slice(0, 4);
   $('n-out').innerHTML = o.map((x) => `<div class="out"><div class="t"><span><i class="dot ${x.end ? '' : 'bad'}"></i>${esc(x.country || x.countryCode || 'Unknown')}${x.network ? ` · ${esc(x.network)}` : ''}</span><span>${x.end ? 'ended' : 'ongoing'} · ${esc((x.start || '').slice(5, 16).replace('T', ' '))}</span></div>${x.description ? `<p>${esc(x.description)}</p>` : ''}</div>`).join('') + (o.length ? '' : '<p class="mut">No confirmed outages in the window.</p>') + fetchedAt(r);
 }).catch(() => { $('n-out').innerHTML = '<p class="mut">Unavailable right now.</p>'; });
-once('/api/defi').then((r) => {
+/*onchain*/once('/api/defi').then((r) => {
   const t = r.result.totals, drop = r.result.tvlDrops?.[0], dep = r.result.depegs?.[0];
   $('n-defi').innerHTML = `<div class="big-num">$${(t.defiTvl / 1e9).toFixed(1)}B<small>total value locked</small></div><div class="kv" style="margin-top:12px"><span>7 day change</span><span style="color:${t.defiTvlChange7d < 0 ? '#ff6b6b' : '#3fd16b'}">${t.defiTvlChange7d > 0 ? '+' : ''}${t.defiTvlChange7d.toFixed(2)}%</span></div>${drop ? `<div class="kv"><span>Biggest drop · ${esc(drop.name)}</span><span>${drop.change1d.toFixed(0)}% 1d</span></div>` : ''}${dep ? `<div class="kv"><span>Off peg · ${esc(dep.symbol)}</span><span>${dep.offPct.toFixed(1)}%</span></div>` : ''}${fetchedAt(r)}`;
-}).catch(() => { $('n-defi').innerHTML = '<p class="mut">Unavailable right now.</p>'; });
+}).catch(() => { $('n-defi').innerHTML = '<p class="mut">Unavailable right now.</p>'; });/*/onchain*//*offchain*/
+api('/api/hazards').then((r) => {
+  const alerts = (r.result || []).slice(0, 3), bulls = (r.bulletins || []).slice(0, 2);
+  $('n-haz').innerHTML = `<div class="big-num">${(r.result || []).length}<small>orange and red alerts</small></div>${alerts.map((a) => `<div class="kv"><span><i class="dot ${/red/i.test(a.level) ? 'bad' : 'warn'}"></i>${esc(a.type)} · ${esc(a.name)}</span><span>${esc(a.level)}</span></div>`).join('')}${bulls.map((b) => `<div class="kv"><span>tsunami ${esc(b.category.toLowerCase())} · ${esc(b.area)}</span><span>${esc(b.issued.slice(5, 16).replace('T', ' '))}</span></div>`).join('')}${fetchedAt(r)}`;
+}).catch(() => { $('n-haz').innerHTML = '<p class="mut">Unavailable right now.</p>'; });/*/offchain*/
 api('/api/calendar?days=14').then((r) => {
   const today = new Date().toISOString().slice(0, 10);
   const items = (r.result.items || []).filter((i) => i.date >= today && i.kind !== "market").slice(0, 5);

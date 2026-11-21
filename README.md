@@ -21,7 +21,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 - **Sourced by design.** Every answer names the sources it used and whether each one was live, cached or unavailable. Nothing is presented without provenance.
 - **Cross-source signals.** When independent sources move on the same subject, Oculon fuses them into one scored signal with the evidence behind it, and storylines are tracked across days.
 - **Measured, not claimed.** A time machine replays past days to calibrate the radar, a first-to-know check compares Oculon against media coverage, and forecasts are timestamped on Bitcoin so they cannot be edited later.
-- **Built for agents.** An MCP server exposes 66 tools; the SDK and CLI return the same objects, and `--json` works on every command.
+- **Built for agents.** An MCP server exposes 64 tools; the SDK and CLI return the same objects, and `--json` works on every command.
 - **Free to run.** Daily per-source budgets keep every free tier free, and the data lives in one local SQLite file.
 
 ## Contents
@@ -41,7 +41,6 @@ npx oculon ask "why is Nvidia in the news this week?"
 | BGP | `oculon bgp [world\|cc\|ASN\|IP]` | Worldwide BGP origin hijacks and route leaks (high-confidence hijacks between different organisations become signals), the countries most targeted by DDoS; for a country or network its routing visibility and incidents involving it; for an IP address the announcing network, RPKI validity, abuse contact and location | Cloudflare Radar, RIPEstat |
 | Vulns | `oculon vulns` / `cve <id>` / `pkg <ecosystem> <name> [version]` | Vulnerabilities newly exploited in the wild with exploitation odds and federal deadlines, new critical CVEs and critical package advisories; one CVE in depth (CVSS, EPSS trend, affected packages and fixes); known vulnerabilities of a package version. `exposure` flags server CVEs that are exploited in the wild | CISA KEV, NVD, FIRST EPSS, OSV.dev, GitHub Advisory Database |
 | Regs | `oculon regs [query] [--agency x]` | US executive orders, final and proposed rules and notices, plus tomorrow's documents on public inspection; effective dates and comment deadlines from market-moving agencies go on the catalyst calendar | Federal Register |
-| DeFi | `oculon defi` / `protocol <name>` | Protocol TVL crashes (compared with the whole market to separate an exploit or bank run from a price move), stablecoin depegs and mass redemptions, hacks, chain TVL moves, DEX volume and fee spikes, crypto fear and greed; one protocol's TVL trend, drawdown, audits, hacks and warnings | DefiLlama, alternative.me |
 | Squawk | `oculon squawk` | Aircraft transmitting emergency transponder codes right now (7500 hijack, 7600 radio failure, 7700 emergency), ground tests and stale positions removed, with registration, type and nearest airport | adsb.lol, hexdb.io, OurAirports |
 | Filings | `oculon filings "<phrase>"` / `edgar <ticker>` | Full-text search of every SEC filing for a phrase (e.g. "cybersecurity incident" in 8-Ks); a company's 8-K events decoded into plain English, with CEO/CFO departures read from the filing text | SEC EDGAR |
 | Cloud | `oculon cloud` | Open incidents on the platforms the internet runs on: official status pages of GitHub, Cloudflare, OpenAI, Anthropic, Discord, Reddit, Vercel, npm and more, plus AWS, Azure and Google Cloud | Statuspage APIs, AWS Health, Azure and Google Cloud status |
@@ -175,9 +174,9 @@ const live = await o.live({ onSignals: (s) => console.log(s) }); // Wikipedia + 
 
 ## Dashboard and schedule
 
-`oculon serve` starts a local web server on `127.0.0.1:4747` with three pages: `/` is an overview page with live numbers and a console that runs a fixed set of read-only commands (bgp, vulns, hazards, cloud, defi, squawk, blackout, cve) and shows their real output, `/docs` renders this README plus `oculon help`, and `/app` is the dashboard. Behind a reverse proxy, a host starting with `app.` or `docs.` serves that page at its root. The dashboard has tabs for:
+`oculon serve` starts a local web server on `127.0.0.1:4747` with three pages: `/` is an overview page with live numbers and a console that runs a fixed set of read-only commands (bgp, vulns, hazards, cloud, squawk, blackout, regs, cve) and shows their real output, `/docs` renders this README plus `oculon help`, and `/app` is the dashboard. Behind a reverse proxy, a host starting with `app.` or `docs.` serves that page at its root. The dashboard has tabs for:
 
-- **Overview**: live cards for exploits, space weather, cloud status, outages, DeFi, catalysts, narratives, forecasts, watchlist, cases and budgets. Drag to reorder, hide what you do not need.
+- **Overview**: live cards for exploits, space weather, cloud status, outages, disaster alerts, catalysts, narratives, forecasts, watchlist, cases and budgets. Drag to reorder, hide what you do not need.
 - **Inbox**: every signal with read state, filters, Useful/Noise votes that move each module's alert bar, and a share card (PNG) for posting.
 - **Signals, Map, Investigate, Cases, Watch, Forecasts, World, Calendar, Live and Graph**, plus **Timeline** (scrub through stored signals), **Sources** (which hosts answered and when, which key groups are set) and **Accuracy** (first-to-know lead times, radar calibration, forecast scoreboard).
 - **Entity pages** for any company, domain, repo or market: signals, links, observations and sources in one place.
