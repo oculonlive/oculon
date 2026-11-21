@@ -387,6 +387,11 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     const edgeSite = viaEdge ? String(req.headers['x-oculon-site'] ?? '') : '';
     const hostName = siteDomain && /^(app|docs)$/.test(edgeSite) ? `${edgeSite}.${siteDomain}` : String(req.headers.host ?? '').split(':')[0]!.toLowerCase();
     const admin = !publicMode || isAdmin(req, adminToken);
+    // The main domain hands /app and /docs to their subdomains before anything else answers them.
+    if (siteDomain && hostName === siteDomain && /^\/(app|docs)\/?$/.test(url.pathname) && (req.method === 'GET' || req.method === 'HEAD')) {
+      res.writeHead(301, { location: `https://${url.pathname.replace(/\//g, '')}.${siteDomain}/${url.search}`, 'cache-control': 'no-store' });
+      return res.end();
+    }
     if (publicMode) {
       const ip = (viaEdge && String(req.headers['x-oculon-client-ip'] ?? '').trim()) || clientIp(req);
       if (url.pathname === '/login' && req.method === 'POST') {
@@ -409,7 +414,8 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
           if (!PUBLIC_API.has(url.pathname)) return send(res, 403, '{"error":"private endpoint"}', 'application/json');
           if (!limiter.allow(ip, url.pathname)) return send(res, 429, '{"error":"slow down, try again in a minute"}', 'application/json');
         }
-        if (url.pathname === '/app' || url.pathname === '/app/' || url.pathname === '/index.html' || url.pathname === '/report' || url.pathname === '/api/image') {
+        const appRoot = url.pathname === '/' && hostName.split('.')[0] === 'app';
+        if (appRoot || url.pathname === '/app' || url.pathname === '/app/' || url.pathname === '/index.html' || url.pathname === '/report' || url.pathname === '/api/image') {
           return send(res, 200, locked(false), 'text/html; charset=utf-8');
         }
       }

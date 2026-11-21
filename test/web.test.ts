@@ -154,3 +154,26 @@ test('edge Worker headers pick the subdomain page only with the shared secret', 
     oculon.close();
   }
 });
+
+test('public mode locks app.<domain> for visitors and the main domain redirects /app and /docs', async () => {
+  const oculon = new Oculon({ dbPath: ':memory:', fetch: mockFetch([]).fetch, throttle: false, now: () => NOW });
+  const { server, stop } = createWebServer({ port: 0, oculon, publicMode: true, adminToken: 'owner-token', domain: 'example.org', edgeSecret: 'edge-secret' });
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  try {
+    const app = await (await fetch(base + '/', { headers: { 'x-oculon-edge': 'edge-secret', 'x-oculon-site': 'app' } })).text();
+    assert.doesNotMatch(app, /id="tab-overview"/, 'visitors never get the dashboard on app.<domain>');
+    const docs = await (await fetch(base + '/', { headers: { 'x-oculon-edge': 'edge-secret', 'x-oculon-site': 'docs' } })).text();
+    assert.match(docs, /<title>Oculon Docs<\/title>/, 'docs stay public');
+    for (const p of ['app', 'docs']) {
+      const r = await new Promise<import('node:http').IncomingMessage>((ok, fail) => {
+        import('node:http').then(({ get }) => get(`${base}/${p}`, { headers: { host: 'example.org' } }, (res) => { res.resume(); ok(res); }).on('error', fail));
+      });
+      assert.equal(r.statusCode, 301);
+      assert.equal(r.headers.location, `https://${p}.example.org/`);
+    }
+  } finally {
+    await stop();
+    oculon.close();
+  }
+});
