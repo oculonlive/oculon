@@ -4,6 +4,13 @@ All notable changes are listed here. Versions follow [semantic versioning](https
 
 ## Unreleased
 
+- Remote MCP over Streamable HTTP at `https://mcp.oculon.live` and at `/mcp` on every install.
+- `oculon url`: link safety from Google Safe Browsing, URLhaus, urlscan.io history, domain age (RDAP) and URL warning signs.
+- `oculon factcheck`: claims and news links checked against published fact checks and current reporting, with cited sources.
+- `oculon audit`: dependency health for package.json, requirements.txt or package lists (deps.dev, OpenSSF Scorecard).
+- `oculon travel`: travel risk brief from official advice, weather, air quality, outbreaks, disasters, earthquakes and outages.
+- `oculon monitor`: monitors written in plain language, backed by eight new watchlist kinds (news, outage, cve, quake, hazard, url, package, travel).
+- The same five features in the web app (Investigate and Watchlist), the Telegram bot and five new MCP tools (69 in all).
 - On-chain features (Robinhood Chain pools, token and deployer checks; wallet and token checks; DeFi) are paused. Their code and tests stay in place; `OCULON_ONCHAIN=1` turns them back on.
 - Public installs serve the dashboard at `app.<domain>` and the docs at `docs.<domain>` when `OCULON_DOMAIN` is set.
 

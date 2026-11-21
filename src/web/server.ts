@@ -15,6 +15,8 @@ import { startScheduler } from '../scheduler.js';
 import { isOnchainEntity, isOnchainSource, ONCHAIN_MODULES, ONCHAIN_WATCH_KINDS, onchainEnabled } from '../core/features.js';
 import { adminCookieValue, clientIp, isAdmin, lockedPage, PUBLIC_API, publicGraph, publicSignals, RateLimiter, tokenMatches } from './public.js';
 import { accuracy, entityProfile, rhDeployers, searchEntities, signalsSince, sourceHealth, timeline } from './insights.js';
+import { McpServer } from '../mcp.js';
+import { handleMcpHttp } from './mcphttp.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -80,6 +82,9 @@ export function consoleArgv(input: string): string[] | null {
   if (cmd === 'cve' && parts.length === 2 && /^CVE-\d{4}-\d{4,7}$/i.test(a1!)) return ['cve', a1!.toUpperCase()];
   if (cmd === 'bgp' && parts.length === 2 && /^(AS\d{1,10}|[A-Za-z]{2})$/i.test(a1!)) return ['bgp', a1!.toUpperCase()];
   if (cmd === 'vulns' && parts.length === 2 && /^\d{1,2}$/.test(a1!)) return ['vulns', a1!];
+  if (cmd === 'url' && parts.length === 2 && /^[\w.:/?=&%#~+@-]{4,300}$/.test(a1!) && /\./.test(a1!)) return ['url', a1!];
+  if (cmd === 'travel' && parts.length >= 2 && parts.slice(1).every((w) => /^[\p{L}.'-]{2,40}$/u.test(w))) return ['travel', ...parts.slice(1)];
+  if (cmd === 'audit' && parts.length >= 2 && parts.slice(1).every((w) => /^(npm|pypi):[@\w./=~-]{1,80}$/i.test(w))) return ['audit', ...parts.slice(1)];
   return null;
 }
 
@@ -197,6 +202,22 @@ export const ROUTES: Record<string, Handler> = {
   },
   '/api/brief': async (q, o) => o.brief({ refresh: q.get('refresh') === '1' }),
   '/api/watch': (_q, o) => o.watchList(),
+  '/api/url': async (q, o) => {
+    try {
+      return slim(await o.urlCheck(need(q, 'url', 2000)));
+    } catch (e) {
+      throw e instanceof HttpError ? e : new HttpError(400, (e as Error).message);
+    }
+  },
+  '/api/factcheck': async (q, o) => slim(await o.factCheck(need(q, 'claim', 600))),
+  '/api/travel': async (q, o) => slim(await o.travel(need(q, 'place', 120))),
+  '/api/audit': async (q, o) => {
+    try {
+      return slim(await o.audit(need(q, 'packages', 2000)));
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+  },
   '/api/quota': (_q, o) => o.quota(),
   '/api/forecasts': (_q, o) => ({ scoreboard: o.scoreboard(), forecasts: o.forecasts('all', 200) }),
   '/api/verify': async (q, o) => slim(await o.verifyProof(need(q, 'id', 64))),
@@ -284,6 +305,25 @@ export const POST_ROUTES: Record<string, PostHandler> = {
     if (q.length < 8 || q.length > 500) throw new HttpError(400, 'question must be 8-500 characters');
     const r = await o.caseInvestigate({ question: q });
     return { id: r.case.id, markdown: r.case.markdown };
+  },
+  '/api/monitor': async (b, o) => {
+    const text = String(b.text ?? '').trim();
+    if (text.length < 4 || text.length > 300) throw new HttpError(400, 'describe what to watch in 4-300 characters');
+    try {
+      return b.dryRun ? await o.monitorParse(text) : await o.monitor(text);
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+  },
+  '/api/watch/delete': (b, o) => ({ removed: o.watchRemove(Number(b.id)) }),
+  '/api/audit': async (b, o) => {
+    const manifest = String(b.manifest ?? '').trim();
+    if (!manifest || manifest.length > 200_000) throw new HttpError(400, 'paste a package.json or requirements.txt (up to 200 KB)');
+    try {
+      return slim(await o.audit(manifest));
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
   },
 };
 
@@ -387,6 +427,8 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
   const limiter = new RateLimiter();
   // OCULON_OPEN=1 opens the whole app to every visitor (no sign-in, no read-only gate, no rate limit).
   const openApp = opts.open ?? process.env.OCULON_OPEN === '1';
+  // One MCP server for the HTTP transport, sharing this server's Oculon instance.
+  const mcpServer = new McpServer(() => oculon);
   // OCULON_PURGE_ONCHAIN=1 clears data left by the paused on-chain modules when the server starts.
   if (!onchainEnabled() && process.env.OCULON_PURGE_ONCHAIN === '1') {
     const removed = oculon.ctx.store.purgeOnchain();
@@ -404,8 +446,15 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     const url = new URL(req.url ?? '/', 'http://localhost');
     const viaEdge = Boolean(edgeSecret) && tokenMatches(String(req.headers['x-oculon-edge'] ?? ''), edgeSecret!);
     const edgeSite = viaEdge ? String(req.headers['x-oculon-site'] ?? '') : '';
-    const hostName = siteDomain && /^(app|docs)$/.test(edgeSite) ? `${edgeSite}.${siteDomain}` : String(req.headers.host ?? '').split(':')[0]!.toLowerCase();
+    const hostName = siteDomain && /^(app|docs|mcp)$/.test(edgeSite) ? `${edgeSite}.${siteDomain}` : String(req.headers.host ?? '').split(':')[0]!.toLowerCase();
     const admin = !publicMode || openApp || isAdmin(req, adminToken);
+    // Remote MCP: POST /mcp on any host, or POST / on mcp.<domain>. Open to anyone who may use the app.
+    const mcpHost = hostName.split('.')[0] === 'mcp';
+    if (url.pathname === '/mcp' || (mcpHost && url.pathname === '/')) {
+      if (!admin) return send(res, 403, '{"error":"the MCP endpoint is not public on this install"}', 'application/json');
+      return handleMcpHttp(req, res, mcpServer, siteDomain ? `https://docs.${siteDomain}/#remote-mcp` : '/docs#remote-mcp', log);
+    }
+    if (mcpHost) return send(res, 404, '{"error":"POST JSON-RPC messages to / on this host"}', 'application/json');
     // The main domain hands /app and /docs to their subdomains before anything else answers them.
     if (siteDomain && hostName === siteDomain && /^\/(app|docs)\/?$/.test(url.pathname) && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(301, { location: `https://${url.pathname.replace(/\//g, '')}.${siteDomain}/${url.search}`, 'cache-control': 'no-store' });

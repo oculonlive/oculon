@@ -9,7 +9,7 @@
 ![Node 22.13+](https://img.shields.io/badge/node-%E2%89%A522.13-00f0ff.svg)
 ![Runtime dependencies: 0](https://img.shields.io/badge/runtime%20dependencies-0-00f0ff.svg)
 
-It ships as a CLI, a TypeScript SDK, an MCP server for Claude and other agents, a web app and a Telegram bot, all over the same result objects. It has no runtime dependencies. About 20 sources work with no key; optional free-tier keys switch on the rest (see `.env.example`).
+It ships as a CLI, a TypeScript SDK, an MCP server for Claude and other agents (local, or remote at `https://mcp.oculon.live` with nothing to install), a web app and a Telegram bot, all over the same result objects. It has no runtime dependencies. About 20 sources work with no key; optional free-tier keys switch on the rest (see `.env.example`).
 
 ```sh
 npx oculon radar
@@ -21,17 +21,24 @@ npx oculon ask "why is Nvidia in the news this week?"
 - **Sourced by design.** Every answer names the sources it used and whether each one was live, cached or unavailable. Nothing is presented without provenance.
 - **Cross-source signals.** When independent sources move on the same subject, Oculon fuses them into one scored signal with the evidence behind it, and storylines are tracked across days.
 - **Measured, not claimed.** A time machine replays past days to calibrate the radar, a first-to-know check compares Oculon against media coverage, and forecasts are timestamped on Bitcoin so they cannot be edited later.
-- **Built for agents.** An MCP server exposes 64 tools; the SDK and CLI return the same objects, and `--json` works on every command.
+- **Built for agents.** 69 MCP tools, locally over stdio or remotely at `https://mcp.oculon.live`; the SDK and CLI return the same objects, and `--json` works on every command.
+- **Everyday checks.** Is this link dangerous? Is this claim true? Are my dependencies safe? What should I know before I travel? Each answer names its sources.
+- **Monitors in plain words.** "Tell me when there is an internet outage in Iran" becomes a rule that is re-checked on a schedule and reports only what changed.
 - **Free to run.** Daily per-source budgets keep every free tier free, and the data lives in one local SQLite file.
 
 ## Contents
 
-[What it does](#what-it-does) · [Install](#install) · [CLI](#cli) · [MCP server](#mcp-server) · [SDK](#sdk) · [Web app](#dashboard-and-schedule) · [Telegram bot](#telegram-bot) · [Configuration](#configuration) · [Deploy](#deploy) · [How it works](#how-it-works) · [Limits](#limits) · [Development](#development)
+[What it does](#what-it-does) · [Install](#install) · [CLI](#cli) · [MCP server](#mcp-server) · [Remote MCP](#remote-mcp) · [SDK](#sdk) · [Web app](#dashboard-and-schedule) · [Telegram bot](#telegram-bot) · [Configuration](#configuration) · [Deploy](#deploy) · [How it works](#how-it-works) · [Limits](#limits) · [Development](#development)
 
 ## What it does
 
 | Module | Command | What it does | Sources |
 |---|---|---|---|
+| URL check | `oculon url <link>` | Is a link dangerous? A verdict (malicious, suspicious, no known threats), a 0-100 risk and the reasons: Safe Browsing and URLhaus matches, community tags on urlscan.io scans, domain age and registrar, and warning signs in the URL itself (a brand name on someone else's domain, punycode look-alikes, risky top-level domains, `@` tricks). Big platforms are not blamed for files their users upload | Google Safe Browsing, URLhaus (abuse.ch), urlscan.io, RDAP |
+| Fact check | `oculon factcheck "<claim>"` or a news URL | Published fact checks about the claim (Snopes, AFP, PolitiFact, Full Fact and others) plus current reporting; an LLM weighs only that evidence and cites it by number, giving true, mostly true, mixed, misleading, false or unverified with a confidence. Without an LLM the published ratings decide | Google Fact Check Tools, Tavily or Exa, Jina Reader, free-tier LLMs |
+| Audit | `oculon audit [package.json\|requirements.txt\|npm:name@ver ...]` | Dependency health for npm and PyPI: known vulnerabilities with CVSS, deprecation, years since the last release, major versions behind, OpenSSF Scorecard and its "Maintained" check, license; a 0-100 risk per package (dev dependencies weigh less) | deps.dev (Google Open Source Insights), OpenSSF Scorecard, OSV |
+| Travel | `oculon travel <place>` | What a visitor should know for the coming week: US State Department level and UK FCDO advice, 7-day weather warnings (storms, heavy rain, strong gusts, heat, cold, UV), PM2.5, WHO disease outbreak news, orange and red disaster alerts, nearby strong earthquakes, satellite heat detections and confirmed internet outages; a level from low to severe | US State Department, UK FCDO, Open-Meteo, OpenAQ, WHO, GDACS, USGS, NASA FIRMS, Cloudflare Radar |
+| Monitor | `oculon monitor "<request>"` | Watch anything in plain language: "internet outages in Iran", "critical CVEs for nginx", "earthquakes above 6 near Tokyo", "news about OpenAI", "travel risk changes for Bangkok", "flood or cyclone alerts for the Philippines". The request becomes a watchlist rule; only changes are reported, with evidence, in the app, Telegram and the signal feed | free-tier LLMs (with a pattern fallback), Meerkat |
 | Live | `oculon live` / `serve --live` | Listens to two real-time streams: English Wikipedia articles suddenly edited by several people (6+ human edits by 3+ editors in 15 minutes), and names or hashtags surging in English Bluesky posts against their own last hour (watched companies and topics get a lower bar) | Wikimedia EventStreams, Bluesky Jetstream |
 | Calendar | `oculon calendar [days]` | Catalysts ahead: earnings (watched companies first, then the largest by revenue estimate), IPOs, key US macro releases (CPI, jobs, GDP, PCE, JOLTS...), rules taking effect and comment periods closing at market-moving agencies, and high-volume prediction markets that close; also added to the daily brief | Finnhub, FRED, Federal Register, Polymarket |
 | Connect | `oculon connect <A> to <B>` / `resolve` | Entity resolution merges duplicates across kinds (`org:nvidia` = `company:nvidia` = `nvidia.com`), then finds the shortest chain of typed links between two things in the graph | Oculon graph |
@@ -69,7 +76,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 | Hound | `oculon dossier <name> [--deep]` | Dossier on a company, person or project: profile and readership spike, stock quote, insider trades and insider sentiment, analyst ratings and their shift, peers, key financials, earnings surprises, decoded 8-K events, news from five outlets, web results, federal court dockets, job openings, UK registry, brand, prediction markets, repos, YouTube, Bluesky; FDA recalls and clinical trials for health and food companies; with `--deep` lobbying, federal contracts, visa filings and patents; one merged timeline | Wikipedia, Finnhub, SEC EDGAR, openFDA, ClinicalTrials.gov, GDELT, GNews, Guardian, NYT, Tavily, CourtListener, Adzuna, Companies House, Brandfetch, Polymarket, GitHub, YouTube, Bluesky |
 | Cricket | `oculon hype <topic>` | Hype-cycle phase (DORMANT, EMERGING, RISING, PEAK, COOLING, STEADY) from 8 weeks of readers, developers, news, press, research, scholarly output and builders | Wikimedia, HN, GDELT, Guardian, arXiv, OpenAlex, GitHub |
 | Ferret | `oculon footprint <domain>` | Pre-release footprints: hostnames new in Certificate Transparency logs or urlscan.io scans, newly archived pages, new public repos, Google Safe Browsing verdicts | crt.sh, CertSpotter, urlscan.io, Wayback Machine, GitHub, Safe Browsing |
-| Meerkat | `oculon watch add/run/list/rm` | Watchlist: re-checks companies, domains, planes, topics, night lights and air quality, and reports only what changed since the last check | every module above |
+| Meerkat | `oculon watch add/run/list/rm` | Watchlist: re-checks companies, domains, planes, topics, night lights, air quality, ports, news keywords, country outages, vendor CVEs, earthquakes near a place, disaster alerts, links, packages and travel risk, and reports only what changed since the last check | every module above |
 | Falcon | `oculon plane <reg>` / `oculon mil` | One aircraft (owner, live position, nearest airport, moves between checks); worldwide military air traffic with notable roles (tanker, AWACS, ISR, bomber) and surges versus history | adsb.lol, OpenSky, hexdb.io, OurAirports |
 | Condor | `oculon events` / `lights` / `image` / `space` / `air` | Natural events with severity; night-time lights of any place versus a baseline month to spot blackouts or surges; true-color satellite images; space weather (official NOAA alerts and scales, solar wind, 3-day forecast, solar flares, coronal mass ejections modelled to reach Earth, geomagnetic storms, close asteroid passes); PM2.5 air quality | NASA EONET, NASA GIBS (VIIRS, MODIS), NOAA SWPC, NASA DONKI and NeoWs, OpenAQ, Nominatim |
 | Raven | `oculon forecast ...` | Forecasts on live Polymarket markets, resolved against real outcomes and scored (Brier) against the crowd price at forecast time | Polymarket |
@@ -152,6 +159,22 @@ Or with any MCP client that launches stdio servers:
 
 Every module is a tool (about 50, plus one per installed plugin tool; `tools/list` returns them with schemas). A few: `oculon_ask`, `oculon_radar`, `oculon_dossier`, `oculon_case_new`, `oculon_calendar`, `oculon_connect`, `oculon_markets_crosscheck`, `oculon_sanctions`, `oculon_health`, `oculon_narratives`, `oculon_ships`, `oculon_military_air`, `oculon_satellite_image` (returns the image), `oculon_forecast`, `oculon_verify_proof`, `oculon_watch_add`, `oculon_brief`, `oculon_signals`, `oculon_entity`.
 
+## Remote MCP
+
+Oculon also runs as a remote MCP server, so an agent can use every tool with nothing installed. The endpoint speaks Streamable HTTP (stateless JSON responses):
+
+```
+https://mcp.oculon.live
+```
+
+- **Claude Code**: `claude mcp add --transport http oculon https://mcp.oculon.live`
+- **Claude** (web and desktop): Settings → Connectors → Add custom connector, and paste the URL.
+- **Cursor**: `{ "mcpServers": { "oculon": { "url": "https://mcp.oculon.live" } } }` in `.cursor/mcp.json`
+- **VS Code**: `{ "servers": { "oculon": { "type": "http", "url": "https://mcp.oculon.live" } } }` in `.vscode/mcp.json`
+- Any other client that supports Streamable HTTP: the same URL.
+
+Your own install serves the same endpoint at `/mcp` (for example `http://127.0.0.1:4747/mcp` while `oculon serve` runs).
+
 ## SDK
 
 ```ts
@@ -161,6 +184,9 @@ const o = new Oculon();
 const radar = await o.radar();
 const dossier = await o.dossier('Nvidia');
 const lights = await o.nightLights('Kyiv');
+const link = await o.urlCheck('paypa1-secure-login.top/verify');
+const claim = await o.factCheck('The Great Wall of China is visible from space');
+await o.monitor('Tell me when there is an internet outage in Iran');
 console.log(radar.signals, dossier.result.timeline, lights.result.verdict);
 o.close();
 ```

@@ -50,6 +50,11 @@ export const HELP = [
   '<b>Oculon</b> — OSINT radar',
   '/ask &lt;question&gt; — AI agent answers using every tool',
   '/radar — what the world is suddenly watching',
+  '/url &lt;link&gt; — is this link dangerous?',
+  '/factcheck &lt;claim or link&gt; — fact check a claim',
+  '/travel &lt;place&gt; — travel risk brief for the coming week',
+  '/audit &lt;npm:name@ver ...&gt; — dependency vulnerabilities and health',
+  '/monitor &lt;request&gt; — watch anything in plain words, e.g. /monitor internet outages in Iran',
   '/signals — latest signals',
   '/dossier &lt;name&gt; — e.g. /dossier Nvidia',
   '/hype &lt;topic&gt; — hype phase of a topic',
@@ -301,6 +306,41 @@ export class TelegramBot {
         const types = Object.entries(d.byType).sort((x, y) => y[1] - x[1]).slice(0, 5).map(([t, n]) => `${esc(t)} ${n}`).join(', ');
         return { html: `<b>${esc(d.place.name)}</b>\n${d.total} vessels in ${d.seconds}s · ${d.moving} moving · ${d.stationary} anchored/moored\n${types}` };
       }
+      case '/url': {
+        if (!arg) return needArg('paypa1-secure-login.top/verify');
+        const d = (await o.urlCheck(arg)).result;
+        const reasons = d.reasons.map((x) => `• ${esc(x)}`).join('\n');
+        const reg = d.domainInfo?.registered ? `\n<i>registered ${esc(d.domainInfo.registered.slice(0, 10))}${d.domainInfo.registrar ? ` via ${esc(d.domainInfo.registrar)}` : ''}</i>` : '';
+        const note = d.verdict === 'no known threats' ? '\n<i>No source flags it; that is not a guarantee.</i>' : '';
+        return { html: `<b>${esc(d.host)}</b>: <b>${esc(d.verdict.toUpperCase())}</b> (risk ${d.risk}/100)${reasons ? `\n${reasons}` : ''}${reg}${note}` };
+      }
+      case '/factcheck': {
+        if (!arg) return needArg('The Great Wall of China is visible from space');
+        const d = (await o.factCheck(arg)).result;
+        const cited = [...d.factChecks, ...d.web].filter((e) => !d.cited.length || d.cited.includes(e.n)).slice(0, 5);
+        const refs = cited.map((e) => `[${e.n}] <a href="${esc(e.url)}">${esc(e.publisher)}</a>${e.rating ? ` "${esc(e.rating)}"` : ''}`).join('\n');
+        return { html: `<b>${esc(d.claim)}</b>\n<b>${esc(d.verdict.toUpperCase())}</b>${d.confidence ? ` · confidence ${d.confidence}%` : ''}\n\n${esc(d.summary)}${refs ? `\n\n${refs}` : ''}` };
+      }
+      case '/travel': {
+        if (!arg) return needArg('Lisbon');
+        const d = (await o.travel(arg)).result;
+        const points = d.points.map((x) => `• ${esc(x)}`).join('\n') || 'No warnings from the sources checked.';
+        const wx = d.weather ? `\n\n<i>${d.weather.days.slice(0, 4).map((x) => `${x.date.slice(5)} ${esc(x.summary)} ${Math.round(x.tMin)}–${Math.round(x.tMax)}°C`).join(' · ')}</i>` : '';
+        return { html: `<b>${esc(d.place.name.split(',').slice(0, 2).join(','))}</b>: <b>${esc(d.level.toUpperCase())} risk</b>\n${points}${wx}` };
+      }
+      case '/audit': {
+        if (!arg) return needArg('npm:lodash@4.17.15 npm:request');
+        const items = arg.split(/\s+/).map((x) => (x.includes(':') ? x : `npm:${x}`)).join(' ');
+        const r = (await o.audit(items)).result;
+        const flagged = r.packages.filter((p) => p.flags.length).slice(0, 8);
+        const body = flagged.map((p) => `<b>${esc(p.name)}@${esc(p.version ?? '?')}</b> risk ${p.risk}\n${p.flags.map((x) => `  • ${esc(x)}`).join('\n')}`).join('\n') || 'No flags.';
+        return { html: `<b>${r.summary.checked} package(s)</b>: ${r.summary.vulnerable} vulnerable, ${r.summary.deprecated} deprecated\n${body}` };
+      }
+      case '/monitor': {
+        if (!arg) return needArg('internet outages in Iran');
+        const r = await o.monitor(arg);
+        return { html: `Monitoring #${r.item.id} <b>${esc(r.rule.kind)}</b>: ${esc(r.rule.description)}. Changes arrive with /alerts on.` };
+      }
       case '/air': {
         if (!arg) return needArg('London');
         const d = (await o.airQuality(arg)).result;
@@ -401,7 +441,7 @@ export class TelegramBot {
       case '/watch': {
         const [sub, kind, ...rest] = arg.split(/\s+/);
         if (sub === 'add') {
-          if (!kind || !rest.length) return needArg('add company Nvidia');
+          if (!kind || !rest.length) return needArg('add company Nvidia (or describe it: /monitor internet outages in Iran)');
           const w = o.watchAdd(kind, rest.join(' '));
           return { html: `Watching #${w.id} ${esc(w.kind)} <b>${esc(w.target)}</b>. Changes arrive with /alerts on.` };
         }
@@ -660,7 +700,7 @@ export class TelegramBot {
     const me = await this.call<{ username: string }>('getMe', {});
     this.log(`bot @${me.username} running; ${this.opts.allowedChats.length} allowed chat(s)`);
     await this.call('setMyCommands', {
-      commands: ['ask', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
+      commands: ['ask', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
     }).catch(() => {});
     if (this.opts.watchMinutes && this.opts.watchMinutes > 0) {
       this.scheduler = startScheduler(this.oculon, {

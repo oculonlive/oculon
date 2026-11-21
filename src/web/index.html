@@ -66,6 +66,8 @@ td.num { font-family: var(--mono); white-space: nowrap; }
 canvas#graph { width: 100%; height: 62vh; min-height: 360px; display: block; background: var(--panel); border: 1px solid var(--line); border-radius: 0; }
 .status { font-family: var(--mono); font-size: 12px; color: var(--muted); }
 .err { color: var(--bad); }
+.pill { display: inline-block; font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 1px 8px; border: 1px solid currentColor; vertical-align: middle; }
+.pill.ok { color: var(--accent); } .pill.warn { color: var(--accent-2); } .pill.bad { color: var(--bad); }
 .out h3 { margin: 14px 0 6px; font-size: 14px; }
 .spark { display: inline-flex; align-items: flex-end; gap: 2px; height: 28px; vertical-align: middle; }
 .spark i { display: block; width: 6px; background: var(--accent-2); border-radius: 0; }
@@ -545,6 +547,13 @@ nav button { white-space: nowrap; }
     <div class="card">
       <div class="row">
         <select id="inv-kind" aria-label="What to investigate">
+          <optgroup label="Everyday checks">
+          <option value="url">Is this link safe? (URL)</option>
+          <option value="factcheck">Fact check (claim or news URL)</option>
+          <option value="audit">Dependency audit (package.json or npm:name@version)</option>
+          <option value="travel">Travel risk (place)</option>
+          </optgroup>
+          <optgroup label="Investigate">
           <option value="dossier">Dossier (company, person)</option>
           <option value="hype">Hype phase (topic)</option>
           <option value="footprint">Pre-release footprint (domain)</option>
@@ -565,8 +574,9 @@ nav button { white-space: nowrap; }
           <option value="health">Company health score</option>
           <option value="impact">Disaster impact (place, or empty for current events)</option>
           <option value="contradictions">Contradictions across sources (topic)</option>
+          </optgroup>
         </select>
-        <input type="text" id="inv-q" placeholder="Nvidia" aria-label="Query">
+        <input type="text" id="inv-q" placeholder="paypa1-secure-login.top/verify" aria-label="Query">
         <button class="go" id="inv-go">Investigate</button>
       </div>
       <div id="inv-out" class="out"></div>
@@ -576,7 +586,10 @@ nav button { white-space: nowrap; }
   <section id="tab-watch" hidden>
     <div class="card">
       <h2>Watchlist</h2>
-      <p class="meta">Oculon re-checks these targets every hour while <code>oculon serve --watch</code> runs and reports only what changed. Add targets from the CLI (<code>oculon watch add company Nvidia</code>), Telegram or MCP.</p>
+      <p class="meta">Describe what to watch in plain words. Oculon turns it into a rule, re-checks it on the schedule and reports only what changed, with evidence.</p>
+      <div class="row"><input type="text" id="mon-q" placeholder="Tell me when there is an internet outage in Iran" aria-label="What to watch"><button class="go" id="mon-go">Monitor</button></div>
+      <p class="meta" id="mon-ex">Try: <a href="#" data-mon>critical CVEs for nginx</a> · <a href="#" data-mon>earthquakes above 6 near Tokyo</a> · <a href="#" data-mon>news about OpenAI</a> · <a href="#" data-mon>travel risk changes for Bangkok</a> · <a href="#" data-mon>flood or cyclone alerts for the Philippines</a></p>
+      <div id="mon-out"></div>
       <div style="overflow-x:auto"><table id="watch"></table></div>
     </div>
     <div class="card" style="margin-top:16px">
@@ -889,7 +902,7 @@ function handleMapClick(e) {
 const waitMap = setInterval(() => { if (map) { map.on('click', handleMapClick); clearInterval(waitMap); } }, 300);
 
 /* investigate */
-const placeholders = { dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
+const placeholders = { url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
 const usd = (x) => (x == null ? '?' : '$' + Math.round(x).toLocaleString('en-US'));
 
 /* brief: tiny, safe Markdown renderer (escape first, then headings, bold, links, bullets) */
@@ -920,11 +933,27 @@ loadBrief(false);
 /* watch */
 async function loadWatch() {
   const [list, sigs, quota] = await Promise.all([api('/api/watch'), api('/api/signals?limit=200'), api('/api/quota')]);
-  $('#watch').innerHTML = '<tr><th>#</th><th>kind</th><th>target</th><th>last check</th></tr>' + (list.map((w) => `<tr><td class="num">${w.id}</td><td>${esc(w.kind)}</td><td>${esc(w.label || w.target)}${w.label ? `<div class="meta">${esc(w.target)}</div>` : ''}</td><td class="meta">${esc(w.lastRun ? w.lastRun.slice(0, 16).replace('T', ' ') + ' UTC' : 'not yet')}</td></tr>`).join('') || '<tr><td colspan="4" class="meta">empty</td></tr>');
+  $('#watch').innerHTML = '<tr><th>#</th><th>kind</th><th>target</th><th>last check</th><th></th></tr>' + (list.map((w) => `<tr><td class="num">${w.id}</td><td>${esc(w.kind)}</td><td>${esc(w.label || w.target)}${w.label ? `<div class="meta">${esc(w.target)}</div>` : ''}</td><td class="meta">${esc(w.lastRun ? w.lastRun.slice(0, 16).replace('T', ' ') + ' UTC' : 'not yet')}</td><td><button class="icon-btn" data-unwatch="${w.id}" aria-label="Stop watching">remove</button></td></tr>`).join('') || '<tr><td colspan="5" class="meta">empty</td></tr>');
+  document.querySelectorAll('[data-unwatch]').forEach((b) => (b.onclick = async () => { b.disabled = true; try { await post('/api/watch/delete', { id: Number(b.dataset.unwatch) }); loadWatch(); } catch (err) { b.disabled = false; } }));
   const ws = sigs.filter((s) => s.module === 'meerkat');
   $('#watch-signals').innerHTML = ws.length ? ws.slice(0, 30).map(renderSignal).join('') : '<p class="meta">No changes yet. The first check of each target records a baseline.</p>';
   $('#quota').innerHTML = '<tr><th>source</th><th>used</th><th>daily budget</th></tr>' + (quota.map((q) => `<tr><td>${esc(q.source)}</td><td class="num">${q.used}</td><td class="num">${q.budget ?? '—'}</td></tr>`).join('') || '<tr><td colspan="3" class="meta">no metered calls today</td></tr>');
 }
+
+$('#mon-go').onclick = async () => {
+  const text = $('#mon-q').value.trim() || $('#mon-q').placeholder;
+  $('#mon-go').disabled = true;
+  $('#mon-out').innerHTML = '<p class="meta">Reading the request…</p>';
+  try {
+    const r = await post('/api/monitor', { text });
+    $('#mon-out').innerHTML = `<p><span class="pill ok">monitoring</span> #${r.item.id} <b>${esc(r.rule.kind)}</b> · ${esc(r.rule.description)}</p><p class="meta">The first check records a baseline; changes after that show up below and in the Inbox.</p>`;
+    $('#mon-q').value = '';
+    loadWatch();
+  } catch (err) { $('#mon-out').innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+  finally { $('#mon-go').disabled = false; }
+};
+$('#mon-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#mon-go').click(); });
+document.querySelectorAll('[data-mon]').forEach((a) => (a.onclick = (e) => { e.preventDefault(); $('#mon-q').value = a.textContent; $('#mon-go').click(); }));
 
 /* first to know */
 async function loadScoops() {
@@ -995,6 +1024,29 @@ $('#inv-kind').onchange = () => { $('#inv-q').placeholder = placeholders[$('#inv
 const spark = (xs) => { const m = Math.max(...xs, 1e-9); return `<span class="spark">${xs.map((x) => `<i style="height:${Math.max(2, Math.round((x / m) * 28))}px" title="${esc(x)}"></i>`).join('')}</span>`; };
 const sigList = (s) => (s.length ? `<h3>Signals</h3>${s.map(renderSignal).join('')}` : '');
 const views = {
+  url: (r) => {
+    const d = r.result;
+    const tone = d.verdict === 'malicious' ? 'bad' : d.verdict === 'suspicious' ? 'warn' : 'ok';
+    return `<h3>${esc(d.host)} <span class="pill ${tone}">${esc(d.verdict)}</span> <span class="meta">risk ${d.risk}/100</span></h3>${d.reasons.length ? `<ul class="ev">${d.reasons.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${d.domainInfo?.registered ? `<p class="meta">${esc(d.domain)} registered ${esc(d.domainInfo.registered.slice(0, 10))}${d.domainInfo.registrar ? ` via ${esc(d.domainInfo.registrar)}` : ''}</p>` : ''}${d.scans?.count ? `<p class="meta">urlscan.io: ${d.scans.count} scans since ${esc((d.scans.firstSeen || '').slice(0, 10))}${d.scans.countries.length ? `, hosted in ${esc(d.scans.countries.join(', '))}` : ''}${d.scans.latest ? ` · <a href="${safeUrl(d.scans.latest)}" target="_blank" rel="noopener noreferrer">latest scan</a>` : ''}</p>` : ''}${d.verdict === 'no known threats' ? '<p class="meta">No source flags it. That is not a guarantee the page is safe.</p>' : ''}`;
+  },
+  factcheck: (r) => {
+    const d = r.result;
+    const tone = /false|misleading/.test(d.verdict) ? 'bad' : /true/.test(d.verdict) ? 'ok' : 'warn';
+    const all = [...d.factChecks, ...d.web];
+    const linked = esc(d.summary).replace(/\[(\d+)\]/g, (m, n) => { const e = all.find((x) => x.n === Number(n)); return e ? `<a href="${safeUrl(e.url)}" target="_blank" rel="noopener noreferrer">[${n}]</a>` : m; });
+    return `<h3>${esc(d.claim)}</h3><p><span class="pill ${tone}">${esc(d.verdict)}</span> ${d.confidence ? `<span class="meta">confidence ${d.confidence}% · ${esc(d.method)}</span>` : ''}</p><p>${linked}</p>${d.factChecks.length ? `<h3>Published fact checks</h3><ul class="ev">${d.factChecks.map((e) => `<li>[${e.n}] <b>${esc(e.publisher)}</b>${e.rating ? ` rated "${esc(e.rating)}"` : ''}: <a href="${safeUrl(e.url)}" target="_blank" rel="noopener noreferrer">${esc(e.title.slice(0, 140))}</a>${e.date ? ` <span class="meta">${esc(e.date.slice(0, 10))}</span>` : ''}</li>`).join('')}</ul>` : ''}${d.web.length ? `<h3>Reporting</h3><ul class="ev">${d.web.map((e) => `<li>[${e.n}] <a href="${safeUrl(e.url)}" target="_blank" rel="noopener noreferrer">${esc(e.title.slice(0, 140))}</a> <span class="meta">${esc(e.publisher)}</span></li>`).join('')}</ul>` : ''}<p class="meta">AI-weighed from the sources above; read them before sharing.</p>`;
+  },
+  audit: (r) => {
+    const d = r.result, s = d.summary;
+    const row = (p) => `<tr><td class="num">${p.risk}</td><td><b>${esc(p.name)}@${esc(p.version || '?')}</b>${p.dev ? ' <span class="meta">dev</span>' : ''}<div class="meta">latest ${esc(p.latest || '?')}${p.project?.scorecard != null ? ` · scorecard ${p.project.scorecard}` : ''}${p.licenses.length ? ` · ${esc(p.licenses.join(', '))}` : ''}</div></td><td>${p.flags.map((x) => `<div>${esc(x)}</div>`).join('') || '<span class="meta">no flags</span>'}${p.advisories.slice(0, 3).map((a) => `<div class="meta"><a href="${safeUrl(a.url)}" target="_blank" rel="noopener noreferrer">${esc(a.aliases[0] || a.id)}</a>${a.cvss ? ` CVSS ${a.cvss}` : ''}: ${esc(a.title.slice(0, 90))}</div>`).join('')}</td></tr>`;
+    return `<div class="kpis"><div class="kpi"><b>${s.checked}/${s.total}</b><span>checked</span></div><div class="kpi"><b>${s.vulnerable}</b><span>vulnerable</span></div><div class="kpi"><b>${s.advisories}</b><span>advisories</span></div><div class="kpi"><b>${s.deprecated}</b><span>deprecated</span></div><div class="kpi"><b>${s.stale}</b><span>no release in 2y</span></div></div><div style="overflow-x:auto"><table><tr><th>risk</th><th>package</th><th>findings</th></tr>${d.packages.map(row).join('')}</table></div>${d.skipped.length ? `<p class="meta">skipped: ${esc(d.skipped.join(', '))}</p>` : ''}<p class="meta">Paste a whole package.json here too. For requirements.txt use the CLI or MCP: <code>oculon audit requirements.txt</code>.</p>`;
+  },
+  travel: (r) => {
+    const d = r.result;
+    const tone = d.level === 'low' ? 'ok' : d.level === 'moderate' ? 'warn' : 'bad';
+    const w = d.weather;
+    return `<h3>${esc(d.place.name)} <span class="pill ${tone}">${esc(d.level)} risk</span></h3><ul class="ev">${d.points.map((x) => `<li>${esc(x)}</li>`).join('') || '<li>No warnings from the sources checked.</li>'}</ul>${w ? `<div style="overflow-x:auto"><table><tr><th>day</th><th>weather</th><th>°C</th><th>rain</th><th>gusts</th></tr>${w.days.map((x) => `<tr><td>${esc(x.date.slice(5))}</td><td>${esc(x.summary)}</td><td class="num">${Math.round(x.tMin)}–${Math.round(x.tMax)}</td><td class="num">${x.rainMm.toFixed(0)} mm</td><td class="num">${Math.round(x.gustKmh)} km/h</td></tr>`).join('')}</table></div>` : ''}${d.air?.pm25 != null ? `<p class="meta">Air: PM2.5 ${d.air.pm25.toFixed(0)} µg/m³ (${esc(d.air.category)}) from ${d.air.stations} stations</p>` : ''}${d.outbreaks.length ? `<h3>WHO outbreak news</h3><ul class="ev">${d.outbreaks.map((o) => `<li><a href="${safeUrl(o.url)}" target="_blank" rel="noopener noreferrer">${esc(o.title)}</a> <span class="meta">${esc(o.date.slice(0, 10))}</span></li>`).join('')}</ul>` : ''}<p class="meta">${d.advisories.us ? `<a href="${safeUrl(d.advisories.us.url)}" target="_blank" rel="noopener noreferrer">US advisory</a>` : ''}${d.advisories.uk ? ` · <a href="${safeUrl(d.advisories.uk.url)}" target="_blank" rel="noopener noreferrer">UK travel advice</a>` : ''}</p>`;
+  },
   dossier: (r) => {
     const d = r.result;
     return `${d.wikipedia ? `<h3>${esc(d.wikipedia.title)}</h3><p class="meta">${esc(d.wikipedia.description || '')}${d.wikipedia.spike ? ` · readers ${d.wikipedia.spike.toFixed(1)}× usual` : ''}</p>` : ''}
@@ -1086,11 +1138,11 @@ $('#inv-go').onclick = async () => {
   if (q.startsWith('(')) q = '';
   const out = $('#inv-out');
   if (kind === 'image') { out.innerHTML = `<p class="meta">Loading satellite image of ${esc(q)}…</p><img class="sat" alt="Satellite image of ${esc(q)}" src="/api/image?place=${encodeURIComponent(q)}">`; return; }
-  const param = { dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
+  const param = { url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
   $('#inv-go').disabled = true;
   out.innerHTML = '<p class="meta">Working… some sources are rate-limited and take a while.</p>';
   try {
-    const r = await api(`/api/${kind}?${param}=${encodeURIComponent(q)}`);
+    const r = kind === 'audit' && /^[{]/.test(q) ? await post('/api/audit', { manifest: q }) : await api(`/api/${kind}?${param}=${encodeURIComponent(q)}`);
     out.innerHTML = views[kind](r) + `<h3>Sources</h3>${renderSources(r.provenance)}`;
   } catch (err) { out.innerHTML = `<p class="err">${esc(err.message)}</p>`; }
   finally { $('#inv-go').disabled = false; }

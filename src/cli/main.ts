@@ -86,12 +86,15 @@ export function parseArgs(argv: string[]): Args {
   }
   return { pos, flags };
 }
-const BOOLEAN = new Set(['json', 'help', 'no-github', 'no-org', 'version', 'live', 'telegram', 'radar', 'deep']);
+const BOOLEAN = new Set(['json', 'help', 'no-github', 'no-org', 'version', 'live', 'telegram', 'radar', 'deep', 'dry-run', 'all', 'public']);
 
 /** Help without the paused on-chain commands (they come back with OCULON_ONCHAIN=1). */
 function helpText(): string {
   if (onchainEnabled()) return HELP;
-  return HELP.split('\n').filter((l) => !/oculon (rh|deployer|wallet|token|defi|protocol)\b|@robinhood/.test(l)).join('\n');
+  return HELP.split('\n')
+    .filter((l) => !/oculon (rh|deployer|wallet|token|defi|protocol)\b|@robinhood|On-chain/.test(l))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n');
 }
 
 const HELP = `${c.bold('oculon')} ${c.dim(`v${VERSION}`)} — OSINT intelligence engine for AI agents
@@ -126,7 +129,7 @@ ${c.bold('Case files')}
   oculon case [list] | show <id> | rerun <id> | watch <id> [off]
 
 ${c.bold('Watch & brief')}
-  oculon watch add <kind> <target>     kinds: company domain wallet token plane topic lights air port
+  oculon watch add <kind> <target>     kinds: company domain plane topic lights air port news outage cve quake hazard url package travel
   oculon watch [list] | run | rm <id>  re-check targets, report only what changed   (meerkat)
   oculon brief [--refresh]             today's brief from signals and watch changes
   oculon sentinel <place> [--date d] [--compare d] [--radar] [--out f.png]  10 m satellite image, before/after
@@ -174,6 +177,13 @@ ${c.bold('On-chain')}
 ${c.bold('Earth & sky')}
   oculon space                         geomagnetic storms and solar flares
   oculon air <place>                   PM2.5 air quality near a place
+
+${c.bold('Everyday checks')}
+  oculon url <link>                    is a link dangerous? Safe Browsing, URLhaus, urlscan, domain age
+  oculon factcheck "<claim>"|<url>     fact check a claim or a news link
+  oculon audit [file|npm:name@ver ...] dependency health: vulnerabilities, deprecation, Scorecard
+  oculon travel <place>                travel risk brief for the coming week
+  oculon monitor "<request>"           watch anything in plain language, e.g. "outages in Iran"
 
 ${c.bold('Web')}
   oculon search <query>                web search
@@ -499,6 +509,83 @@ export const COMMANDS: Record<string, Cmd> = {
       printSources(r);
     });
   },
+  async url(o, a) {
+    const r = await o.urlCheck(need(a, 1, 'link'));
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.verdict === 'malicious' ? c.red : d.verdict === 'suspicious' ? c.yellow : c.green;
+      out(`${c.bold(d.host)}  ${tone(d.verdict.toUpperCase())}  ${c.dim(`risk ${d.risk}/100`)}`);
+      for (const x of d.reasons) out(`  - ${x}`);
+      if (d.domainInfo?.registered) out(c.dim(`  domain ${d.domain}: registered ${d.domainInfo.registered.slice(0, 10)}${d.domainInfo.registrar ? ` via ${d.domainInfo.registrar}` : ''}${d.domainInfo.expires ? `, expires ${d.domainInfo.expires.slice(0, 10)}` : ''}`));
+      if (d.scans?.count) out(c.dim(`  urlscan.io: ${d.scans.count} scan(s) since ${d.scans.firstSeen?.slice(0, 10)}${d.scans.countries.length ? `, hosted in ${d.scans.countries.join(', ')}` : ''}${d.scans.latest ? `  ${d.scans.latest}` : ''}`));
+      if (d.verdict === 'no known threats') out(c.dim('  no source flags it; that is not a guarantee the page is safe'));
+      printSources(r);
+    });
+  },
+  async audit(o, a) {
+    const args = a.pos.slice(1);
+    let text: string;
+    if (!args.length) {
+      const guess = ['package.json', 'requirements.txt'].find((f) => existsSync(f));
+      if (!guess) throw new UsageError('usage: oculon audit <package.json|requirements.txt> | oculon audit npm:express@4.17.1 pypi:requests');
+      text = readFileSync(guess, 'utf8');
+    } else if (args.length === 1 && existsSync(args[0]!)) text = readFileSync(args[0]!, 'utf8');
+    else text = args.map((x) => (x.includes(':') ? x : `npm:${x}`)).join(' ');
+    if (!json(a)) out(c.dim('checking packages on deps.dev…'));
+    const r = await o.audit(text, a.flags.max ? { max: Number(a.flags.max) } : {});
+    emit(a, r, () => {
+      const s = r.result.summary;
+      out(`${c.bold(`${r.result.manifest}: ${s.checked} of ${s.total} packages checked`)}  ${s.vulnerable ? c.red(`${s.vulnerable} vulnerable (${s.advisories} advisories)`) : c.green('no known vulnerabilities')}${s.deprecated ? `  ${c.yellow(`${s.deprecated} deprecated`)}` : ''}${s.stale ? `  ${s.stale} stale` : ''}`);
+      for (const p of r.result.packages) {
+        if (!p.flags.length && !a.flags.all) continue;
+        const tone = p.risk >= 60 ? c.red : p.risk >= 30 ? c.yellow : (x: string) => x;
+        out(`  ${tone(String(p.risk).padStart(3))}  ${c.bold(`${p.name}@${p.version ?? '?'}`)}${p.dev ? c.dim(' (dev)') : ''}${p.project?.scorecard != null ? c.dim(`  scorecard ${p.project.scorecard}`) : ''}`);
+        for (const f of p.flags) out(`         - ${f}`);
+        for (const x of p.advisories.slice(0, 3)) out(c.dim(`           ${x.aliases[0] ?? x.id}${x.cvss ? ` CVSS ${x.cvss}` : ''}: ${trunc(x.title, 90)}`));
+      }
+      const clean = r.result.packages.filter((p) => !p.flags.length).length;
+      if (clean && !a.flags.all) out(c.dim(`  ${clean} package(s) with no flags (show them with --all)`));
+      for (const x of r.result.skipped) out(c.dim(`  skipped ${x}`));
+      printSources(r);
+    });
+  },
+  async factcheck(o, a) {
+    const claim = a.pos.slice(1).join(' ').trim();
+    if (!claim) throw new UsageError('usage: oculon factcheck "<claim>" | oculon factcheck <news url>');
+    const r = await o.factCheck(claim);
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = /false|misleading/.test(d.verdict) ? c.red : /true/.test(d.verdict) ? c.green : c.yellow;
+      out(`${c.bold(trunc(d.claim, 160))}\n  ${tone(d.verdict.toUpperCase())}${d.confidence ? c.dim(`  confidence ${d.confidence}%`) : ''}  ${c.dim(d.method)}`);
+      if (d.summary) out(`  ${d.summary}`);
+      for (const e of [...d.factChecks, ...d.web].filter((e) => !d.cited.length || d.cited.includes(e.n)).slice(0, 8)) out(`  [${e.n}] ${e.kind === 'fact-check' ? c.bold(e.publisher) : e.publisher}${e.rating ? ` "${e.rating}"` : ''}: ${trunc(e.title, 90)}\n      ${c.cyan(e.url)}`);
+      printSources(r);
+    });
+  },
+  async travel(o, a) {
+    const r = await o.travel(a.pos.slice(1).join(' ') || need(a, 1, 'place'));
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.level === 'severe' || d.level === 'high' ? c.red : d.level === 'moderate' ? c.yellow : c.green;
+      out(`${c.bold(d.place.name)}\n  ${tone(`${d.level.toUpperCase()} risk`)}`);
+      for (const p of d.points) out(`  - ${p}`);
+      if (d.weather) out(c.dim(`  next days: ${d.weather.days.slice(0, 5).map((x) => `${x.date.slice(5)} ${x.summary} ${Math.round(x.tMin)}–${Math.round(x.tMax)}°C`).join(' · ')}`));
+      if (d.air?.pm25 != null) out(c.dim(`  air: PM2.5 ${d.air.pm25.toFixed(0)} µg/m³ (${d.air.category})`));
+      if (d.advisories.us) out(c.dim(`  ${d.advisories.us.url}`));
+      if (d.advisories.uk) out(c.dim(`  ${d.advisories.uk.url}`));
+      printSources(r);
+    });
+  },
+  async monitor(o, a) {
+    const text = a.pos.slice(1).join(' ').trim();
+    if (!text) throw new UsageError('usage: oculon monitor "<what to watch>"   e.g. "internet outages in Iran", "critical CVEs for nginx", "earthquakes above 6 near Tokyo"');
+    if (a.flags['dry-run']) {
+      const r = await o.monitorParse(text);
+      return emit(a, r, () => out(`would watch ${c.bold(r.kind)} ${r.target}: ${r.description} ${c.dim(`(${r.method})`)}`));
+    }
+    const r = await o.monitor(text);
+    emit(a, r, () => out(`${c.green('monitoring')} #${r.item.id} ${r.rule.kind} ${c.bold(r.rule.target)}\n  ${r.rule.description}\n${c.dim('  checked with the watchlist (oculon watch run, or every cycle of serve --watch / telegram); the first check records a baseline')}`));
+  },
   async search(o, a) {
     const r = await o.webSearch(need(a, 1, 'query'), Number(a.flags.max ?? 8) || 8);
     emit(a, r, () => {
@@ -750,7 +837,7 @@ export const COMMANDS: Record<string, Cmd> = {
     if (sub === 'add') {
       const kind = a.pos[2];
       const target = a.pos.slice(3).join(' ').trim();
-      if (!kind || !target) throw new UsageError('usage: oculon watch add <company|domain|wallet|token|plane|topic|lights|air|port> <target> [--label name]');
+      if (!kind || !target) throw new UsageError('usage: oculon watch add <kind> <target> [--label name]   (or describe it: oculon monitor "...")');
       const item = o.watchAdd(kind, target, typeof a.flags.label === 'string' ? a.flags.label : undefined);
       return emit(a, item, () => out(`${c.green('watching')} #${item.id} ${item.kind} ${c.bold(item.target)}${item.label ? c.dim(` (${item.label})`) : ''}\n${c.dim('  the first `oculon watch run` records a baseline; later runs report changes')}`));
     }
@@ -1413,7 +1500,8 @@ export const COMMANDS: Record<string, Cmd> = {
       ['markets', ['FINNHUB_API_KEY', 'FRED_API_KEY', 'COINGECKO_API_KEY']],
       ['on-chain', ['ZERION_API_KEY', 'ETHERSCAN_API_KEY', 'WEBACY_API_KEY', 'HELIUS_API_KEY', 'ROBINHOOD_PUBLIC_RPC_URL']],
       ['companies', ['ADZUNA_APP_KEY', 'COURTLISTENER_TOKEN', 'COMPANIES_HOUSE_API_KEY', 'BRANDFETCH_API_KEY']],
-      ['web security', ['URLSCAN_API_KEY', 'SAFE_BROWSING_KEY']],
+      ['web security', ['URLSCAN_API_KEY', 'SAFE_BROWSING_KEY', 'ABUSECH_AUTH_KEY']],
+      ['fact checks', ['GOOGLE_API_KEY']],
       ['social/research', ['YOUTUBE_API_KEY', 'BLUESKY_APP_PASSWORD', 'OPENALEX_API_KEY']],
       ['air quality', ['OPENAQ_API_KEY']],
     ];

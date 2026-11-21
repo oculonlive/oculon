@@ -94,7 +94,7 @@ aside.left a.on{text-shadow:0 0 18px rgba(0,240,255,.6)}
 .qc .cmd .p{color:var(--y)}
 .cp{background:none;border:1px solid #2a3b3f;color:#9fd8e2;font:11px var(--mono);padding:4px 9px;cursor:pointer;flex:none;transition:all .2s}
 .cp:hover{border-color:var(--y);color:#fff}.cp.ok{border-color:#3fd16b;color:#3fd16b}
-.surf{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.surf{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
 .sc{display:block;text-decoration:none !important;border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:16px;position:relative;overflow:hidden;transition:border-color .3s,transform .35s}
 .sc:hover{border-color:rgba(0,240,255,.55);transform:translateY(-3px)}
 .sc::after{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--y),transparent);transform:translateX(-100%);transition:transform .7s}
@@ -136,11 +136,12 @@ aside.left a.on{text-shadow:0 0 18px rgba(0,240,255,.6)}
         <div class="qc"><div class="n">01</div><h3>Install</h3><p>Needs Node.js 22.13 or newer. No runtime dependencies.</p><div class="cmd"><span class="p">$</span><code>npm i -g oculon</code><button class="cp" type="button">copy</button></div></div>
         <div class="qc"><div class="n">02</div><h3>Take the tour</h3><p>Shows what this install knows and what to try next.</p><div class="cmd"><span class="p">$</span><code>oculon tour</code><button class="cp" type="button">copy</button></div></div>
         <div class="qc"><div class="n">03</div><h3>Open the web app</h3><p>Overview page, console, dashboard and these docs, with the schedule and live streams running.</p><div class="cmd"><span class="p">$</span><code>oculon serve --watch 15 --live</code><button class="cp" type="button">copy</button></div></div>
-        <div class="qc"><div class="n">04</div><h3>Connect an agent</h3><p>Starts the MCP server on stdio for Claude and other MCP clients.</p><div class="cmd"><span class="p">$</span><code>oculon mcp</code><button class="cp" type="button">copy</button></div></div>
+        <div class="qc"><div class="n">04</div><h3>Connect an agent</h3><p>Add the remote MCP server to Claude Code, or run <code>oculon mcp</code> on stdio.</p><div class="cmd"><span class="p">$</span><code>claude mcp add --transport http oculon https://mcp.oculon.live</code><button class="cp" type="button">copy</button></div></div>
       </div></div>
-    <div class="dsec"><h2 id="surfaces">Surfaces</h2><p class="sub">The same results in five places. Each card jumps to its section.</p>
+    <div class="dsec"><h2 id="surfaces">Surfaces</h2><p class="sub">The same results in six places. Each card jumps to its section.</p>
       <div class="surf">
         <a class="sc" href="#cli"><div class="ic">$_</div><h3>CLI</h3><p>Every module, plain text or --json.</p></a>
+        <a class="sc" href="#remote-mcp"><div class="ic">⇄</div><h3>Remote MCP</h3><p>One URL, nothing to install.</p></a>
         <a class="sc" href="#sdk"><div class="ic">{ }</div><h3>SDK</h3><p>TypeScript, same result objects.</p></a>
         <a class="sc" href="#mcp-server"><div class="ic">&lt;/&gt;</div><h3>MCP server</h3><p><span class="mcpn">71</span> tools for agents.</p></a>
         <a class="sc" href="#dashboard-and-schedule"><div class="ic">▦</div><h3>Web and schedule</h3><p>Overview, console, dashboard.</p></a>

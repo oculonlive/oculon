@@ -16,8 +16,27 @@ import { hound } from './hound.js';
 import { token, wallet } from './magpie.js';
 import { shipsNear } from './ships.js';
 import { air } from './sky.js';
+import { gnews, guardian } from '../sources/press.js';
+import { recentQuakes } from '../sources/usgs.js';
+import { geocode } from '../sources/earth.js';
+import { haversineKm } from '../sources/airports.js';
+import { blackout } from './blackout.js';
+import { vulns } from './vulns.js';
+import { hazards } from './hazards.js';
+import { urlCheck } from './urlcheck.js';
+import { audit } from './audit.js';
+import { travel } from './travel.js';
 
-export const WATCH_KINDS = ['company', 'domain', 'wallet', 'token', 'plane', 'topic', 'lights', 'air', 'port'] as const;
+const lc = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+/** "Tokyo|5.5" is a place with a minimum magnitude; a bare place uses 5.0. */
+export function splitQuakeTarget(target: string): { place: string; min: number } {
+  const [place, min] = target.split('|');
+  const m = Number(min);
+  return { place: (place ?? '').trim(), min: Number.isFinite(m) && m > 0 ? m : 5 };
+}
+
+export const WATCH_KINDS = ['company', 'domain', 'wallet', 'token', 'plane', 'topic', 'lights', 'air', 'port', 'news', 'outage', 'cve', 'quake', 'hazard', 'url', 'package', 'travel'] as const;
 export type WatchKind = (typeof WATCH_KINDS)[number];
 
 export interface WatchItem {
@@ -167,10 +186,81 @@ export async function observe(ctx: Ctx, item: WatchItem, prev: State | null): Pr
       if (prev && r.category && prev.category !== r.category) changes.push(`air quality ${String(prev.category)} → ${r.category} (PM2.5 ${r.median?.toFixed(0)})`);
       return { state: { category: r.category, median: r.median }, changes };
     }
+    case 'news': {
+      const [g, n] = await Promise.all([guardian(ctx, item.target, 3, 10), gnews(ctx, item.target, 10)]);
+      const all = [...(g.data ?? []), ...(n.data ?? [])];
+      const seen = all.map((a) => a.url);
+      if (prev) {
+        const fresh = all.filter((a) => newOnes(seen, prev.seen).includes(a.url));
+        for (const a of fresh.slice(0, 4)) changes.push(`${a.source}: ${a.title.slice(0, 140)} ${a.url}`);
+        if (fresh.length > 4) changes.push(`${fresh.length - 4} more new stories`);
+      }
+      return { state: { seen: [...new Set([...seen, ...(Array.isArray(prev?.seen) ? (prev!.seen as string[]) : [])])].slice(0, 200) }, changes };
+    }
+    case 'outage': {
+      const r = (await blackout(ctx, 2)).result;
+      const q = lc(item.target.trim());
+      const hits = r.outages.filter((o) => (o.countryCode && o.countryCode.toLowerCase() === q) || (o.country && lc(o.country).includes(q)));
+      const keys = hits.map((o) => `${o.start}|${o.network ?? ''}|${o.end ?? ''}`);
+      if (prev) for (const o of hits.filter((h) => newOnes(keys, prev.keys).includes(`${h.start}|${h.network ?? ''}|${h.end ?? ''}`)).slice(0, 4)) changes.push(`${o.end ? 'outage ended' : 'internet outage'} in ${o.country ?? item.target}${o.network ? ` (${o.network})` : ''}: ${o.cause ?? o.type ?? 'cause unknown'}, since ${o.start.slice(0, 16)}Z${o.verified ? ', confirmed' : ''}${o.url ? ` ${o.url}` : ''}`);
+      return { state: { keys }, changes };
+    }
+    case 'cve': {
+      const r = (await vulns(ctx, { days: 14, vendor: item.target })).result;
+      const ids = [...r.kev.map((k) => k.cveID), ...r.criticalCves.map((c) => c.id), ...r.advisories.map((a) => a.id)];
+      if (prev) {
+        for (const k of r.kev.filter((x) => newOnes(ids, prev.ids).includes(x.cveID)).slice(0, 3)) changes.push(`exploited in the wild (CISA KEV): ${k.cveID} ${k.vendorProject} ${k.product}, ${k.vulnerabilityName}`);
+        for (const c of r.criticalCves.filter((x) => newOnes(ids, prev.ids).includes(x.id)).slice(0, 3)) changes.push(`new critical CVE ${c.id}${c.cvss ? ` (CVSS ${c.cvss})` : ''}: ${c.description.slice(0, 140)} ${c.url}`);
+        for (const a of r.advisories.filter((x) => newOnes(ids, prev.ids).includes(x.id)).slice(0, 3)) changes.push(`new critical advisory ${a.cve ?? a.id}: ${a.summary.slice(0, 140)} ${a.url}`);
+      }
+      return { state: { ids: [...new Set([...ids, ...(Array.isArray(prev?.ids) ? (prev!.ids as string[]) : [])])].slice(0, 500) }, changes };
+    }
+    case 'quake': {
+      const { place, min } = splitQuakeTarget(item.target);
+      const g = await geocode(ctx, place, 1);
+      const p = g.data?.[0];
+      if (!p) throw new Error(`place not found: ${place}`);
+      const qk = await recentQuakes(ctx);
+      const near = (qk.data ?? []).filter((q) => q.lat != null && q.lon != null && q.mag >= min).map((q) => ({ ...q, km: Math.round(haversineKm(p.lat, p.lon, q.lat!, q.lon!)) })).filter((q) => q.km <= 300);
+      const ids = near.map((q) => q.id);
+      if (prev) for (const q of near.filter((x) => newOnes(ids, prev.ids).includes(x.id)).slice(0, 3)) changes.push(`M${q.mag.toFixed(1)} earthquake ${q.km} km from ${place.split(',')[0]}: ${q.place} at ${new Date(q.time).toISOString().slice(0, 16)}Z${q.tsunami ? ', tsunami flag' : ''} ${q.url}`);
+      return { state: { ids: [...new Set([...ids, ...(Array.isArray(prev?.ids) ? (prev!.ids as string[]) : [])])].slice(0, 300) }, changes };
+    }
+    case 'hazard': {
+      const r = await hazards(ctx, 7);
+      const q = lc(item.target.trim());
+      const hits = r.result.filter((h) => h.level !== 'Green' && (lc(h.countries).includes(q) || lc(h.name).includes(q)));
+      const keys = hits.map((h) => `${h.id}|${h.level}`);
+      if (prev) for (const h of hits.filter((x) => newOnes(keys, prev.keys).includes(`${x.id}|${x.level}`)).slice(0, 3)) changes.push(`${h.level.toLowerCase()} alert: ${h.type} ${h.name} (${h.countries})${h.severity ? `, ${h.severity}` : ''} ${h.url}`);
+      return { state: { keys }, changes };
+    }
+    case 'url': {
+      const r = (await urlCheck(ctx, item.target)).result;
+      if (prev && prev.verdict !== r.verdict) changes.push(`verdict ${String(prev.verdict)} → ${r.verdict}${r.reasons.length ? `: ${r.reasons.slice(0, 2).join('; ')}` : ''}`);
+      return { state: { verdict: r.verdict, risk: r.risk }, changes };
+    }
+    case 'package': {
+      const spec = item.target.includes(':') ? item.target : `npm:${item.target}`;
+      const p = (await audit(ctx, spec)).result.packages[0];
+      if (!p) throw new Error(`package not found: ${item.target}`);
+      const ids = p.advisories.map((a) => a.id);
+      if (prev) {
+        for (const a of p.advisories.filter((x) => newOnes(ids, prev.ids).includes(x.id))) changes.push(`new advisory for ${p.name}@${p.version}: ${a.aliases[0] ?? a.id} ${a.title}${a.cvss ? ` (CVSS ${a.cvss})` : ''} ${a.url}`);
+        if (p.deprecated && !prev.deprecated) changes.push(`${p.name} is now deprecated: ${p.deprecated}`);
+        if (typeof prev.latest === 'string' && p.latest && p.latest !== prev.latest) changes.push(`new release ${p.name}@${p.latest} (was ${prev.latest})`);
+      }
+      return { state: { ids, deprecated: p.deprecated, latest: p.latest }, changes };
+    }
+    case 'travel': {
+      const r = (await travel(ctx, item.target, { fires: false })).result;
+      if (prev && prev.level !== r.level) changes.push(`risk ${String(prev.level)} → ${r.level}: ${r.points.slice(0, 2).join('; ')}`);
+      else if (prev) for (const x of newOnes(r.points, prev.points).filter((x) => !/^UK FCDO has no|moderate earthquake/.test(x)).slice(0, 2)) changes.push(x);
+      return { state: { level: r.level, points: r.points }, changes };
+    }
   }
 }
 
-const KIND_WEIGHT: Record<WatchKind, number> = { company: 55, domain: 60, wallet: 60, token: 65, plane: 65, topic: 50, lights: 65, air: 50, port: 60 };
+const KIND_WEIGHT: Record<WatchKind, number> = { company: 55, domain: 60, wallet: 60, token: 65, plane: 65, topic: 50, lights: 65, air: 50, port: 60, news: 50, outage: 70, cve: 65, quake: 70, hazard: 70, url: 70, package: 60, travel: 65 };
 
 /** Run every watch item (or the given ids) one after another, so free-tier rate limits are respected. */
 export async function runWatch(ctx: Ctx, ids?: number[]): Promise<{ runs: WatchRun[]; signals: Signal[] }> {

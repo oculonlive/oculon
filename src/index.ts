@@ -54,6 +54,11 @@ import { rewind } from './modules/rewind.js';
 import { quotaUsage } from './core/quota.js';
 import { air, spaceWeather } from './modules/sky.js';
 import { readPage, webSearch } from './sources/press.js';
+import { urlCheck } from './modules/urlcheck.js';
+import { audit } from './modules/audit.js';
+import { factCheck } from './modules/factcheck.js';
+import { travel } from './modules/travel.js';
+import { addMonitor, parseMonitor } from './modules/monitor.js';
 
 export interface OculonOptions extends Pick<ContextOptions, 'dbPath' | 'fetch' | 'throttle' | 'now'> {
   /** Contact string for User-Agents (enables SEC EDGAR). Falls back to OCULON_CONTACT. */
@@ -296,6 +301,30 @@ export class Oculon {
   /** Meerkat: re-check every watch item and report what changed since last time. */
   watchRun(ids?: number[]) {
     return runWatch(this.ctx, ids);
+  }
+  /** Monitor in plain language: "internet outages in Iran" becomes a watch rule that alerts on changes. */
+  monitor(text: string) {
+    return addMonitor(this.ctx, text);
+  }
+  /** Read a monitoring sentence into a rule without saving it. */
+  monitorParse(text: string) {
+    return parseMonitor(text);
+  }
+  /** Is a link dangerous? Safe Browsing, URLhaus, urlscan.io history, domain age and URL heuristics. */
+  urlCheck(url: string) {
+    return urlCheck(this.ctx, url);
+  }
+  /** Dependency audit of package.json, requirements.txt or "npm:name@version" items (deps.dev, OpenSSF Scorecard). */
+  audit(manifest: string, opts: { max?: number } = {}) {
+    return audit(this.ctx, manifest, opts);
+  }
+  /** Fact check a claim or a news link against published fact checks and current reporting. */
+  factCheck(claimOrUrl: string) {
+    return factCheck(this.ctx, claimOrUrl);
+  }
+  /** Travel risk brief for a place: official advice, weather, air, outbreaks, hazards, quakes and outages. */
+  travel(place: string, opts: { fires?: boolean } = {}) {
+    return travel(this.ctx, place, opts);
   }
   /** Today's brief (stored once per day; refresh to rewrite). */
   brief(opts?: { refresh?: boolean; lang?: string }) {

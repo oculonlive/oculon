@@ -35,10 +35,13 @@ export const PUBLIC_API = new Set([
   '/api/verify',
   '/api/graph',
   '/api/quota',
+  '/api/url',
+  '/api/travel',
+  '/api/audit',
 ]);
 
 /** Endpoints that start outside work (a CLI process or several upstream calls) get a tighter budget. */
-const HEAVY = new Set(['/api/console', '/api/rhtoken', '/api/verify']);
+const HEAVY = new Set(['/api/console', '/api/rhtoken', '/api/verify', '/api/url', '/api/travel', '/api/audit']);
 
 /** Signals from these modules describe the owner's own watchlist, cases, fences, votes or raw social streams. */
 const PRIVATE_MODULES = new Set(['meerkat', 'case', 'fence', 'feedback', 'live']);

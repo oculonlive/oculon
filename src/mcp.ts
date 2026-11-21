@@ -7,6 +7,7 @@ import { createInterface } from 'node:readline';
 import { Oculon, summarizeProvenance } from './index.js';
 import type { ModuleResult } from './core/types.js';
 import { ONCHAIN_TOOLS, onchainEnabled } from './core/features.js';
+import { availableKinds } from './modules/monitor.js';
 
 export const SERVER_INFO = { name: 'oculon', version: '0.1.0' };
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
@@ -189,6 +190,36 @@ export const TOOLS: Tool[] = [
     run: async (o, a) => compact(await o.airQuality(String(a.place))),
   },
   {
+    name: 'oculon_url_check',
+    description: 'Is a link dangerous? Checks Google Safe Browsing, URLhaus (abuse.ch), urlscan.io scan history, domain age and registrar (RDAP), and warning signs in the URL itself (brand names on other domains, punycode, risky TLDs). Returns a verdict (malicious, suspicious, no known threats), a 0-100 risk and the reasons.',
+    inputSchema: schema({ url: str('The link or domain, e.g. "https://paypa1-login.top/verify"') }, ['url']),
+    run: async (o, a) => compact(await o.urlCheck(String(a.url))),
+  },
+  {
+    name: 'oculon_audit',
+    description: 'Dependency audit for developers. Pass the text of a package.json or requirements.txt, or items like "npm:express@4.17.1 pypi:requests==2.19.0". For each package: known vulnerabilities with CVSS, deprecation, last release, versions behind, OpenSSF Scorecard and maintenance, license; plus a 0-100 risk. Source: deps.dev.',
+    inputSchema: schema({ manifest: str('package.json or requirements.txt contents, or "npm:name@version" items'), max: num('Maximum packages to check (default 60, up to 150)') }, ['manifest']),
+    run: async (o, a) => compact(await o.audit(String(a.manifest), a.max ? { max: Number(a.max) } : {})),
+  },
+  {
+    name: 'oculon_fact_check',
+    description: 'Fact check a claim, or the main claim of a news link. Finds published fact checks (Google Fact Check Tools: Snopes, AFP, PolitiFact, Full Fact and others) and current reporting, then gives a verdict (true, mostly true, mixed, misleading, false, unverified) with a confidence and a summary that cites the numbered sources.',
+    inputSchema: schema({ claim: str('The claim, or a URL of an article') }, ['claim']),
+    run: async (o, a) => compact(await o.factCheck(String(a.claim))),
+  },
+  {
+    name: 'oculon_travel',
+    description: 'Travel and place risk brief for the coming week: US State Department and UK FCDO advice, 7-day weather warnings (storms, heavy rain, gusts, heat, cold, UV), PM2.5 air quality, WHO disease outbreak news, GDACS disaster alerts, nearby earthquakes, satellite heat detections and confirmed internet outages. Returns a level (low, moderate, high, severe) with the reasons.',
+    inputSchema: schema({ place: str('City, region or country, e.g. "Lisbon"') }, ['place']),
+    run: async (o, a) => compact(await o.travel(String(a.place))),
+  },
+  {
+    name: 'oculon_monitor',
+    description: 'Create a monitor from a plain-language request, e.g. "tell me when there is an internet outage in Iran", "watch critical CVEs for nginx", "earthquakes above 6 near Tokyo", "news about OpenAI", "travel risk changes for Bangkok". It becomes a watch rule that is re-checked on a schedule and reports only changes, with evidence. Set dry_run to see the rule without saving it.',
+    inputSchema: schema({ request: str('What to watch, in plain language'), dry_run: { type: 'boolean', description: 'Only show how the request would be read' } }, ['request']),
+    run: async (o, a) => (a.dry_run ? o.monitorParse(String(a.request)) : o.monitor(String(a.request))),
+  },
+  {
     name: 'oculon_web_search',
     description: 'Search the web (Tavily, Exa fallback). Returns titles, URLs, snippets and dates.',
     inputSchema: schema({ query: str('Search query'), max: num('Max results (default 6)') }, ['query']),
@@ -313,8 +344,8 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'oculon_watch_add',
-    description: 'Add a watchlist target. Kinds: company, domain, wallet, token (address or address@chain, e.g. 0x..@robinhood), plane, topic, lights (place), air (place), port (place, anchored-vessel queue).',
-    inputSchema: schema({ kind: { type: 'string', enum: ['company', 'domain', 'wallet', 'token', 'plane', 'topic', 'lights', 'air', 'port'] }, target: str('What to watch'), label: str('Optional display name') }, ['kind', 'target']),
+    description: `Add a watchlist target. Kinds: company, domain, plane, topic, lights (place), air (place), port (place, anchored-vessel queue), news (keyword), outage (country), cve (vendor or product), quake ("place|min magnitude"), hazard (country or storm name), url, package ("npm:name" or "pypi:name"), travel (place)${onchainEnabled() ? ', wallet, token (address or address@chain)' : ''}. For plain-language requests use oculon_monitor.`,
+    inputSchema: schema({ kind: { type: 'string', enum: availableKinds() }, target: str('What to watch'), label: str('Optional display name') }, ['kind', 'target']),
     run: (o, a) => o.watchAdd(String(a.kind), String(a.target), a.label ? String(a.label) : undefined),
   },
   {
