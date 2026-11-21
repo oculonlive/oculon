@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { Oculon, summarizeProvenance } from './index.js';
 import type { ModuleResult } from './core/types.js';
+import { ONCHAIN_TOOLS, onchainEnabled } from './core/features.js';
 
 export const SERVER_INFO = { name: 'oculon', version: '0.1.0' };
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
@@ -495,6 +496,11 @@ interface Request {
   params?: Json;
 }
 
+/** Tools this build offers: on-chain tools are left out unless OCULON_ONCHAIN=1. */
+export function activeTools(): Tool[] {
+  return onchainEnabled() ? TOOLS : TOOLS.filter((t) => !ONCHAIN_TOOLS.has(t.name));
+}
+
 export class McpServer {
   private oculon: Oculon | null = null;
 
@@ -520,7 +526,7 @@ export class McpServer {
         })),
       );
     }
-    return [...TOOLS, ...this.pluginTools];
+    return [...activeTools(), ...this.pluginTools];
   }
 
   /** Handle one JSON-RPC message; returns the response, or null for notifications. */

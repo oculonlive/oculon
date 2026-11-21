@@ -1,6 +1,6 @@
 # Oculon
 
-**Open-source intelligence engine for the physical and digital world.** Oculon watches more than 50 public data sources (routing tables, exploit catalogs, transponders, satellites, ship trackers, registries, prediction markets and Robinhood Chain), finds what is unusual, fuses observations about the same subject from independent sources into scored signals, and labels every result with where it came from and how fresh it is. An AI agent on top answers plain-language questions with sources.
+**Open-source intelligence engine for the physical and digital world.** Oculon watches more than 50 public data sources (routing tables, exploit catalogs, transponders, satellites, ship trackers, registries and prediction markets), finds what is unusual, fuses observations about the same subject from independent sources into scored signals, and labels every result with where it came from and how fresh it is. An AI agent on top answers plain-language questions with sources.
 
 [oculon.live](https://oculon.live) · [Documentation](https://oculon.live/docs) · [Privacy](https://oculon.live/privacy) · [Terms](https://oculon.live/terms)
 
@@ -13,17 +13,15 @@ It ships as a CLI, a TypeScript SDK, an MCP server for Claude and other agents, 
 
 ```sh
 npx oculon radar
-npx oculon rh                                   # Robinhood Chain: new pools with risk flags
 npx oculon ask "why is Nvidia in the news this week?"
 ```
 
 ## Highlights
 
 - **Sourced by design.** Every answer names the sources it used and whether each one was live, cached or unavailable. Nothing is presented without provenance.
-- **Robinhood Chain, read block by block.** Heron watches pools the minute they open, follows each token back to the wallet that deployed it (directly or through a launchpad) and counts how many of that wallet's launches are already dead.
 - **Cross-source signals.** When independent sources move on the same subject, Oculon fuses them into one scored signal with the evidence behind it, and storylines are tracked across days.
 - **Measured, not claimed.** A time machine replays past days to calibrate the radar, a first-to-know check compares Oculon against media coverage, and forecasts are timestamped on Bitcoin so they cannot be edited later.
-- **Built for agents.** An MCP server exposes 71 tools; the SDK and CLI return the same objects, and `--json` works on every command.
+- **Built for agents.** An MCP server exposes 66 tools; the SDK and CLI return the same objects, and `--json` works on every command.
 - **Free to run.** Daily per-source budgets keep every free tier free, and the data lives in one local SQLite file.
 
 ## Contents
@@ -53,7 +51,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 | Exposure | `oculon exposure <domain>` | Resolves a domain's main hosts and known subdomains, then lists open ports, software and known CVEs per machine, the network that announces each IP (abuse contact, RPKI) and which CVEs are exploited in the wild; CDN edges are marked, and CVEs or exposed databases and remote access on direct machines become a signal | Google DNS, Shodan InternetDB (free), RIPEstat, CISA KEV |
 | Social pulse | `oculon social <subject>` | Recent posts about a subject on X, Reddit, TikTok and Bluesky: count per platform, the most engaged and the newest posts with links, and Reddit's pace over the last six hours versus the day before; a sharp acceleration is a signal | Apify (X, Reddit, TikTok; pay per result), Bluesky |
 | Feedback | Telegram buttons / `oculon feedback` | Every alert has Useful and Noise buttons; votes move that module's alert bar (from the third vote, capped at -10/+20 points) | your votes |
-| Sanctions | `oculon sanctions <wallet\|IMO\|name>` | Screens against the US OFAC SDN list and, for names, sanctions, PEP and wanted lists worldwide (OpenSanctions, free non-commercial key): listed wallets (and one hop of direct counterparties), vessel IMO numbers, exact names and aliases; for a confident name match, its owners, subsidiaries, directors and associates, sanctioned ones first. Runs automatically on every wallet lookup and every vessel seen over AIS | OFAC SDN, OpenSanctions, Etherscan |
+| Sanctions | `oculon sanctions <IMO\|name>` | Screens against the US OFAC SDN list and, for names, sanctions, PEP and wanted lists worldwide (OpenSanctions, free non-commercial key): vessel IMO numbers, exact names and aliases; for a confident name match, its owners, subsidiaries, directors and associates, sanctioned ones first. Runs automatically on every vessel seen over AIS | OFAC SDN, OpenSanctions |
 | Narratives | `oculon narratives [run]` | Groups headlines into storylines that persist across days and flags new or fast-growing ones | Guardian, NYT, Hacker News, Oculon signals, free-tier LLMs |
 | Calibration | `oculon calibrate` | Replays past days with the Time Machine, checks which radar items became news within three days, picks the signal threshold with the best F1 and per-source weights; the live radar uses them | Time Machine, Guardian |
 | Company health | `oculon health <company>` | 0-100 early-warning score from hiring momentum, new lawsuits, insider selling, news tone, shipping and the stock move, each part explained; a sharp drop is a signal | Hound sources |
@@ -72,9 +70,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 | Hound | `oculon dossier <name> [--deep]` | Dossier on a company, person or project: profile and readership spike, stock quote, insider trades and insider sentiment, analyst ratings and their shift, peers, key financials, earnings surprises, decoded 8-K events, news from five outlets, web results, federal court dockets, job openings, UK registry, brand, prediction markets, repos, YouTube, Bluesky; FDA recalls and clinical trials for health and food companies; with `--deep` lobbying, federal contracts, visa filings and patents; one merged timeline | Wikipedia, Finnhub, SEC EDGAR, openFDA, ClinicalTrials.gov, GDELT, GNews, Guardian, NYT, Tavily, CourtListener, Adzuna, Companies House, Brandfetch, Polymarket, GitHub, YouTube, Bluesky |
 | Cricket | `oculon hype <topic>` | Hype-cycle phase (DORMANT, EMERGING, RISING, PEAK, COOLING, STEADY) from 8 weeks of readers, developers, news, press, research, scholarly output and builders | Wikimedia, HN, GDELT, Guardian, arXiv, OpenAlex, GitHub |
 | Ferret | `oculon footprint <domain>` | Pre-release footprints: hostnames new in Certificate Transparency logs or urlscan.io scans, newly archived pages, new public repos, Google Safe Browsing verdicts | crt.sh, CertSpotter, urlscan.io, Wayback Machine, GitHub, Safe Browsing |
-| Meerkat | `oculon watch add/run/list/rm` | Watchlist: re-checks companies, domains, wallets, tokens, planes, topics, night lights and air quality, and reports only what changed since the last check | every module above |
-| Heron | `oculon rh` / `deployer <address>` / `token <address> --chain robinhood` | Robinhood Chain: activity, trending and newly created pools with risk flags (thin liquidity, buys without sells, sudden dumps); token risk from contract verification, holder concentration and the deployer's track record (every token it launched, directly or through a launchpad, and how many are dead) | GeckoTerminal, Blockscout |
-| Magpie | `oculon wallet <address>` / `token <address>` | Wallet portfolio, who the address is and which known entities it trades with (about 144k labeled addresses from the open eth-labels dataset, checked offline), age, transactions and risk labels (EVM, Solana, Robinhood Chain); token honeypot/tax/owner flags, DEX liquidity and price with a DANGER/CAUTION/OK verdict | Zerion, Etherscan, GoPlus, Webacy, Helius, Robinhood Chain RPC, DexScreener, CoinGecko |
+| Meerkat | `oculon watch add/run/list/rm` | Watchlist: re-checks companies, domains, planes, topics, night lights and air quality, and reports only what changed since the last check | every module above |
 | Falcon | `oculon plane <reg>` / `oculon mil` | One aircraft (owner, live position, nearest airport, moves between checks); worldwide military air traffic with notable roles (tanker, AWACS, ISR, bomber) and surges versus history | adsb.lol, OpenSky, hexdb.io, OurAirports |
 | Condor | `oculon events` / `lights` / `image` / `space` / `air` | Natural events with severity; night-time lights of any place versus a baseline month to spot blackouts or surges; true-color satellite images; space weather (official NOAA alerts and scales, solar wind, 3-day forecast, solar flares, coronal mass ejections modelled to reach Earth, geomagnetic storms, close asteroid passes); PM2.5 air quality | NASA EONET, NASA GIBS (VIIRS, MODIS), NOAA SWPC, NASA DONKI and NeoWs, OpenAQ, Nominatim |
 | Raven | `oculon forecast ...` | Forecasts on live Polymarket markets, resolved against real outcomes and scored (Brier) against the crowd price at forecast time | Polymarket |
@@ -109,13 +105,10 @@ oculon markets                                # Polymarket vs Kalshi and Manifol
 oculon launches OpenAI --domain openai.com    # what is about to ship
 oculon rewind 2026-11-12                      # time machine
 oculon fence add hormuz "Strait of Hormuz" --radius 150
-oculon deployer 0x...                         # Robinhood Chain deployer reputation
 oculon ships "Port of Rotterdam"              # live vessels (AIS)
-oculon watch add company Nvidia               # watchlist: company domain wallet token plane topic lights air port
-oculon watch add token 0x...@robinhood --label MYTOKEN
+oculon watch add company Nvidia               # watchlist: company domain plane topic lights air port
 oculon watch run                              # report only what changed since last time
 oculon brief                                  # today's brief
-oculon rh                                     # Robinhood Chain pools with risk flags
 oculon quota                                  # today's API usage vs free-tier budgets
 oculon ask "is there a geomagnetic storm right now?"
 oculon radar                                  # what the world is suddenly watching
@@ -129,8 +122,6 @@ oculon lights "Gaza Strip"                    # night lights vs baseline
 oculon image Kyoto --date 2026-11-15 --out kyoto.png
 oculon space                                  # geomagnetic storms, solar flares
 oculon air "New Delhi"                        # PM2.5 near a place
-oculon wallet 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
-oculon token 0x... --chain base               # honeypot / tax / owner flags
 oculon search "query"                         # web search
 oculon read https://example.com               # readable page text
 oculon forecast <market-slug> --p 0.35 --why "reason"
@@ -160,7 +151,7 @@ Or with any MCP client that launches stdio servers:
 { "mcpServers": { "oculon": { "command": "npx", "args": ["-y", "oculon", "mcp"] } } }
 ```
 
-Every module is a tool (about 50, plus one per installed plugin tool; `tools/list` returns them with schemas). A few: `oculon_ask`, `oculon_radar`, `oculon_dossier`, `oculon_case_new`, `oculon_calendar`, `oculon_connect`, `oculon_markets_crosscheck`, `oculon_sanctions`, `oculon_health`, `oculon_narratives`, `oculon_wallet`, `oculon_token`, `oculon_robinhood`, `oculon_ships`, `oculon_military_air`, `oculon_satellite_image` (returns the image), `oculon_forecast`, `oculon_verify_proof`, `oculon_watch_add`, `oculon_brief`, `oculon_signals`, `oculon_entity`.
+Every module is a tool (about 50, plus one per installed plugin tool; `tools/list` returns them with schemas). A few: `oculon_ask`, `oculon_radar`, `oculon_dossier`, `oculon_case_new`, `oculon_calendar`, `oculon_connect`, `oculon_markets_crosscheck`, `oculon_sanctions`, `oculon_health`, `oculon_narratives`, `oculon_ships`, `oculon_military_air`, `oculon_satellite_image` (returns the image), `oculon_forecast`, `oculon_verify_proof`, `oculon_watch_add`, `oculon_brief`, `oculon_signals`, `oculon_entity`.
 
 ## SDK
 
@@ -184,22 +175,21 @@ const live = await o.live({ onSignals: (s) => console.log(s) }); // Wikipedia + 
 
 ## Dashboard and schedule
 
-`oculon serve` starts a local web server on `127.0.0.1:4747` with three pages: `/` is an overview page with live numbers and a console that runs a fixed set of read-only commands (bgp, vulns, hazards, rh, cloud, defi, squawk, token, deployer, cve) and shows their real output, `/docs` renders this README plus `oculon help`, and `/app` is the dashboard. Behind a reverse proxy, a host starting with `app.` or `docs.` serves that page at its root. The dashboard has tabs for:
+`oculon serve` starts a local web server on `127.0.0.1:4747` with three pages: `/` is an overview page with live numbers and a console that runs a fixed set of read-only commands (bgp, vulns, hazards, cloud, defi, squawk, blackout, cve) and shows their real output, `/docs` renders this README plus `oculon help`, and `/app` is the dashboard. Behind a reverse proxy, a host starting with `app.` or `docs.` serves that page at its root. The dashboard has tabs for:
 
-- **Overview**: live cards for exploits, space weather, cloud status, outages, DeFi, catalysts, Robinhood Chain, narratives, forecasts, watchlist, cases and budgets. Drag to reorder, hide what you do not need.
-- **Robinhood**: new and trending pools with risk flags, a token check, the deployer board, watched tokens and Heron signals, refreshed every minute.
+- **Overview**: live cards for exploits, space weather, cloud status, outages, DeFi, catalysts, narratives, forecasts, watchlist, cases and budgets. Drag to reorder, hide what you do not need.
 - **Inbox**: every signal with read state, filters, Useful/Noise votes that move each module's alert bar, and a share card (PNG) for posting.
 - **Signals, Map, Investigate, Cases, Watch, Forecasts, World, Calendar, Live and Graph**, plus **Timeline** (scrub through stored signals), **Sources** (which hosts answered and when, which key groups are set) and **Accuracy** (first-to-know lead times, radar calibration, forecast scoreboard).
-- **Entity pages** for any company, domain, wallet or market: signals, links, observations and sources in one place.
+- **Entity pages** for any company, domain, repo or market: signals, links, observations and sources in one place.
 
-Press Ctrl+K anywhere to search entities or run a module (CVE ids, 0x addresses, AS numbers, domains, dates and names are recognized). New signals arrive over a live stream without reloading, optional browser notifications flag scores of 75 and up, and the app installs as a PWA. Write actions only accept same-origin requests with a custom header.
+Press Ctrl+K anywhere to search entities or run a module (CVE ids, AS numbers, domains, dates and names are recognized). New signals arrive over a live stream without reloading, optional browser notifications flag scores of 75 and up, and the app installs as a PWA. Write actions only accept same-origin requests with a custom header.
 
 `--watch 15` turns on the schedule (shared with the Telegram bot); `--live` adds the stream listeners; `--telegram` runs the bot in the same process:
 
 | Every | Task |
 |---|---|
 | real time (`--live`) | Wikipedia edit surges, Bluesky term surges |
-| 15 min (configurable) | radar, military air, natural events, space weather, Robinhood Chain, geofences, disaster impact |
+| 15 min (configurable) | radar, military air, natural events, space weather, geofences, disaster impact |
 | 60 min | watchlist re-check |
 | 6 h | resolve settled forecasts, First to Know check, market cross-check, narratives |
 | daily | automatic forecasts and their Bitcoin timestamp, health of watched companies, watched cases (up to 3), cache cleanup, brief with the day's catalysts (from 07:00 local) |
@@ -230,7 +220,7 @@ All optional, read from the environment or a `.env` file in the working director
 | `OCULON_DB` | Database path override |
 | `OCULON_CONTACT` | Contact email, sent only to SEC EDGAR (which requires one); no other API receives it |
 | `GITHUB_TOKEN` | Raises GitHub limits from 60 to 5000 requests/hour |
-| LLM, search, news, markets, on-chain, company, security, social and air keys | See `.env.example`; each is optional, all have free tiers. `oculon doctor` shows which groups are on |
+| LLM, search, news, markets, company, security, social and air keys | See `.env.example`; each is optional, all have free tiers. `oculon doctor` shows which groups are on |
 
 API keys never appear in output: provenance URLs, errors and agent tool results are scrubbed of every key in the environment.
 
@@ -279,10 +269,7 @@ The repository includes a `Dockerfile` and `railway.json`. Mount a persistent vo
 - Exposure uses InternetDB, which reflects Shodan's last scan (days to weeks old) and knows nothing about machines behind a CDN.
 - Social pulse samples are small (X returns about 10 posts per search on Apify's free plan) and X, TikTok and Bluesky are fetched by popularity, so pace is measured on Reddit only. Address labels come from a community dataset (MIT) and can be incomplete or stale.
 - Plugins run with full Node permissions; install only code you trust.
-- Heron's Robinhood Chain token rules are heuristics over pool and explorer data, not a contract audit.
 - `oculon ask` answers are written by a free-tier LLM from tool results; they can still misread data, so check the cited sources.
-- Zerion portfolio values are shown as reported; airdropped tokens can carry inflated prices.
-- DexScreener lists few pools for tokens that mostly trade as the quote side (USDT, USDC); thin-liquidity warnings only apply below $100M market cap.
 - Respect each data provider's terms. OpenStreetMap, Nominatim and adsb.lol data are ODbL-licensed and require attribution.
 
 ## Development

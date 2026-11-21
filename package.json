@@ -1,7 +1,7 @@
 {
   "name": "oculon",
   "version": "0.1.0",
-  "description": "Open-source intelligence engine: cross-source signals with provenance from 50+ public sources, Robinhood Chain token and deployer checks, satellites, ships and aircraft, forecasts timestamped on Bitcoin. CLI, SDK, MCP server, web app and Telegram bot.",
+  "description": "Open-source intelligence engine and agent: cross-source signals with provenance from 50+ public sources (routing, exploits, ships, aircraft, satellites, markets), forecasts timestamped on Bitcoin. CLI, SDK, MCP server, web app and Telegram bot.",
   "keywords": [
     "osint",
     "ai-agent",
@@ -13,7 +13,6 @@
     "prediction-markets",
     "opentimestamps",
     "cli",
-    "robinhood-chain",
     "bgp",
     "cve",
     "threat-intelligence"

@@ -9,6 +9,7 @@ import { oculonHome } from '../core/paths.js';
 import { fmtTime } from '../modules/listen.js';
 import type { ModuleResult } from '../core/types.js';
 import { Oculon, summarizeProvenance, type Signal } from '../index.js';
+import { ONCHAIN_COMMANDS, ONCHAIN_PAUSED_MESSAGE, onchainEnabled } from '../core/features.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VERSION = (() => {
@@ -86,6 +87,12 @@ export function parseArgs(argv: string[]): Args {
   return { pos, flags };
 }
 const BOOLEAN = new Set(['json', 'help', 'no-github', 'no-org', 'version', 'live', 'telegram', 'radar', 'deep']);
+
+/** Help without the paused on-chain commands (they come back with OCULON_ONCHAIN=1). */
+function helpText(): string {
+  if (onchainEnabled()) return HELP;
+  return HELP.split('\n').filter((l) => !/oculon (rh|deployer|wallet|token)\b|@robinhood/.test(l)).join('\n');
+}
 
 const HELP = `${c.bold('oculon')} ${c.dim(`v${VERSION}`)} — OSINT intelligence engine for AI agents
 
@@ -1488,7 +1495,7 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     out(lines.length ? lines.join('\n') : `No help for "${topic}".\n\n${HELP}`);
     return 0;
   }
-  if (!cmd || a.flags.help || cmd === 'help') return out(HELP), 0;
+  if (!cmd || a.flags.help || cmd === 'help') return out(helpText()), 0;
   if (existsSync('.env')) process.loadEnvFile('.env');
 
   if (cmd === 'mcp') {
@@ -1509,6 +1516,10 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     return 0;
   }
 
+  if (ONCHAIN_COMMANDS.has(cmd) && !onchainEnabled()) {
+    out(c.dim(ONCHAIN_PAUSED_MESSAGE));
+    return 1;
+  }
   const run = COMMANDS[cmd];
   if (!run) {
     const near = closest(cmd, [...Object.keys(COMMANDS), 'mcp', 'telegram', 'help', 'version']);

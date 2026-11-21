@@ -103,7 +103,7 @@ footer{background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
   </ul>
   <h2>What leaves your machine</h2>
   <ul>
-    <li><strong>Queries to public data sources.</strong> When a module runs, it calls the sources it needs (for example USGS, Cloudflare Radar, Blockscout or GeckoTerminal) with the inputs you gave it, such as an address, a domain or a place name. Each source handles those requests under its own policy.</li>
+    <li><strong>Queries to public data sources.</strong> When a module runs, it calls the sources it needs <!--onchain-->(for example USGS, Cloudflare Radar, Blockscout or GeckoTerminal)<!--/onchain--><!--offchain-->(for example USGS, Cloudflare Radar, NVD or NASA)<!--/offchain--> with the inputs you gave it, <!--onchain-->such as an address, a domain or a place name.<!--/onchain--><!--offchain-->such as a domain, a company or a place name.<!--/offchain--> Each source handles those requests under its own policy.</li>
     <li><strong>Questions to language models.</strong> Commands such as <code>ask</code>, <code>case</code> and the daily brief send your question and the collected evidence to the LLM providers you configured keys for (Groq, Google Gemini, Mistral, OpenRouter, NVIDIA or Anthropic). Without a key, nothing is sent.</li>
     <li><strong>Telegram.</strong> If you run the bot, alerts and answers go to the chats you allow-listed, through Telegram's servers.</li>
     <li><strong>This web page.</strong> The landing page, app and docs load fonts from Google Fonts, map libraries from cdnjs and map outlines from jsDelivr, so your browser contacts those services when it opens them.</li>
@@ -126,7 +126,7 @@ footer{background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
     <div class="gc"><div class="ic">MIT</div><h3>Free and open</h3><p>Use, copy, modify and distribute, including commercially. Keep the notice.</p></div>
     <div class="gc"><div class="ic">AS IS</div><h3>No warranty</h3><p>Provided as is. Sources can be late, wrong or offline.</p></div>
     <div class="gc"><div class="ic">!=</div><h3>Not advice</h3><p>Scores, verdicts and forecasts are automated readings, not financial or legal advice.</p></div>
-    <div class="gc"><div class="ic">≈</div><h3>Heuristics, not audits</h3><p>Token and deployer verdicts list their reasons so you can judge them.</p></div>
+    <div class="gc"><div class="ic">≈</div><h3>Heuristics, not audits</h3><p><!--onchain-->Token and deployer verdicts<!--/onchain--><!--offchain-->Scores and verdicts<!--/offchain--> list their reasons so you can judge them.</p></div>
     <div class="gc"><div class="ic">OK</div><h3>Use it fairly</h3><p>Lawful use, no targeting private people, no overloading the sources.</p></div>
     <div class="gc"><div class="ic">PD</div><h3>Public-domain imagery</h3><p>NASA GIBS imagery and Natural Earth outlines on these pages.</p></div>
     <div class="gc wide"><div class="live-h"><span class="lbl"><i class="dotl"></i>Third-party sources used today</span><span class="srcn">loading…</span></div><div class="srcs"></div><p style="margin-top:12px !important">Read from this install's daily usage counters (<code>oculon quota</code>). Requests go only to these services, each under its own terms.</p></div>
@@ -136,7 +136,7 @@ footer{background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
   <h2 id="sources">Data sources</h2>
   <p>Oculon reads public and free-tier sources run by other organisations. Their data stays subject to their own terms, rate limits and attribution rules. You are responsible for keeping your use within those terms, including for any API keys you add. Every Oculon result names the sources behind it and whether each answer was live or cached.</p>
   <h2>Not advice</h2>
-  <p>Signals, scores, verdicts and forecasts are automated readings of public data. They are not financial, legal, security or investment advice. Token and deployer verdicts on Robinhood Chain and other chains are heuristics over pool and explorer data, not contract audits. A DANGER or OK verdict can be wrong.</p>
+  <p>Signals, scores, verdicts and forecasts are automated readings of public data. They are not financial, legal, security or investment advice. <!--onchain-->Token and deployer verdicts on Robinhood Chain and other chains are heuristics over pool and explorer data, not contract audits. A DANGER or OK verdict can be wrong.<!--/onchain--><!--offchain-->Scores are heuristics over public data, not audits or ratings, and a high or low score can be wrong.<!--/offchain--></p>
   <h2>Accuracy and availability</h2>
   <p>Sources can be late, wrong, rate-limited or offline, and free tiers can change. When a source fails, Oculon labels it and returns the rest of the result. Language-model output can be mistaken; answers cite the evidence they used so you can check it.</p>
   <h2>Acceptable use</h2>

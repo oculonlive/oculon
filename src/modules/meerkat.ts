@@ -4,6 +4,7 @@
  */
 import type { Ctx } from '../core/context.js';
 import { clamp } from '../core/stats.js';
+import { ONCHAIN_WATCH_KINDS, onchainEnabled } from '../core/features.js';
 import { signalId } from '../core/text.js';
 import type { Signal } from '../core/types.js';
 import { lights } from './condor.js';
@@ -75,6 +76,8 @@ const newOnes = (now: string[], before: unknown) => {
 /** Run the module for one item and return its state plus human-readable changes against the previous state. */
 export async function observe(ctx: Ctx, item: WatchItem, prev: State | null): Promise<{ state: State; changes: string[] }> {
   const changes: string[] = [];
+  // Wallet and token items wait while on-chain features are paused; their stored state is kept as is.
+  if (ONCHAIN_WATCH_KINDS.has(item.kind) && !onchainEnabled()) return { state: prev ?? {}, changes };
   switch (item.kind) {
     case 'company': {
       const d = (await hound(ctx, item.target)).result;

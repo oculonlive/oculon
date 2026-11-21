@@ -3,6 +3,7 @@
  * Only chats listed in the allowlist can use it (anyone else gets their chat id and setup instructions).
  * With alerts on, a background loop pushes new high-scoring signals to subscribed chats.
  */
+import { ONCHAIN_PAUSED_MESSAGE, onchainEnabled } from './core/features.js';
 import { readFileSync } from 'node:fs';
 import { Oculon, type Signal } from './index.js';
 import { alertBar, feedbackStats, recordFeedback, type Verdict } from './modules/feedback.js';
@@ -38,6 +39,11 @@ export function formatSignal(s: Signal): string {
     .map((e) => `  • <i>${esc(e.source)}</i>: ${e.url ? `<a href="${esc(e.url)}">${esc(e.text.slice(0, 140))}</a>` : esc(e.text.slice(0, 140))}`)
     .join('\n');
   return `<b>[${Math.round(s.score)}] ${esc(s.title)}</b> <code>${esc(s.module)}</code>${ev ? `\n${ev}` : ''}`;
+}
+
+/** Help text without the paused on-chain commands (they return with OCULON_ONCHAIN=1). */
+export function helpHtml(): string {
+  return onchainEnabled() ? HELP : HELP.split('\n').filter((l) => !/^\/(wallet|token|rh|deployer)\b/.test(l)).join('\n');
 }
 
 export const HELP = [
@@ -180,10 +186,11 @@ export class TelegramBot {
     const o = this.oculon;
     const needArg = (example: string) => ({ html: `Usage: ${esc(cmd)} ${esc(example)}` });
 
+    if (/^\/(wallet|token|rh|deployer)$/.test(cmd) && !onchainEnabled()) return { html: esc(ONCHAIN_PAUSED_MESSAGE) };
     switch (cmd) {
       case '/start':
       case '/help':
-        return { html: HELP };
+        return { html: helpHtml() };
       case '/radar': {
         const r = await o.radar();
         return { html: r.signals.length ? `<b>Radar</b>: ${r.signals.length} signals\n\n${r.signals.slice(0, 8).map(formatSignal).join('\n\n')}` : 'Radar: nothing stands out right now.' };
@@ -563,7 +570,7 @@ export class TelegramBot {
         return { html: on ? `Alerts on: signals scoring ${this.opts.alertMinScore ?? 70}+ will be sent here${this.opts.watchMinutes ? ` (scan every ${this.opts.watchMinutes} min)` : ' when the bot runs with a watch interval'}.` : 'Alerts off.' };
       }
       default:
-        return { html: `Unknown command. ${HELP}` };
+        return { html: `Unknown command. ${helpHtml()}` };
     }
   }
 

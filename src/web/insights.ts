@@ -5,6 +5,7 @@
  */
 import type { Oculon } from '../index.js';
 import { loadCalibration } from '../modules/calibrate.js';
+import { isOnchainSource, onchainEnabled } from '../core/features.js';
 
 type Row = Record<string, unknown>;
 const parse = (s: unknown): Record<string, unknown> => {
@@ -118,11 +119,12 @@ export function sourceHealth(o: Oculon) {
   const list = [...hosts.values()]
     .sort((a, b) => b.last - a.last)
     .map((h) => ({ host: h.host, cachedResponses: h.responses, lastFetch: new Date(h.last).toISOString(), state: now - h.last < 3_600_000 ? 'fresh' : now - h.last < 86_400_000 ? 'today' : 'stale' }));
-  const keys = KEY_GROUPS.map(([group, names]) => {
+  const on = onchainEnabled();
+  const keys = KEY_GROUPS.filter(([group]) => on || group !== 'On-chain').map(([group, names]) => {
     const set = names.filter((n) => process.env[n]?.trim());
     return { group, set: set.length, total: names.length, missing: names.filter((n) => !set.includes(n)) };
   });
-  return { hosts: list, quota: o.quota(), keys };
+  return { hosts: on ? list : list.filter((h) => !isOnchainSource(h.host)), quota: on ? o.quota() : o.quota().filter((q) => !isOnchainSource(q.source)), keys };
 }
 
 /** First-to-know lead times, the radar calibration and the forecast scoreboard in one place. */

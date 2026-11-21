@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { Oculon, summarizeProvenance } from '../index.js';
 import type { ModuleResult } from '../core/types.js';
 import { startScheduler } from '../scheduler.js';
+import { isOnchainEntity, isOnchainSource, ONCHAIN_MODULES, ONCHAIN_WATCH_KINDS, onchainEnabled } from '../core/features.js';
 import { adminCookieValue, clientIp, isAdmin, lockedPage, PUBLIC_API, publicGraph, publicSignals, RateLimiter, tokenMatches } from './public.js';
 import { accuracy, entityProfile, rhDeployers, searchEntities, signalsSince, sourceHealth, timeline } from './insights.js';
 
@@ -24,6 +25,8 @@ export interface WebOptions {
   publicMode?: boolean;
   /** Owner token for public mode (default OCULON_ADMIN_TOKEN). Without one the app cannot be opened remotely. */
   adminToken?: string;
+  /** Public domain (default OCULON_DOMAIN): app.<domain> serves the dashboard and docs.<domain> the docs. */
+  domain?: string;
   /** Minutes between background scans; 0 disables. */
   watchMinutes?: number;
   oculon?: Oculon;
@@ -65,10 +68,11 @@ export function consoleArgv(input: string): string[] | null {
   const parts = input.trim().replace(/^oculon\s+/, '').split(/\s+/).filter(Boolean);
   if (!parts.length || parts.length > 4) return null;
   const [cmd, a1, a2, a3] = parts;
-  const bare = ['bgp', 'vulns', 'hazards', 'rh', 'cloud', 'defi', 'squawk', 'blackout', 'regs', 'calendar', 'quota', 'help'];
+  const onchain = onchainEnabled();
+  const bare = ['bgp', 'vulns', 'hazards', 'cloud', 'defi', 'squawk', 'blackout', 'regs', 'calendar', 'quota', 'help', ...(onchain ? ['rh'] : [])];
   if (parts.length === 1 && bare.includes(cmd!)) return [cmd!];
-  if (cmd === 'deployer' && parts.length === 2 && HEX_ADDR.test(a1!)) return ['deployer', a1!];
-  if (cmd === 'token' && HEX_ADDR.test(a1!) && ((parts.length === 2) || (a2 === '--chain' && /^(eth|base|arbitrum|bsc|polygon|robinhood)$/.test(a3 ?? '')))) return parts as string[];
+  if (onchain && cmd === 'deployer' && parts.length === 2 && HEX_ADDR.test(a1!)) return ['deployer', a1!];
+  if (onchain && cmd === 'token' && HEX_ADDR.test(a1!) && ((parts.length === 2) || (a2 === '--chain' && /^(eth|base|arbitrum|bsc|polygon|robinhood)$/.test(a3 ?? '')))) return parts as string[];
   if (cmd === 'cve' && parts.length === 2 && /^CVE-\d{4}-\d{4,7}$/i.test(a1!)) return ['cve', a1!.toUpperCase()];
   if (cmd === 'bgp' && parts.length === 2 && /^(AS\d{1,10}|[A-Za-z]{2})$/i.test(a1!)) return ['bgp', a1!.toUpperCase()];
   if (cmd === 'vulns' && parts.length === 2 && /^\d{1,2}$/.test(a1!)) return ['vulns', a1!];
@@ -228,9 +232,9 @@ export const ROUTES: Record<string, Handler> = {
   '/api/accuracy': (_q, o) => accuracy(o),
   '/api/timeline': (q, o) => timeline(o, Math.min(24 * 14, Number(q.get('hours') ?? 72) || 72)),
   '/api/meta': async () => {
-    const { TOOLS, SERVER_INFO } = await import('../mcp.js');
+    const { activeTools, SERVER_INFO } = await import('../mcp.js');
     const modules = readdirSync(join(HERE, '..', 'modules')).filter((f) => /\.(ts|js)$/.test(f) && !f.endsWith('.d.ts')).length;
-    return { version: SERVER_INFO.version, mcpTools: TOOLS.length, modules };
+    return { version: SERVER_INFO.version, mcpTools: activeTools().length, modules, onchain: onchainEnabled() };
   },
   '/api/readme': () => {
     for (const p of [join(HERE, '..', '..', 'README.md'), join(HERE, '..', 'README.md')]) if (existsSync(p)) return { markdown: readFileSync(p, 'utf8') };
@@ -289,7 +293,8 @@ function streamSignals(req: IncomingMessage, res: ServerResponse, o: Oculon, onl
   const tick = () => {
     try {
       const all = signalsSince(o, last);
-      const rows = onlyPublic ? publicSignals(all) : all;
+      const visible = onchainEnabled() ? all : all.filter((r) => !ONCHAIN_MODULES.has(r.module));
+      const rows = onlyPublic ? publicSignals(visible) : visible;
       for (const r of all) last = Math.max(last, r.ts);
       for (const r of rows) {
         last = Math.max(last, r.ts);
@@ -302,6 +307,48 @@ function streamSignals(req: IncomingMessage, res: ServerResponse, o: Oculon, onl
   };
   const timer = setInterval(tick, 5000);
   req.on('close', () => clearInterval(timer));
+}
+
+/** Endpoints that only exist for the on-chain features. */
+const ONCHAIN_ROUTES = new Set(['/api/robinhood', '/api/rhtoken', '/api/deployer', '/api/rh/deployers', '/api/wallet', '/api/token']);
+
+/** Drops on-chain signals, entities and watch items from shared views while those features are paused. */
+function withoutOnchain(path: string, out: unknown): unknown {
+  type Sig = { module: string; entity?: string | null };
+  if (path === '/api/signals' || path === '/api/timeline') return (out as Sig[]).filter((s) => !ONCHAIN_MODULES.has(s.module) && !(s.entity && isOnchainEntity(s.entity)));
+  if (path === '/api/graph') {
+    const g = out as { nodes: { id: string }[]; edges: { src: string; dst: string }[] };
+    const hidden = new Set(g.nodes.filter((n) => isOnchainEntity(n.id)).map((n) => n.id));
+    return { nodes: g.nodes.filter((n) => !hidden.has(n.id)), edges: g.edges.filter((e) => !hidden.has(e.src) && !hidden.has(e.dst)) };
+  }
+  if (path === '/api/quota') return (out as { source: string }[]).filter((q) => !isOnchainSource(q.source));
+  if (path === '/api/search') return (out as { id: string }[]).filter((e) => !isOnchainEntity(e.id));
+  if (path === '/api/watch') return (out as { kind: string; target: string }[]).filter((w) => !ONCHAIN_WATCH_KINDS.has(w.kind) && !/@robinhood$/i.test(w.target));
+  if (path === '/api/profile' && out && isOnchainEntity((out as { id: string }).id)) throw new HttpError(404, 'on-chain features are paused');
+  return out;
+}
+
+/**
+ * Prepares a page: keeps or removes the blocks marked for the on-chain features
+ * (<!--onchain-->…<!--/onchain--> and /*onchain*\/…/*\/onchain*\/; the offchain markers are the reverse),
+ * and on the public domain points /app and /docs links at their subdomains.
+ */
+export function renderPage(html: string, domain: string | null): string {
+  const on = onchainEnabled();
+  const drop = (name: string) => (h: string) => h.replace(new RegExp(`<!--${name}-->[\\s\\S]*?<!--/${name}-->`, 'g'), '').replace(new RegExp(`/\\*${name}\\*/[\\s\\S]*?/\\*/${name}\\*/`, 'g'), '');
+  let out = on ? drop('offchain')(html) : drop('onchain')(html);
+  // the markers themselves are not needed once the blocks are resolved
+  out = out.replace(/<!--\/?(on|off)chain-->/g, '').replace(/\/\*\/?(on|off)chain\*\//g, '');
+  if (domain) {
+    const main = `https://${domain}`;
+    out = out
+      .replace(/href="\/app(#[^"]*)?"/g, (_m, h: string | undefined) => `href="https://app.${domain}/${h ?? ''}"`)
+      .replace(/href="\/report"/g, `href="https://app.${domain}/report"`)
+      .replace(/href="\/docs(#[^"]*)?"/g, (_m, h: string | undefined) => `href="https://docs.${domain}/${h ?? ''}"`)
+      .replace(/href="\/(privacy|terms)(#[^"]*)?"/g, (_m, p: string, h: string | undefined) => `href="${main}/${p}${h ?? ''}"`)
+      .replace(/href="\/"/g, `href="${main}/"`);
+  }
+  return out;
 }
 
 function send(res: ServerResponse, status: number, body: string | Buffer, type: string, cache = 'no-store') {
@@ -325,18 +372,23 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
   const adminToken = opts.adminToken ?? (process.env.OCULON_ADMIN_TOKEN?.trim() || undefined);
   const limiter = new RateLimiter();
 
+  // OCULON_DOMAIN (e.g. oculon.live) turns on subdomain links and redirects for app.* and docs.*.
+  const siteDomain = (opts.domain ?? process.env.OCULON_DOMAIN ?? '').trim().toLowerCase() || null;
+
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    const locked = (failed: boolean) => renderPage(lockedPage(Boolean(adminToken), failed), siteDomain);
     const url = new URL(req.url ?? '/', 'http://localhost');
+    const hostName = String(req.headers.host ?? '').split(':')[0]!.toLowerCase();
     const admin = !publicMode || isAdmin(req, adminToken);
     if (publicMode) {
       const ip = clientIp(req);
       if (url.pathname === '/login' && req.method === 'POST') {
-        if (!limiter.allow(ip, '/api/console')) return send(res, 429, lockedPage(Boolean(adminToken), true), 'text/html; charset=utf-8');
+        if (!limiter.allow(ip, '/api/console')) return send(res, 429, locked(true), 'text/html; charset=utf-8');
         let raw = '';
         for await (const c of req) { raw += c; if (raw.length > 2048) break; }
         const given = new URLSearchParams(raw).get('token') ?? '';
-        if (!tokenMatches(given, adminToken)) { log('login refused'); return send(res, 401, lockedPage(Boolean(adminToken), true), 'text/html; charset=utf-8'); }
-        res.writeHead(303, { location: '/app', 'set-cookie': `oculon_admin=${adminCookieValue(adminToken!)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000`, 'cache-control': 'no-store' });
+        if (!tokenMatches(given, adminToken)) { log('login refused'); return send(res, 401, locked(true), 'text/html; charset=utf-8'); }
+        res.writeHead(303, { location: hostName.startsWith('app.') ? '/' : '/app', 'set-cookie': `oculon_admin=${adminCookieValue(adminToken!)}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000`, 'cache-control': 'no-store' });
         log('login ok');
         return res.end();
       }
@@ -351,7 +403,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
           if (!limiter.allow(ip, url.pathname)) return send(res, 429, '{"error":"slow down, try again in a minute"}', 'application/json');
         }
         if (url.pathname === '/app' || url.pathname === '/app/' || url.pathname === '/index.html' || url.pathname === '/report' || url.pathname === '/api/image') {
-          return send(res, 200, lockedPage(Boolean(adminToken)), 'text/html; charset=utf-8');
+          return send(res, 200, locked(false), 'text/html; charset=utf-8');
         }
       }
     }
@@ -376,7 +428,14 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     // Pages: landing at /, dashboard at /app, docs at /docs. On app.* and docs.* hosts the root serves that page.
     const sub = (req.headers.host ?? '').split('.')[0];
     const page = url.pathname === '/' ? (sub === 'app' ? 'app' : sub === 'docs' ? 'docs' : 'landing') : url.pathname === '/app' || url.pathname === '/app/' || url.pathname === '/index.html' ? 'app' : url.pathname === '/docs' || url.pathname === '/docs/' ? 'docs' : /^\/(privacy|terms)\/?$/.test(url.pathname) ? 'legal' : null;
-    if (page) return send(res, 200, readFileSync(join(HERE, PAGE_FILES[page]), 'utf8'), 'text/html; charset=utf-8');
+    if (page) {
+      // On the public domain, /app and /docs live on their own subdomains.
+      if (siteDomain && hostName === siteDomain && (page === 'app' || page === 'docs') && url.pathname !== '/') {
+        res.writeHead(301, { location: `https://${page}.${siteDomain}/${url.search}`, 'cache-control': 'no-store' });
+        return res.end();
+      }
+      return send(res, 200, renderPage(readFileSync(join(HERE, PAGE_FILES[page]), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
+    }
     if (url.pathname === '/manifest.webmanifest') return send(res, 200, readFileSync(join(HERE, 'manifest.webmanifest'), 'utf8'), 'application/manifest+json; charset=utf-8', 'no-cache');
     if (url.pathname === '/sw.js') return send(res, 200, readFileSync(join(HERE, 'sw.js'), 'utf8'), 'text/javascript; charset=utf-8', 'no-cache');
     if (url.pathname === '/favicon.ico') return send(res, 200, readFileSync(join(HERE, 'assets', 'favicon-32.png')), 'image/png', 'public, max-age=86400');
@@ -411,7 +470,9 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     if (!route) return send(res, 404, '{"error":"not found"}', 'application/json');
     const t0 = Date.now();
     try {
+      if (!onchainEnabled() && ONCHAIN_ROUTES.has(url.pathname)) return send(res, 404, '{"error":"on-chain features are paused"}', 'application/json');
       let out = await route(url.searchParams, oculon);
+      if (!onchainEnabled()) out = withoutOnchain(url.pathname, out);
       if (!admin && url.pathname === '/api/signals') out = publicSignals(out as { module: string }[]);
       if (!admin && url.pathname === '/api/graph') out = publicGraph(out as Parameters<typeof publicGraph>[0]);
       log(`${url.pathname}${url.search} ${Date.now() - t0}ms`);

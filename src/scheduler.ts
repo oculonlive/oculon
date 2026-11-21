@@ -8,6 +8,7 @@
  *   every 6 h:    resolve forecasts whose markets settled
  *   once a day:   automatic forecasts + Bitcoin timestamp of new forecasts; daily brief from 07:00 local time
  */
+import { onchainEnabled } from './core/features.js';
 import type { Signal } from './core/types.js';
 import type { Oculon } from './index.js';
 
@@ -61,7 +62,7 @@ export function startScheduler(o: Oculon, opts: SchedulerOptions = {}): { stop: 
         await task('space', async () => (await o.spaceWeather(7, { nasa })).signals);
         if (nasa) last['space-nasa'] = Date.now();
         await task('squawk', async () => (await o.squawks()).signals);
-        await task('robinhood', async () => (await o.robinhood()).signals);
+        if (onchainEnabled()) await task('robinhood', async () => (await o.robinhood()).signals);
         if (o.fenceList().length) await task('fences', async () => (await o.fenceCheck()).signals);
         await task('impact', async () => (await o.impact()).signals);
         await task('blackout', async () => (await o.blackout(2)).signals);

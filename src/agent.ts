@@ -6,11 +6,13 @@
 import { carryRaw, chat, type ChatMessage, type ToolSpec } from './core/llm.js';
 import { scrubSecrets } from './core/keys.js';
 import type { Oculon } from './index.js';
-import { TOOLS } from './mcp.js';
+import { activeTools, TOOLS } from './mcp.js';
 
 /** Tools the agent may call. Side-effecting tools and the agent itself are excluded. */
 const EXCLUDED = new Set(['oculon_ask', 'oculon_forecast', 'oculon_auto_forecast', 'oculon_stamp_proofs', 'oculon_resolve_forecasts', 'oculon_satellite_image', 'oculon_watch_add', 'oculon_watch_run', 'oculon_brief', 'oculon_case_new', 'oculon_fence_add', 'oculon_fence_check']);
 export const AGENT_TOOLS = TOOLS.filter((t) => !EXCLUDED.has(t.name));
+/** Agent tools for this build (on-chain tools only when OCULON_ONCHAIN=1). */
+const agentTools = () => activeTools().filter((t) => !EXCLUDED.has(t.name));
 
 export interface AskStep {
   tool: string;
@@ -81,7 +83,7 @@ export interface AgentOptions {
 
 /** The tool loop shared by `ask` and case investigations. */
 export async function runAgent(o: Oculon, system: string, user: string, opts: AgentOptions = {}): Promise<AgentRun> {
-  const tools: ToolSpec[] = AGENT_TOOLS.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.inputSchema } }));
+  const tools: ToolSpec[] = agentTools().map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.inputSchema } }));
   const messages: ChatMessage[] = [
     { role: 'system', content: `${system}\nToday is ${o.ctx.now().toISOString().slice(0, 10)}.` },
     { role: 'user', content: user },
@@ -102,7 +104,7 @@ export async function runAgent(o: Oculon, system: string, user: string, opts: Ag
     messages.push(carryRaw(r.message, { role: 'assistant', content: r.message.content ?? '', tool_calls: calls }));
     const results = await Promise.all(
       calls.map(async (c) => {
-        const tool = AGENT_TOOLS.find((t) => t.name === c.function.name);
+        const tool = agentTools().find((t) => t.name === c.function.name);
         let args: Record<string, unknown> = {};
         try {
           args = JSON.parse(c.function.arguments || '{}') as Record<string, unknown>;

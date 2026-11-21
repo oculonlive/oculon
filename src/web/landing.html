@@ -8,7 +8,8 @@
 <link rel="icon" type="image/png" href="/favicon.ico">
 <link rel="apple-touch-icon" href="/assets/icon-192.png">
 <title>Oculon</title>
-<meta name="description" content="Open-source intelligence engine: routing, vulnerabilities, ships, satellites and Robinhood Chain, with sources on every answer.">
+<!--onchain--><meta name="description" content="Open-source intelligence engine: routing, vulnerabilities, ships, satellites and Robinhood Chain, with sources on every answer."><!--/onchain-->
+<!--offchain--><meta name="description" content="Open-source intelligence engine: routing, vulnerabilities, ships, satellites and markets, with sources on every answer."><!--/offchain-->
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -62,7 +63,7 @@ nav.top .wrap{display:flex;justify-content:space-between;align-items:center;padd
 .prompt{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding:12px 22px;background:#080808}
 .prompt input{flex:1;background:none;border:0;outline:0;color:#fff;font:13px var(--mono);min-width:0}
 .prompt button{background:none;border:1px solid #333;color:#ddd;font:12px var(--mono);padding:6px 12px;cursor:pointer}
-/* terminal window (console + heron) */
+/* terminal window */
 .terminal{border-radius:12px;border:1px solid #2a2a2a;background:linear-gradient(180deg,#0d0d0d,#070707);box-shadow:0 50px 140px -40px rgba(0,0,0,.95),0 0 0 1px rgba(255,255,255,.03) inset,0 0 90px -30px rgba(0,240,255,.14);overflow:hidden;min-width:0;font-family:var(--mono)}
 .terminal-bar{display:flex;align-items:center;gap:14px;height:42px;padding:0 14px;border-bottom:1px solid #1d1d1d;background:rgba(255,255,255,.018)}
 .lights{display:flex;gap:7px;flex:none}.lights i{width:12px;height:12px;border-radius:50%;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.25)}.lights i:nth-child(2){background:#00f0ff}.lights i:nth-child(3){background:#28c840}
@@ -90,7 +91,7 @@ nav.top .wrap{display:flex;justify-content:space-between;align-items:center;padd
 .t-input button{background:none;border:1px solid #2e2e2e;color:#bbb;border-radius:999px;font:11px var(--mono);padding:6px 12px;cursor:pointer}
 .t-input button:hover{color:#fff;border-color:#555}
 .note{margin-top:16px;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;font:12px var(--mono);color:var(--dim);letter-spacing:.06em}
-/* robinhood */
+/* section with its own glow */
 .rh{margin-top:clamp(90px,9vw,130px);border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:radial-gradient(ellipse 900px 520px at 85% 10%,rgba(0,240,255,.09),transparent 70%),#030303;padding-bottom:110px}
 .chain{margin-top:64px;display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line)}
 .chain>div{padding:26px 28px;border-right:1px solid var(--line)}.chain>div:last-child{border-right:0}
@@ -345,11 +346,11 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
   <img src="/assets/night-emea.jpg" alt="">
   <div class="tint"></div><div class="grid"></div><canvas id="herofx" aria-hidden="true"></canvas><div class="scan"></div><div class="shade"></div>
   <nav class="top"><div class="wrap"><a class="logo" href="/">OCULON</a>
-    <div class="links"><a class="opt" href="#console">Console</a><a class="opt" href="#robinhood">Robinhood Chain</a><a class="opt" href="#modules">Modules</a><a href="/docs">Docs</a><a class="btn o" href="/app" style="padding:9px 14px;font-size:13px">Open app</a></div></div></nav>
+    <div class="links"><a class="opt" href="#console">Console</a><!--onchain--><a class="opt" href="#robinhood">Robinhood Chain</a><!--/onchain--><a class="opt" href="#modules">Modules</a><a href="/docs">Docs</a><a class="btn o" href="/app" style="padding:9px 14px;font-size:13px">Open app</a></div></div></nav>
   <div class="lbl credit"><span class="y">●</span> SCAN <span id="clock">--:--:--</span> UTC<br><span id="scanning">NASA Black Marble · Europe · Africa · Asia</span></div>
   <div class="copy"><div class="wrap">
     <h1><span class="ln"><span>See</span></span><span class="ln"><span>everything.</span></span></h1>
-    <div class="hin" style="padding-bottom:12px"><p>An open-source intelligence engine for the physical and digital world. Routing tables to shipping lanes to fresh pools on Robinhood Chain. Self-hosted, sourced, silent until it matters.</p>
+    <div class="hin" style="padding-bottom:12px"><p>An open-source intelligence engine for the physical and digital world. <!--onchain-->Routing tables to shipping lanes to fresh pools on Robinhood Chain.<!--/onchain--><!--offchain-->Routing tables to shipping lanes to exploit catalogs and orbit.<!--/offchain--> Self-hosted, sourced, silent until it matters.</p>
       <div style="margin-top:26px;display:flex;gap:12px;flex-wrap:wrap"><a class="btn" href="/app">Open the app</a><span class="btn o"><span class="y">$</span> npm i -g oculon</span></div></div>
   </div></div>
 </header>
@@ -359,7 +360,8 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
 <div class="stats">
   <div><div class="lbl">BGP hijacks · 48h</div><div class="v" id="s-hijacks">—</div></div>
   <div><div class="lbl">Exploited CVEs · 7d</div><div class="v" id="s-kev">—</div></div>
-  <div><div class="lbl">Robinhood Chain txs today</div><div class="v" id="s-rh">—</div></div>
+<!--onchain-->  <div><div class="lbl">Robinhood Chain txs today</div><div class="v" id="s-rh">—</div></div><!--/onchain-->
+<!--offchain-->  <div><div class="lbl">Signals · 24h</div><div class="v" id="s-sig">—</div></div><!--/offchain-->
   <div><div class="lbl">MCP tools for agents</div><div class="v" id="s-mcp">—</div></div>
 </div>
 
@@ -372,19 +374,21 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
     <div class="t-tabs" role="tablist" id="ctabs">
       <button type="button" class="t-tab is-active" role="tab" data-cmd="bgp">Routing</button>
       <button type="button" class="t-tab" role="tab" data-cmd="vulns">Exploits</button>
-      <button type="button" class="t-tab" role="tab" data-cmd="rh">Robinhood Chain</button>
+<!--onchain-->      <button type="button" class="t-tab" role="tab" data-cmd="rh">Robinhood Chain</button><!--/onchain-->
+<!--offchain-->      <button type="button" class="t-tab" role="tab" data-cmd="blackout">Outages</button><!--/offchain-->
       <button type="button" class="t-tab" role="tab" data-cmd="hazards">Disasters</button>
       <button type="button" class="t-tab" role="tab" data-cmd="cloud">Cloud</button>
       <button type="button" class="t-tab" role="tab" data-cmd="defi">DeFi</button>
       <span class="t-meta" id="cmeta"></span>
     </div>
     <pre class="terminal-body" id="cout" aria-live="polite"></pre>
-    <form class="t-input" id="cform"><span class="t-path">~/ops</span><span class="t-prompt">❯</span><span class="t-cmd">oculon</span><input id="cin" autocomplete="off" spellcheck="false" placeholder="cve CVE-2026-40217   bgp AS31452   token 0x… --chain robinhood" aria-label="Command"><button>Run ↵</button></form>
+<!--onchain-->    <form class="t-input" id="cform"><span class="t-path">~/ops</span><span class="t-prompt">❯</span><span class="t-cmd">oculon</span><input id="cin" autocomplete="off" spellcheck="false" placeholder="cve CVE-2026-40217   bgp AS31452   token 0x… --chain robinhood" aria-label="Command"><button>Run ↵</button></form><!--/onchain-->
+<!--offchain-->    <form class="t-input" id="cform"><span class="t-path">~/ops</span><span class="t-prompt">❯</span><span class="t-cmd">oculon</span><input id="cin" autocomplete="off" spellcheck="false" placeholder="cve CVE-2026-40217   bgp AS31452   vulns 30" aria-label="Command"><button>Run ↵</button></form><!--/offchain-->
   </div>
   <div class="note"><span>REAL OUTPUT FROM THIS INSTALL · READ-ONLY COMMANDS · CACHED 10 MIN</span><span>--json · --no-color · did-you-mean on typos</span></div>
 </section>
 
-<section class="rh" id="robinhood"><div class="wrap">
+<!--onchain--><section class="rh" id="robinhood"><div class="wrap">
   <div class="head rhhead"><div><div class="lbl y">02 · Home chain</div><h2 class="big" style="margin-top:18px">Every launch on<br>Robinhood Chain,<br>traced to a wallet.</h2></div>
   <p class="lead">Oculon grew up inside the Robinhood Chain ecosystem, so its deepest module lives there. Heron watches pools the minute they open, follows each token back to the wallet that deployed it, directly or through a launchpad, and counts how many of that wallet's launches are already dead.</p></div>
   <div class="chain">
@@ -414,7 +418,7 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
     <div><div class="mono y" style="font-size:13px">02</div><h3>Deployer memory</h3><div class="cd">Every token a wallet launched, including through launchpad factories. Most of its launches dead means a serial launcher, and the verdict says so.</div></div>
     <div><div class="mono y" style="font-size:13px">03</div><h3>Wallet context</h3><div class="cd">Balance, activity and contract status on Robinhood Chain next to EVM and Solana, plus sanctions checks on the wallet and its counterparties.</div></div>
   </div>
-</div></section>
+</div></section><!--/onchain-->
 
 <section class="sec wrap rv" id="world">
   <div class="head"><div><div class="lbl">03 · Live world</div><h2 class="big" style="margin-top:18px">The planet,<br>refreshed every scan.</h2></div>
@@ -465,12 +469,13 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
     <div class="card"><div class="cmd">$ oculon squawk</div><h3>Aircraft in distress</h3><div class="cd">Transponders on 7500, 7600 or 7700 right now.</div><div class="cr" id="r-squawk" hidden></div><div class="src">adsb.lol</div></div>
     <div class="card"><div class="cmd">$ oculon blackout</div><h3>Internet shutdowns</h3><div class="cd">Outages by country, checked against routing evidence.</div><div class="src">Cloudflare Radar · IODA · RIPEstat</div></div>
     <div class="card"><div class="cmd">$ oculon defi</div><h3>DeFi under stress</h3><div class="cd">TVL crashes, stablecoin depegs, hacks, fear and greed.</div><div class="cr" id="r-defi" hidden></div><div class="src">DefiLlama · alternative.me</div></div>
-    <div class="card"><div class="cmd">$ oculon sanctions &lt;x&gt;</div><h3>Sanctions, one hop out</h3><div class="cd">Wallets, IMO numbers and names, counterparties included.</div><div class="src">OFAC · OpenSanctions</div></div>
+<!--onchain-->    <div class="card"><div class="cmd">$ oculon sanctions &lt;x&gt;</div><h3>Sanctions, one hop out</h3><div class="cd">Wallets, IMO numbers and names, counterparties included.</div><div class="src">OFAC · OpenSanctions</div></div><!--/onchain-->
+<!--offchain-->    <div class="card"><div class="cmd">$ oculon sanctions &lt;x&gt;</div><h3>Sanctions screening</h3><div class="cd">Names and IMO numbers against OFAC and worldwide lists, with related entities.</div><div class="src">OFAC · OpenSanctions</div></div><!--/offchain-->
     <div class="card"><div class="cmd">$ oculon markets</div><h3>Prediction market gaps</h3><div class="cd">Polymarket against Kalshi and Manifold on the same question.</div><div class="src">Polymarket · Kalshi · Manifold</div></div>
     <div class="card"><div class="cmd">$ oculon exposure &lt;domain&gt;</div><h3>What a domain leaves open</h3><div class="cd">Open ports, software and known exploited CVEs per server.</div><div class="src">Shodan InternetDB · CISA KEV</div></div>
     <div class="card"><div class="cmd">$ oculon case new "&lt;q&gt;"</div><h3>Case files</h3><div class="cd">A deep investigation with a citation on every finding, rerun on demand.</div><div class="src">All modules</div></div>
     <div class="card"><div class="cmd">$ oculon rewind &lt;date&gt;</div><h3>Time machine</h3><div class="cd">What Oculon would have seen on a past day, used to tune the radar.</div><div class="src">Archives · Wayback</div></div>
-    <div class="card"><div class="cmd">$ oculon connect A to B</div><h3>How two things link</h3><div class="cd">Shortest path through companies, wallets, domains and people.</div><div class="src">Evidence graph</div></div>
+    <div class="card"><div class="cmd">$ oculon connect A to B</div><h3>How two things link</h3><div class="cd">Shortest path through companies, domains, repos and people.</div><div class="src">Evidence graph</div></div>
     <div class="card"><div class="cmd">$ oculon ask "&lt;q&gt;"</div><h3>An agent with every tool</h3><div class="cd">Ask in plain English; it picks modules and cites what it used.</div><div class="src">Free-tier LLMs first</div></div>
   </div>
 </section>
@@ -486,7 +491,7 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
 
 <section class="sec wrap rv" id="graph">
   <div class="head"><div><div class="lbl">00 · Evidence graph</div><h2 class="big" style="margin-top:18px">Every finding<br>is connected.</h2></div>
-  <p class="lead">Companies, domains, repos, markets, stories and on-chain events share one local graph. This is the newest slice of it from this install. Hover a node to read it; <span class="mono" style="color:#fff">oculon connect A to B</span> walks it for you.</p></div>
+  <p class="lead">Companies, domains, repos, markets, <!--onchain-->stories and on-chain events share one local graph.<!--/onchain--><!--offchain-->stories and topics share one local graph.<!--/offchain--> This is the newest slice of it from this install. Hover a node to read it; <span class="mono" style="color:#fff">oculon connect A to B</span> walks it for you.</p></div>
   <div class="gbox"><canvas id="gcanvas"></canvas>
     <div class="glegend" id="glegend"></div>
     <div class="gtip" id="gtip" hidden></div>
@@ -519,22 +524,36 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
   <div class="head"><div><div class="lbl">07 · Surfaces</div><h2 class="big" style="margin-top:18px">Same answer,<br>wherever you work.</h2></div>
   <p class="lead">The verdict you saw in the terminal is the same object your code receives, your agent calls and your phone gets pinged about. One engine, no second copy of the logic.</p></div>
   <div class="surf">
-    <div class="term"><div class="tbar"><button class="tab" aria-selected="true">SDK · TypeScript</button></div><div class="tbody"><pre><span class="y">import</span> <span class="w">{ Oculon }</span> <span class="y">from</span> 'oculon';
+    <!--onchain--><div class="term"><div class="tbar"><button class="tab" aria-selected="true">SDK · TypeScript</button></div><div class="tbody"><pre><span class="y">import</span> <span class="w">{ Oculon }</span> <span class="y">from</span> 'oculon';
 
 <span class="y">const</span> <span class="w">o</span> = <span class="y">new</span> Oculon();
 <span class="y">const</span> <span class="w">r</span> = <span class="y">await</span> o.robinhoodToken(addr);
 
 r.result.verdict   <span class="d">// 'DANGER' | 'CAUTION' | 'OK'</span>
 r.result.reasons   <span class="d">// why, in plain words</span>
-r.provenance       <span class="d">// every source used</span></pre></div></div>
-    <div class="term"><div class="tbar"><button class="tab" aria-selected="true">MCP · <span id="mcp-n">71</span> tools</button></div><div class="tbody"><pre><span class="d">// any MCP client, stdio: oculon mcp</span>
+r.provenance       <span class="d">// every source used</span></pre></div></div><!--/onchain--><!--offchain--><div class="term"><div class="tbar"><button class="tab" aria-selected="true">SDK · TypeScript</button></div><div class="tbody"><pre><span class="y">import</span> <span class="w">{ Oculon }</span> <span class="y">from</span> 'oculon';
+
+<span class="y">const</span> <span class="w">o</span> = <span class="y">new</span> Oculon();
+<span class="y">const</span> <span class="w">r</span> = <span class="y">await</span> o.cve('CVE-2026-40217');
+
+r.result.cvss      <span class="d">// score, severity, vector</span>
+r.result.kev       <span class="d">// exploited in the wild?</span>
+r.provenance       <span class="d">// every source used</span></pre></div></div><!--/offchain-->
+    <!--onchain--><div class="term"><div class="tbar"><button class="tab" aria-selected="true">MCP · <span id="mcp-n">71</span> tools</button></div><div class="tbody"><pre><span class="d">// any MCP client, stdio: oculon mcp</span>
 {
   "tool": <span class="w">"oculon_robinhood_token"</span>,
   "arguments": {
     "address": <span class="w">"0x…"</span>
   }
 }
-<span class="d">// also oculon_robinhood_deployer, oculon_bgp …</span></pre></div></div>
+<span class="d">// also oculon_robinhood_deployer, oculon_bgp …</span></pre></div></div><!--/onchain--><!--offchain--><div class="term"><div class="tbar"><button class="tab" aria-selected="true">MCP · <span id="mcp-n2">71</span> tools</button></div><div class="tbody"><pre><span class="d">// any MCP client, stdio: oculon mcp</span>
+{
+  "tool": <span class="w">"oculon_cve"</span>,
+  "arguments": {
+    "id": <span class="w">"CVE-2026-40217"</span>
+  }
+}
+<span class="d">// also oculon_bgp, oculon_darkships, oculon_ask …</span></pre></div></div><!--/offchain-->
     <div class="box" style="overflow:hidden"><div class="tbar"><button class="tab" aria-selected="true" style="font-family:var(--sans);font-size:13px">Telegram · alerts</button></div>
       <div style="padding:20px 22px"><div id="tg" style="background:#111;border:1px solid var(--line);padding:16px 18px;font-size:14px;line-height:1.55"><span class="mut">Latest signal appears here.</span></div>
       <div style="display:flex;gap:8px;margin-top:10px"><span style="flex:1;text-align:center;border:1px solid #333;padding:9px;font-size:13px">Useful</span><span style="flex:1;text-align:center;border:1px solid #333;padding:9px;font-size:13px">Noise</span></div>
@@ -548,7 +567,8 @@ r.provenance       <span class="d">// every source used</span></pre></div></div>
   <p class="lead">The same install serves very different jobs. These are the commands each desk tends to live in.</p></div>
   <div class="uses">
     <div class="use"><div class="use-i">01</div><h3>Security teams</h3><p>Know which exploited CVEs touch your servers, which routes were hijacked overnight and what a domain leaves open.</p><div class="chips"><span>vulns</span><span>cve</span><span>exposure</span><span>bgp</span><span>blackout</span><span>pkg</span></div></div>
-    <div class="use"><div class="use-i">02</div><h3>Crypto and Robinhood Chain</h3><p>Read a token before you touch it, trace the wallet that launched it and screen counterparties against sanctions lists.</p><div class="chips"><span>rh</span><span>token</span><span>deployer</span><span>wallet</span><span>sanctions</span><span>defi</span></div></div>
+<!--onchain-->    <div class="use"><div class="use-i">02</div><h3>Crypto and Robinhood Chain</h3><p>Read a token before you touch it, trace the wallet that launched it and screen counterparties against sanctions lists.</p><div class="chips"><span>rh</span><span>token</span><span>deployer</span><span>wallet</span><span>sanctions</span><span>defi</span></div></div><!--/onchain-->
+<!--offchain-->    <div class="use"><div class="use-i">02</div><h3>Infrastructure and operations</h3><p>See cloud incidents, internet shutdowns, disaster alerts and aircraft in distress as they happen, with the source of each.</p><div class="chips"><span>cloud</span><span>blackout</span><span>hazards</span><span>squawk</span><span>fires</span><span>darkships</span></div></div><!--/offchain-->
     <div class="use"><div class="use-i">03</div><h3>Newsrooms and researchers</h3><p>Open a case with sourced findings, rewind to what was visible on a given day and spot sources that contradict each other.</p><div class="chips"><span>case new</span><span>rewind</span><span>contradictions</span><span>narratives</span><span>podcast</span><span>connect</span></div></div>
     <div class="use"><div class="use-i">04</div><h3>Markets and companies</h3><p>Track filings, catalysts and company health, and compare prediction markets that price the same question.</p><div class="chips"><span>calendar</span><span>edgar</span><span>filings</span><span>health</span><span>markets</span><span>launches</span></div></div>
   </div>
@@ -590,8 +610,10 @@ r.provenance       <span class="d">// every source used</span></pre></div></div>
     <details><summary>Where does my data go?</summary><p>Into a local SQLite file in <code>~/.oculon</code>. Nothing is sent to the authors; there is no telemetry. Queries go only to the sources a command needs. See <a href="/privacy">Privacy</a>.</p></details>
     <details><summary>What do I need to run it?</summary><p>Node.js 22.13 or newer. <code>npm i -g oculon</code>, then <code>oculon tour</code> shows what your install can already do.</p></details>
     <details><summary>Can my AI agent use it?</summary><p>Yes. <code>oculon mcp</code> starts an MCP server on stdio with <span class="mcpn">71</span> tools, and the TypeScript SDK returns the same result objects as the CLI.</p></details>
-    <details><summary>Does Robinhood Chain need a key?</summary><p>No. Heron reads pool data from GeckoTerminal and contract data from Blockscout without keys.</p></details>
-    <details><summary>Are the verdicts audits?</summary><p>No. Token and deployer verdicts are heuristics over pool and explorer data, and every verdict lists the reasons behind it so you can judge them.</p></details>
+<!--onchain-->    <details><summary>Does Robinhood Chain need a key?</summary><p>No. Heron reads pool data from GeckoTerminal and contract data from Blockscout without keys.</p></details>
+    <details><summary>Are the verdicts audits?</summary><p>No. Token and deployer verdicts are heuristics over pool and explorer data, and every verdict lists the reasons behind it so you can judge them.</p></details><!--/onchain-->
+<!--offchain-->    <details><summary>Which sources need a key?</summary><p>About 20 work with none. <code>oculon doctor</code> lists which optional keys are set and what each one switches on.</p></details>
+    <details><summary>Are the scores predictions?</summary><p>No. A score says how unusual something is across independent sources, and every signal lists the evidence behind it so you can judge it.</p></details><!--/offchain-->
   </div>
 </section>
 
@@ -607,7 +629,7 @@ r.provenance       <span class="d">// every source used</span></pre></div></div>
 <footer class="sitefoot"><div class="wrap">
   <div class="fgrid">
     <div class="fbrand"><a class="logo" href="/">OCULON</a><p>Open-source intelligence engine for the physical and digital world. Self-hosted, MIT licensed, zero runtime dependencies.</p><div class="fstatus"><i></i><span id="f-status">Engine online</span></div></div>
-    <div><h5>Product</h5><a href="#console">Console</a><a href="#robinhood">Robinhood Chain</a><a href="#world">Live world</a><a href="#modules">Modules</a><a href="/app">Open the app</a></div>
+    <div><h5>Product</h5><a href="#console">Console</a><!--onchain--><a href="#robinhood">Robinhood Chain</a><!--/onchain--><a href="#world">Live world</a><a href="#modules">Modules</a><a href="/app">Open the app</a></div>
     <div><h5>Developers</h5><a href="/docs#cli">CLI</a><a href="/docs#sdk">SDK</a><a href="/docs#mcp-server">MCP server</a><a href="/docs#telegram-bot">Telegram bot</a><a href="/docs#cli-reference">Command reference</a></div>
     <div><h5>Resources</h5><a href="/docs">Documentation</a><a href="/docs#install">Install</a><a href="/docs#configuration">Configuration</a><a href="/docs#limits">Limits</a><a href="/report">Weekly report</a></div>
     <div><h5>Legal</h5><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/docs#license">Licence (MIT)</a><a href="/terms#sources">Data sources</a></div>
@@ -733,7 +755,7 @@ api('/api/signals?limit=80').then((all) => {
 once('/api/bgp').then((b) => countUp($('s-hijacks'), b.result.incidents.hijacks.length)).catch(() => { $('s-hijacks').textContent = 'n/a'; });
 once('/api/vulns').then((v) => countUp($('s-kev'), v.result.kev.length)).catch(() => { $('s-kev').textContent = 'n/a'; });
 
-/* ---- robinhood chain ---- */
+/*onchain*//* ---- robinhood chain ---- */
 function setVerdict(t, label) {
   $("v-sym").textContent = t.symbol || label || short(t.address);
   const v = $('v-verdict'); v.textContent = t.verdict; v.className = `verdict ${t.verdict}`;
@@ -771,7 +793,15 @@ once('/api/robinhood').then((r) => {
   document.querySelectorAll('#pools .row[data-token]').forEach((row) => row.addEventListener("click", () => checkToken(row.dataset.token, row.dataset.label)));
   const target = fresh.find((p) => p.flags.length) ?? fresh[0] ?? r.result.trending[0];
   if (target) checkToken(target.pool.token, target.pool.name.split(" / ")[0]);
-}).catch((e) => { $('rh-out').innerHTML = `<pre class="y">${esc(e.message)}</pre>`; $('s-rh').textContent = 'n/a'; });
+}).catch((e) => { $('rh-out').innerHTML = `<pre class="y">${esc(e.message)}</pre>`; $('s-rh').textContent = 'n/a'; });/*/onchain*//*offchain*/
+/* ---- signals in the last day (stat for builds without the chain section) ---- */
+api('/api/signals?limit=200').then((list) => {
+  const n = list.filter((x) => Date.now() - Date.parse(x.createdAt) < 864e5).length;
+  const el = $('s-sig'); if (!el) return;
+  if (n >= 200) el.textContent = '200+'; else countUp(el, n);
+}).catch(() => { const el = $('s-sig'); if (el) el.textContent = 'n/a'; });
+document.querySelectorAll('#mcp-n2').forEach((el) => once('/api/meta').then((m) => { el.textContent = m.mcpTools; }).catch(() => {}));
+/*/offchain*/
 
 /* ---- module result lines ---- */
 once('/api/squawks').then((r) => { const el = $('r-squawk'); el.textContent = `${r.result.total} aircraft squawking at ${new Date(r.generatedAt).toUTCString().slice(17, 22)} UTC`; el.hidden = false; }).catch(() => {});
@@ -955,7 +985,7 @@ fetch('/api/meta').then((r) => { $('f-status').textContent = r.ok ? 'Engine onli
   const tick = () => { $('clock').textContent = new Date().toUTCString().slice(17, 25); };
   tick(); setInterval(tick, 1000);
   // The corner label cycles through what the engine reads (names of real modules and sources).
-  const reads = ['NASA Black Marble · Europe · Africa · Asia', 'Reading Cloudflare Radar · routing', 'Reading USGS · earthquakes', 'Reading adsb.lol · military air', 'Reading Blockscout · Robinhood Chain', 'Reading CISA KEV · exploits', 'Reading NASA EONET · storms and fires'];
+  const reads = ['NASA Black Marble · Europe · Africa · Asia', 'Reading Cloudflare Radar · routing', 'Reading USGS · earthquakes', 'Reading adsb.lol · military air', 'Reading CISA KEV · exploits', 'Reading NASA EONET · storms and fires'];
   let ri = 0;
   $('scanning').style.transition = 'opacity .35s';
   setInterval(() => { const el = $('scanning'); el.style.opacity = 0; setTimeout(() => { ri = (ri + 1) % reads.length; el.textContent = reads[ri]; el.style.opacity = 1; }, 350); }, 3200);

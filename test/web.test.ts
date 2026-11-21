@@ -57,8 +57,18 @@ test('web console only maps read-only commands to argv', async () => {
   const { consoleArgv } = await import('../src/web/server.js');
   const addr = '0x666f7136be18a9be9adfa97d1d81b8e5ef32c78d';
   assert.deepEqual(consoleArgv('oculon bgp'), ['bgp']);
-  assert.deepEqual(consoleArgv(`token ${addr} --chain robinhood`), ['token', addr, '--chain', 'robinhood']);
-  assert.deepEqual(consoleArgv(`deployer ${addr}`), ['deployer', addr]);
+  // on-chain commands are paused by default
+  assert.equal(consoleArgv('rh'), null);
+  assert.equal(consoleArgv(`token ${addr} --chain robinhood`), null);
+  assert.equal(consoleArgv(`deployer ${addr}`), null);
+  process.env.OCULON_ONCHAIN = '1';
+  try {
+    assert.deepEqual(consoleArgv('rh'), ['rh']);
+    assert.deepEqual(consoleArgv(`token ${addr} --chain robinhood`), ['token', addr, '--chain', 'robinhood']);
+    assert.deepEqual(consoleArgv(`deployer ${addr}`), ['deployer', addr]);
+  } finally {
+    delete process.env.OCULON_ONCHAIN;
+  }
   assert.deepEqual(consoleArgv('cve cve-2026-40217'), ['cve', 'CVE-2026-40217']);
   assert.deepEqual(consoleArgv('bgp as31452'), ['bgp', 'AS31452']);
   for (const bad of ['ask hello', 'watch add company x', 'case new "x"', 'token 0x12 --chain robinhood', `token ${addr} --out /etc/x`, 'bgp; rm -rf /', 'social x', 'serve', '']) assert.equal(consoleArgv(bad), null, bad);
@@ -102,4 +112,27 @@ test('public mode rate limits each client', async () => {
   assert.equal(l.allow('2.2.2.2', '/api/meta', 1000), true, 'other clients are unaffected');
   assert.deepEqual([1, 2].map(() => l.allow('1.1.1.1', '/api/console', 1000)), [true, false], 'heavy endpoints have their own smaller budget');
   assert.equal(l.allow('1.1.1.1', '/api/meta', 62_000), true, 'the window resets after a minute');
+});
+
+
+test('pages drop on-chain blocks unless switched on, and point app and docs links at subdomains', async () => {
+  const { renderPage } = await import('../src/web/server.js');
+  const html = '<a href="/app">app</a><a href="/docs#cli">cli</a><a href="/">home</a><a href="/privacy">p</a><!--onchain--><b>chain</b><!--/onchain--><!--offchain--><i>plain</i><!--/offchain--><script>/*onchain*/const a = 1;/*/onchain*/</script>';
+  const off = renderPage(html, null);
+  assert.doesNotMatch(off, /chain<\/b>|const a/);
+  assert.match(off, /<i>plain<\/i>/);
+  assert.doesNotMatch(off, /onchain|offchain/, 'markers are removed');
+  assert.match(off, /href="\/app"/, 'local links stay relative');
+  process.env.OCULON_ONCHAIN = '1';
+  try {
+    const on = renderPage(html, 'example.org');
+    assert.match(on, /<b>chain<\/b>/);
+    assert.doesNotMatch(on, /<i>plain/);
+    assert.match(on, /href="https:\/\/app\.example\.org\/"/);
+    assert.match(on, /href="https:\/\/docs\.example\.org\/#cli"/);
+    assert.match(on, /href="https:\/\/example\.org\/privacy"/);
+    assert.match(on, /href="https:\/\/example\.org\/"/);
+  } finally {
+    delete process.env.OCULON_ONCHAIN;
+  }
 });

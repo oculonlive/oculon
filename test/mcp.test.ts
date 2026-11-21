@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { Oculon } from '../src/index.js';
-import { McpServer, TOOLS } from '../src/mcp.js';
+import { activeTools, McpServer, TOOLS } from '../src/mcp.js';
 import { mockFetch, NOW } from './helpers.js';
 
 const offline = () => new Oculon({ dbPath: ':memory:', fetch: mockFetch([]).fetch, throttle: false, now: () => NOW });
@@ -24,7 +24,9 @@ test('initialize negotiates protocol version and advertises tools', async () => 
 test('tools/list exposes valid schemas; tools/call works and reports errors as tool errors', async () => {
   const s = new McpServer(offline);
   const list = (await s.handle({ jsonrpc: '2.0', id: 1, method: 'tools/list' })) as { result: { tools: { name: string; inputSchema: { type: string; required: string[]; properties: object } }[] } };
-  assert.equal(list.result.tools.length, TOOLS.length);
+  assert.equal(list.result.tools.length, activeTools().length);
+  assert.ok(activeTools().length < TOOLS.length, "on-chain tools are left out by default");
+  assert.ok(!list.result.tools.some((t: { name: string }) => /robinhood|wallet|^oculon_token$/.test(t.name)));
   for (const t of list.result.tools) {
     assert.match(t.name, /^oculon_[a-z_]+$/);
     assert.equal(t.inputSchema.type, 'object');
@@ -81,6 +83,6 @@ test('stdio server speaks line-delimited JSON-RPC as a real child process', asyn
 
   const byId = Object.fromEntries(responses.map((r) => [String(r.id), r])) as Record<string, { result: Record<string, unknown> }>;
   assert.equal((byId['1']!.result.serverInfo as { name: string }).name, 'oculon');
-  assert.equal((byId['2']!.result.tools as unknown[]).length, TOOLS.length);
+  assert.equal((byId['2']!.result.tools as unknown[]).length, activeTools().length);
   assert.deepEqual(JSON.parse((byId['3']!.result.content as { text: string }[])[0]!.text), []);
 });
