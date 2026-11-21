@@ -188,6 +188,25 @@ export class Store {
       .run(key, body, fetchedAt);
   }
 
+  /**
+   * Deletes everything the on-chain modules left behind (Robinhood Chain pools and deployers, wallet and
+   * token checks, DeFi): their signals, scoops, observations, entities, edges and watch targets.
+   */
+  purgeOnchain(): Record<string, number> {
+    const ent = "(%s LIKE 'wallet:%' OR %s LIKE 'token:%' OR %s LIKE 'event:token:%' OR %s LIKE 'event:deployer:%')";
+    const on = (col: string) => ent.replaceAll('%s', col);
+    const mods = "('heron', 'magpie', 'defi')";
+    const run = (sql: string) => Number(this.db.prepare(sql).run().changes);
+    return {
+      scoops: run(`DELETE FROM scoops WHERE signal_id LIKE 'heron-%' OR signal_id LIKE 'magpie-%' OR signal_id LIKE 'defi-%'`),
+      signals: run(`DELETE FROM signals WHERE module IN ${mods} OR (entity_id IS NOT NULL AND ${on('entity_id')})`),
+      observations: run(`DELETE FROM observations WHERE module IN ${mods} OR ${on('entity_id')}`),
+      edges: run(`DELETE FROM edges WHERE ${on('src')} OR ${on('dst')}`),
+      entities: run(`DELETE FROM entities WHERE ${on('id')}`),
+      watchlist: run(`DELETE FROM watchlist WHERE kind IN ('wallet', 'token') OR target LIKE '%@robinhood'`),
+    };
+  }
+
   /** Drop raw API responses older than `days` (derived entries such as calibration stay), optionally compacting the file. */
   pruneCache(days = 14, vacuum = false, now = Date.now()): { removed: number } {
     const removed = Number(this.db.prepare("DELETE FROM cache WHERE fetched_at < ? AND key NOT LIKE 'derived:%'").run(now - days * 86_400_000).changes);

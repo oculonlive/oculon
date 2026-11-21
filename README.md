@@ -233,6 +233,15 @@ OCULON_ADMIN_TOKEN=<long random string> oculon serve --host 0.0.0.0 --public --w
 
 In public mode visitors get the overview page, the docs, the legal pages and a read-only API. Writes, the dashboard, LLM-backed endpoints and anything personal (watchlist, cases, geofences, votes) stay closed, and every client is rate limited. The owner opens `/app`, signs in once with `OCULON_ADMIN_TOKEN` and gets the full app; the token is never stored in the browser. Serving beyond localhost without `--public` is refused.
 
+Other deployment switches:
+
+| Variable | Effect |
+| --- | --- |
+| `OCULON_OPEN=1` | Opens the whole app to every visitor: dashboard, writes and LLM-backed endpoints, with no sign-in and no rate limit. |
+| `OCULON_DOMAIN=example.com` | Points app and docs links at `app.example.com` and `docs.example.com`, and redirects `/app` and `/docs` there. |
+| `OCULON_EDGE_SECRET` | Shared secret with the Cloudflare Worker in `edge/`, which serves the two subdomains from the same server. |
+| `OCULON_PURGE_ONCHAIN=1` | Clears data left by the paused on-chain modules each time the server starts. |
+
 The repository includes a `Dockerfile` and `railway.json`. Mount a persistent volume at `/data` (the image sets `OCULON_HOME=/data`), set your keys as environment variables, and point a domain at the service. Each deployment keeps its own database and its own daily budgets.
 
 ## How it works

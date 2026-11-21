@@ -29,6 +29,8 @@ export interface WebOptions {
   domain?: string;
   /** Shared secret with the edge Worker (default OCULON_EDGE_SECRET). */
   edgeSecret?: string;
+  /** Public mode with the whole app open to every visitor (default OCULON_OPEN=1). */
+  open?: boolean;
   /** Minutes between background scans; 0 disables. */
   watchMinutes?: number;
   oculon?: Oculon;
@@ -327,7 +329,17 @@ function withoutOnchain(path: string, out: unknown): unknown {
   if (path === '/api/search') return (out as { id: string }[]).filter((e) => !isOnchainEntity(e.id));
   if (path === '/api/watch') return (out as { kind: string; target: string }[]).filter((w) => !ONCHAIN_WATCH_KINDS.has(w.kind) && !/@robinhood$/i.test(w.target));
   if (path === '/api/profile' && out && isOnchainEntity((out as { id: string }).id)) throw new HttpError(404, 'on-chain features are paused');
+  if (path === '/api/scoops' || path === '/api/accuracy') return dropOnchainScoops(out);
   return out;
+}
+
+/** Removes scoop rows that came from on-chain signals (their ids start with the module name), at any depth. */
+function dropOnchainScoops(v: unknown): unknown {
+  if (Array.isArray(v)) {
+    return v.filter((x) => !(x && typeof x === 'object' && ONCHAIN_MODULES.has(String((x as { signalId?: string }).signalId ?? '').split('-')[0]!))).map(dropOnchainScoops);
+  }
+  if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, dropOnchainScoops(x)]));
+  return v;
 }
 
 /**
@@ -373,6 +385,13 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
   const publicMode = Boolean(opts.publicMode);
   const adminToken = opts.adminToken ?? (process.env.OCULON_ADMIN_TOKEN?.trim() || undefined);
   const limiter = new RateLimiter();
+  // OCULON_OPEN=1 opens the whole app to every visitor (no sign-in, no read-only gate, no rate limit).
+  const openApp = opts.open ?? process.env.OCULON_OPEN === '1';
+  // OCULON_PURGE_ONCHAIN=1 clears data left by the paused on-chain modules when the server starts.
+  if (!onchainEnabled() && process.env.OCULON_PURGE_ONCHAIN === '1') {
+    const removed = oculon.ctx.store.purgeOnchain();
+    log(`purged on-chain data: ${Object.entries(removed).map(([k, n]) => `${k} ${n}`).join(', ')}`);
+  }
 
   // OCULON_DOMAIN (e.g. oculon.live) turns on subdomain links and redirects for app.* and docs.*.
   const siteDomain = (opts.domain ?? process.env.OCULON_DOMAIN ?? '').trim().toLowerCase() || null;
@@ -386,7 +405,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     const viaEdge = Boolean(edgeSecret) && tokenMatches(String(req.headers['x-oculon-edge'] ?? ''), edgeSecret!);
     const edgeSite = viaEdge ? String(req.headers['x-oculon-site'] ?? '') : '';
     const hostName = siteDomain && /^(app|docs)$/.test(edgeSite) ? `${edgeSite}.${siteDomain}` : String(req.headers.host ?? '').split(':')[0]!.toLowerCase();
-    const admin = !publicMode || isAdmin(req, adminToken);
+    const admin = !publicMode || openApp || isAdmin(req, adminToken);
     // The main domain hands /app and /docs to their subdomains before anything else answers them.
     if (siteDomain && hostName === siteDomain && /^\/(app|docs)\/?$/.test(url.pathname) && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(301, { location: `https://${url.pathname.replace(/\//g, '')}.${siteDomain}/${url.search}`, 'cache-control': 'no-store' });
@@ -423,9 +442,11 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     if (req.method === 'POST' && POST_ROUTES[url.pathname]) {
       // Writes only from this dashboard: a custom header (forces a CORS preflight that this server never
       // grants), a JSON body, and a same-host Origin when the browser sends one.
+      // Behind the edge Worker the browser's origin is app.<domain> while the Host header is the origin server's.
       const origin = req.headers.origin;
-      const host = req.headers.host ?? '';
-      if (req.headers['x-oculon'] !== '1' || !String(req.headers['content-type'] ?? '').startsWith('application/json') || (origin && origin !== `http://${host}`)) {
+      const host = String(req.headers.host ?? '').toLowerCase();
+      const originHost = (() => { try { return new URL(String(origin)).host.toLowerCase(); } catch { return null; } })();
+      if (req.headers['x-oculon'] !== '1' || !String(req.headers['content-type'] ?? '').startsWith('application/json') || (origin && originHost !== host && originHost !== hostName)) {
         return send(res, 403, '{"error":"forbidden"}', 'application/json');
       }
       try {

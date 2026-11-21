@@ -177,3 +177,46 @@ test('public mode locks app.<domain> for visitors and the main domain redirects 
     oculon.close();
   }
 });
+
+test('open mode serves the full app to visitors and accepts writes from app.<domain> through the edge', async () => {
+  const oculon = new Oculon({ dbPath: ':memory:', fetch: mockFetch([]).fetch, throttle: false, now: () => NOW });
+  const { server, stop } = createWebServer({ port: 0, oculon, publicMode: true, open: true, domain: 'example.org', edgeSecret: 'edge-secret' });
+  await new Promise((r) => server.once('listening', r));
+  const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  const edge = { 'x-oculon-edge': 'edge-secret', 'x-oculon-site': 'app' };
+  try {
+    assert.match(await (await fetch(base + '/', { headers: edge })).text(), /id="tab-overview"/, 'visitors get the dashboard');
+    assert.equal((await fetch(base + '/api/cases', { headers: edge })).status, 200, 'private endpoints are open');
+    const write = await fetch(base + '/api/fences', { method: 'POST', headers: { ...edge, origin: 'https://app.example.org', 'content-type': 'application/json', 'x-oculon': '1' }, body: '{}' });
+    assert.notEqual(write.status, 403, 'a write from app.<domain> passes the origin check');
+    const forged = await fetch(base + '/api/fences', { method: 'POST', headers: { origin: 'https://evil.example', 'content-type': 'application/json', 'x-oculon': '1' }, body: '{}' });
+    assert.equal(forged.status, 403, 'other origins are still refused');
+  } finally {
+    await stop();
+    oculon.close();
+  }
+});
+
+test('purgeOnchain removes only what the on-chain modules left behind', () => {
+  const oculon = new Oculon({ dbPath: ':memory:', fetch: mockFetch([]).fetch, throttle: false, now: () => NOW });
+  try {
+    const db = oculon.ctx.store.db;
+    const sig = db.prepare("INSERT INTO signals (id, module, entity_id, title, score, evidence, created_at) VALUES (?, ?, ?, 't', 50, '[]', 1)");
+    sig.run('heron-1', 'heron', 'event:token:0xabc');
+    sig.run('owl-1', 'owl', 'story:x');
+    const scoop = db.prepare("INSERT INTO scoops (signal_id, subject, oculon_at, checked_at) VALUES (?, 's', 1, 1)");
+    scoop.run('heron-1');
+    scoop.run('owl-1');
+    db.prepare("INSERT INTO entities (id, kind, name, created_at, updated_at) VALUES ('wallet:0xabc', 'wallet', '0xabc', 1, 1)").run();
+    oculon.ctx.graph.upsert('domain', 'acme.com');
+    const removed = oculon.ctx.store.purgeOnchain();
+    assert.equal(removed.signals, 1);
+    assert.equal(removed.scoops, 1);
+    assert.equal(removed.entities, 1);
+    const left = db.prepare('SELECT id FROM signals').all().map((r) => (r as { id: string }).id);
+    assert.deepEqual(left, ['owl-1']);
+    assert.equal((db.prepare('SELECT COUNT(*) n FROM entities').get() as { n: number }).n, 1);
+  } finally {
+    oculon.close();
+  }
+});
