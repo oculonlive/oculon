@@ -117,6 +117,18 @@ function errMsg(e: unknown): string {
   return String(e);
 }
 
+/** A short reason from a JSON error body (Cloudflare `errors[0]`, or `message` / `error`), as " (reason)". */
+function errorReason(text: string): string {
+  try {
+    const j = JSON.parse(text) as { errors?: { code?: number; message?: string }[]; message?: unknown; error?: unknown };
+    const e = j.errors?.[0];
+    const why = e?.message ? `${e.code ? `${e.code} ` : ''}${e.message}` : typeof j.message === 'string' ? j.message : typeof j.error === 'string' ? j.error : '';
+    return why ? ` (${scrubSecrets(why).slice(0, 120)})` : '';
+  } catch {
+    return '';
+  }
+}
+
 class ParseError extends Error {}
 
 export class Http {
@@ -226,9 +238,10 @@ export class Http {
           continue;
         }
         if (!res.ok) {
-          lastErr = `HTTP ${res.status}`;
+          const text = await res.text().catch(() => '');
+          lastErr = `HTTP ${res.status}${errorReason(text)}`;
           // GitHub signals (secondary) rate limits with 403.
-          if (res.status === 403 && (res.headers.get('x-ratelimit-remaining') === '0' || /rate limit/i.test(await res.text()))) {
+          if (res.status === 403 && (res.headers.get('x-ratelimit-remaining') === '0' || /rate limit/i.test(text))) {
             lastErr = 'HTTP 403 rate limited';
             if (attempt < retries) await sleep(this.cfg.retryDelayMs !== undefined ? baseDelay : 8000 * 2 ** attempt);
             continue;
