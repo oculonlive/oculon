@@ -28,6 +28,10 @@ test('scam check: links, sender, patterns and the "hi mum" pair', async () => {
     assert.equal(parcel.result.verdict, 'likely scam');
     const mum = await scamCheck(ctx, 'Hi mom, this is my new number, I lost my phone. Can you send me $400 for rent today?');
     assert.equal(mum.result.verdict, 'likely scam');
+    const sol = await scamCheck(ctx, "Hi! I'm hosting a special Solana giveaway for five people, and I'm happy to let you know you were selected as the final recipient. Send me your sol address....?");
+    assert.equal(sol.result.verdict, 'likely scam');
+    const seed = await scamCheck(ctx, 'Your wallet needs to be validated. Reply with your 12-word recovery phrase to keep your funds.');
+    assert.notEqual(seed.result.verdict, 'no strong signs');
     const lunch = await scamCheck(ctx, 'Are we still on for lunch Thursday at 12? I booked a table.');
     assert.equal(lunch.result.verdict, 'no strong signs');
   });

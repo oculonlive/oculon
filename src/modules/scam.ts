@@ -30,7 +30,8 @@ const PATTERNS: { name: string; weight: number; re: RegExp }[] = [
   { name: 'urgency or threat', weight: 15, re: /\b(urgent|immediately|within (24|48) hours|final (notice|warning)|last chance|act now|expires? today|will be (suspended|closed|deleted|blocked)|legal action|arrest warrant)\b/i },
   { name: 'account locked or verify your account', weight: 20, re: /\b(account (has been |is )?(suspended|locked|limited|restricted|on hold|compromised)|verify your (account|identity|details)|unusual (sign[- ]?in|activity)|confirm your (password|details|information))\b/i },
   { name: 'parcel or delivery fee', weight: 25, re: /\b(parcel|package|delivery|shipment)\b[\s\S]{0,80}\b(fee|pay|held|on hold|failed|unpaid|customs|redeliver|re-?schedule)\b/i },
-  { name: 'prize, lottery or giveaway', weight: 25, re: /\b(you('ve| have)? won|winner|lottery|jackpot|claim your (prize|reward|gift)|selected to receive|free (iphone|gift))\b/i },
+  { name: 'prize, lottery or giveaway', weight: 25, re: /\b(you('ve| have)? won|winner|lottery|jackpot|claim your (prize|reward|gift)|selected to receive|free (iphone|gift)|giveaway|airdrop|you (were|have been|are|got) (selected|chosen|picked)|(selected|chosen|picked) as (the|a|one of)|lucky (winner|recipient|one))\b/i },
+  { name: 'asks for your crypto wallet or recovery phrase', weight: 35, re: /\b(seed phrase|recovery phrase|secret (recovery )?phrase|private key|1[2-8][- ]word|connect your wallet|(validate|verify|sync|rectify) your wallet)\b|\b(send|share|give|drop|reply with|dm|tell)\b(?: me)?[\s\S]{0,25}\b(sol|solana|eth|ethereum|btc|bitcoin|usdt|bnb|trx|crypto|wallet|metamask|phantom|trust ?wallet)\s+(wallet\s+)?(address|addy|wallet)\b/i },
   { name: 'refund or tax rebate', weight: 20, re: /\b(refund|rebate|overpaid|reimbursement|compensation)\b[\s\S]{0,60}\b(claim|click|eligible|pending|approved)\b/i },
   { name: 'asks for a one-time code or password', weight: 40, re: /\b(otp|one[- ]time (code|password)|verification code|security code|6-digit code|pin)\b[\s\S]{0,60}\b(send|share|reply|tell|give|forward)\b|\b(send|share|reply with|tell me|give me|forward)\b[\s\S]{0,40}\b(otp|code|password|pin)\b/i },
   { name: 'gift card or crypto payment', weight: 30, re: /\b(gift ?cards?|itunes card|google play card|steam card|pay (in|with|via) (bitcoin|btc|usdt|crypto)|bitcoin atm|wallet address)\b/i },
@@ -86,6 +87,8 @@ export async function scamCheck(ctx: Ctx, text: string): Promise<ModuleResult<Sc
   for (const p of patterns) { risk += p.weight; reasons.push(`${p.name}: "${p.evidence}"`); }
   // "Hi mum, new number, send money" is one of the most common scams: the pair counts more than its parts.
   if (patterns.some((p) => /new number/.test(p.name)) && patterns.some((p) => /send money/.test(p.name))) { risk += 20; reasons.push('a new number asking for money is the "hi mum" family-impersonation scam'); }
+  // A giveaway that wants your wallet is the crypto "you were selected" scam.
+  if (patterns.some((p) => /giveaway/.test(p.name)) && patterns.some((p) => /crypto wallet/.test(p.name))) { risk += 20; reasons.push('a giveaway that asks for your wallet is a common crypto scam'); }
   const brand = BRANDS.exec(msg)?.[1];
   if (brand && sender && (sender.freeMail || !senderDomain!.includes(brand.toLowerCase().replace(/\s+/g, '')))) { risk += 25; reasons.push(`mentions ${brand} but the sender is ${sender.email}`); }
   if (brand && links.length && links.every((l) => !apexOf(new URL(l.url).hostname).includes(brand.toLowerCase().replace(/\s+/g, '')))) { risk += 15; reasons.push(`mentions ${brand} but its links go elsewhere`); }
@@ -96,7 +99,8 @@ export async function scamCheck(ctx: Ctx, text: string): Promise<ModuleResult<Sc
   if (verdict !== 'no strong signs') {
     advice.push('Do not click the links or reply. Open the company\'s app or type its address yourself.');
     if (patterns.some((p) => /code|password/.test(p.name))) advice.push('Never share a one-time code: no real company asks for it.');
-    if (patterns.some((p) => /gift card|crypto/.test(p.name))) advice.push('Requests for gift cards or crypto are almost always fraud.');
+    if (patterns.some((p) => /gift card|crypto payment/.test(p.name))) advice.push('Requests for gift cards or crypto are almost always fraud.');
+    if (patterns.some((p) => /crypto wallet/.test(p.name))) advice.push('Never share a recovery phrase or private key, and ignore "giveaways" that ask for your wallet: they lead to drained wallets or fake fees.');
     if (patterns.some((p) => /new number/.test(p.name))) advice.push('Call the person on the number you already have before sending anything.');
     advice.push('Report it: forward phishing SMS to 7726 (US, UK) and report emails to the impersonated company.');
   } else advice.push('No warning signs were found, which is not proof it is safe. If it asks for money or codes, check with the sender another way.');
