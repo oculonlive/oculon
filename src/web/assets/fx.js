@@ -176,3 +176,30 @@ void main(){
 
   window.OculonFX = { liquid, stream, reduce: REDUCE };
 })();
+
+/*
+ * Clean addresses: links to a part of the same page scroll there without adding "#section" to the
+ * address bar, and a "#section" that arrives from another page is removed once the page has used it.
+ * A page with its own views (the app) sets window.onOculonHash(name) to handle names that are not elements.
+ */
+(function () {
+  if (window.__oculonCleanUrl) return;
+  window.__oculonCleanUrl = true;
+  window.oculonInitialHash = decodeURIComponent(location.hash.slice(1));
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a || (a.target && a.target !== '_self') || a.hasAttribute('download')) return;
+    const raw = a.getAttribute('href');
+    if (raw === '#') { e.preventDefault(); return; }
+    const u = new URL(a.href, location.href);
+    if (!u.hash || u.origin !== location.origin || u.pathname !== location.pathname || u.search !== location.search) return;
+    const name = decodeURIComponent(u.hash.slice(1));
+    const el = document.getElementById(name);
+    if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (typeof window.onOculonHash === 'function') { e.preventDefault(); window.onOculonHash(name); }
+  });
+  const clear = () => { if (location.hash) history.replaceState(history.state, '', location.pathname + location.search); };
+  window.oculonClearHash = clear;
+  addEventListener('load', () => setTimeout(clear, 2500));
+})();

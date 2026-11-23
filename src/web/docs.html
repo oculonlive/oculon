@@ -221,9 +221,11 @@ fetch('/api/readme').then((r) => r.json()).then((j) => {
   const first = doc.querySelector('p'); if (first) first.classList.add('intro');
   buildNav(); reveal();
   // A link straight to a section (#remote-mcp) skips the rise-in, which could leave the jumped-to text hidden on phones.
-  if (location.hash) {
+  const target = window.oculonInitialHash || decodeURIComponent(location.hash.slice(1));
+  if (target) {
     document.querySelectorAll('.rv').forEach((el) => { el.classList.add('in'); rvio.unobserve(el); });
-    document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    document.getElementById(target)?.scrollIntoView({ behavior: 'instant', block: 'start' });
+    window.oculonClearHash?.();
   }
 }).catch((e) => { $('doc').textContent = `Could not load the README: ${e.message}`; });
 fetch('/api/meta').then((r) => r.json()).then((m) => { $('ver').textContent = `v${m.version}`; }).catch(() => {});

@@ -1439,7 +1439,6 @@ const signalCard = (s) => shareCard({ kicker: `${s.module} · ${String(s.created
 function openEntity(id) {
   document.querySelectorAll('nav button').forEach((x) => x.setAttribute('aria-selected', 'false'));
   document.querySelectorAll('main > section').forEach((s) => { s.hidden = s.id !== 'tab-entity'; });
-  history.replaceState(null, '', '#entity:' + encodeURIComponent(id));
   scrollTo({ top: 0 });
   loadEntity(id);
 }
@@ -1465,7 +1464,7 @@ async function loadEntity(id) {
     const d = document.getElementById('ent-dossier'); if (d) d.onclick = () => runInvestigate('dossier', p.name);
   } catch (e) { body.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
 }
-addEventListener('hashchange', () => { if (location.hash.startsWith('#entity:')) loadEntity(decodeURIComponent(location.hash.slice(8))); });
+addEventListener('hashchange', () => { const n = decodeURIComponent(location.hash.slice(1)); if (n) { openView(n); history.replaceState(null, '', location.pathname + location.search); } });
 function runInvestigate(kind, q) {
   goTab('investigate');
   const sel = document.getElementById('inv-kind'); sel.value = kind; sel.dispatchEvent(new Event('change'));
@@ -1769,11 +1768,15 @@ async function loadAccuracy() {
 /* ================================================================== PWA */
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 
-const fromHash = () => document.querySelector(`nav button[data-tab="${CSS.escape(location.hash.slice(1))}"]`)?.click();
-document.querySelectorAll('nav button').forEach((b) => b.addEventListener('click', () => history.replaceState(null, '', '#' + b.dataset.tab)));
-addEventListener('hashchange', fromHash);
-if (location.hash.startsWith('#entity:')) openEntity(decodeURIComponent(location.hash.slice(8)));
-else if (location.hash) fromHash();
+// Views are opened by name (#overview, #entity:org:x) from links, but the address bar stays clean.
+const openView = (name) => {
+  if (!name) return;
+  if (name.startsWith('entity:')) openEntity(name.slice(7));
+  else document.querySelector(`nav button[data-tab="${CSS.escape(name)}"]`)?.click();
+};
+window.onOculonHash = openView;
+const arrived = decodeURIComponent(location.hash.slice(1));
+if (arrived) { openView(arrived); history.replaceState(null, '', location.pathname + location.search); }
 loadInbox().catch(() => {});
 if (!loaded.overview && !document.getElementById('tab-overview').hidden) { loaded.overview = true; loadOverview(); }
 
