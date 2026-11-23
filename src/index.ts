@@ -59,6 +59,11 @@ import { audit } from './modules/audit.js';
 import { factCheck } from './modules/factcheck.js';
 import { travel } from './modules/travel.js';
 import { addMonitor, parseMonitor } from './modules/monitor.js';
+import { recall } from './modules/recall.js';
+import { emailSecurity } from './modules/emailsec.js';
+import { papers } from './modules/papers.js';
+import { countryBrief } from './modules/country.js';
+import { airportStatus } from './modules/airport.js';
 
 export interface OculonOptions extends Pick<ContextOptions, 'dbPath' | 'fetch' | 'throttle' | 'now'> {
   /** Contact string for User-Agents (enables SEC EDGAR). Falls back to OCULON_CONTACT. */
@@ -325,6 +330,26 @@ export class Oculon {
   /** Travel risk brief for a place: official advice, weather, air, outbreaks, hazards, quakes and outages. */
   travel(place: string, opts: { fires?: boolean } = {}) {
     return travel(this.ctx, place, opts);
+  }
+  /** Recalls for a VIN, "year make model", or a product (NHTSA, CPSC, FDA). */
+  recall(query: string) {
+    return recall(this.ctx, query);
+  }
+  /** Can someone spoof email from this domain? SPF, DMARC, DKIM, MTA-STS, DNSSEC, with fixes. */
+  emailSecurity(domain: string) {
+    return emailSecurity(this.ctx, domain);
+  }
+  /** Research brief: most cited and newest papers on a topic, growth per year, an overview with citations. */
+  papers(topic: string, opts: { years?: number } = {}) {
+    return papers(this.ctx, topic, opts);
+  }
+  /** Country brief: economy, leaders, currency, IMF outlook, travel advice, outages, disasters, headlines. */
+  country(name: string) {
+    return countryBrief(this.ctx, name);
+  }
+  /** Airport status: METAR and TAF, FAA delays and ground stops (US), emergency squawks nearby. */
+  airport(code: string) {
+    return airportStatus(this.ctx, code);
   }
   /** Today's brief (stored once per day; refresh to rewrite). */
   brief(opts?: { refresh?: boolean; lang?: string }) {

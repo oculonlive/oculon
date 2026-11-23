@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" href="/favicon.ico">
 <link rel="apple-touch-icon" href="/assets/icon-192.png">
 <title>Oculon</title>
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Oculon app"><meta property="og:description" content="Investigate, monitor and share: the full Oculon intelligence app."><meta property="og:url" content="https://oculon.live/app"><meta property="og:image" content="https://oculon.live/assets/og.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://oculon.live/assets/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
@@ -552,6 +553,11 @@ nav button { white-space: nowrap; }
           <option value="factcheck">Fact check (claim or news URL)</option>
           <option value="audit">Dependency audit (package.json or npm:name@version)</option>
           <option value="travel">Travel risk (place)</option>
+          <option value="recall">Recall check (VIN, "2018 Honda Accord", or product)</option>
+          <option value="emailsec">Email security (domain)</option>
+          <option value="airport">Airport status (JFK, EGLL…)</option>
+          <option value="country">Country brief</option>
+          <option value="papers">Research papers (topic)</option>
           </optgroup>
           <optgroup label="Investigate">
           <option value="dossier">Dossier (company, person)</option>
@@ -902,7 +908,7 @@ function handleMapClick(e) {
 const waitMap = setInterval(() => { if (map) { map.on('click', handleMapClick); clearInterval(waitMap); } }, 300);
 
 /* investigate */
-const placeholders = { url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
+const placeholders = { recall: '2018 Honda Accord', emailsec: 'example.com', airport: 'JFK', country: 'Argentina', papers: 'solid-state battery', url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
 const usd = (x) => (x == null ? '?' : '$' + Math.round(x).toLocaleString('en-US'));
 
 /* brief: tiny, safe Markdown renderer (escape first, then headings, bold, links, bullets) */
@@ -1024,6 +1030,36 @@ $('#inv-kind').onchange = () => { $('#inv-q').placeholder = placeholders[$('#inv
 const spark = (xs) => { const m = Math.max(...xs, 1e-9); return `<span class="spark">${xs.map((x) => `<i style="height:${Math.max(2, Math.round((x / m) * 28))}px" title="${esc(x)}"></i>`).join('')}</span>`; };
 const sigList = (s) => (s.length ? `<h3>Signals</h3>${s.map(renderSignal).join('')}` : '');
 const views = {
+  recall: (r) => {
+    const d = r.result;
+    const head = d.vehicle ? `${d.vehicle.year} ${d.vehicle.make} ${d.vehicle.model}` : d.query;
+    const park = d.recalls.some((x) => x.parkIt || x.parkOutside);
+    return `<h3>${esc(head)} <span class="pill ${park ? 'bad' : d.recalls.length ? 'warn' : 'ok'}">${d.recalls.length ? d.recalls.length + ' recall' + (d.recalls.length === 1 ? '' : 's') : 'no recalls found'}</span></h3>${d.recalls.length ? `<ul class="ev">${d.recalls.slice(0, 15).map((x) => `<li>${x.parkIt ? '<b class="err">DO NOT DRIVE</b> ' : x.parkOutside ? '<b class="err">PARK OUTSIDE</b> ' : x.classification === 'Class I' ? '<b class="err">Class I</b> ' : ''}<b>${esc(x.title)}</b> <span class="meta">${esc(x.source)} ${esc(x.id)} · ${esc(x.date || '')}</span><div>${esc(x.hazard)}</div>${x.remedy ? `<div class="meta">${esc(x.remedy)}</div>` : ''}<a href="${safeUrl(x.url)}" target="_blank" rel="noopener noreferrer">details</a></li>`).join('')}</ul>` : ''}${d.note ? `<p class="meta">${esc(d.note)}</p>` : ''}`;
+  },
+  emailsec: (r) => {
+    const d = r.result;
+    const tone = d.verdict === 'protected' ? 'ok' : d.verdict === 'partly protected' ? 'warn' : 'bad';
+    const row = (k, v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
+    return `<h3>${esc(d.domain)} <span class="pill ${tone}">${esc(d.verdict)}</span> <span class="meta">score ${d.score}/100</span></h3><table>${row('SPF', d.spf.record ? `${esc(d.spf.all || 'no all')} · ${d.spf.lookups} lookups<div class="meta">${esc(d.spf.record)}</div>` : '<span class="err">missing</span>')}${row('DMARC', d.dmarc.record ? `p=${esc(d.dmarc.policy || '?')}${d.dmarc.reports ? ' · reports on' : ''}<div class="meta">${esc(d.dmarc.record)}</div>` : '<span class="err">missing</span>')}${row('DKIM', d.dkim.selectorsFound.length ? esc(d.dkim.selectorsFound.join(', ')) : '<span class="meta">no common selector found</span>')}${row('MTA-STS', esc(d.mtaSts.mode || 'off'))}${row('DNSSEC', d.dnssec ? 'on' : 'off')}${row('MX', esc(d.mx.slice(0, 3).join(', ') || 'none'))}</table>${d.fixes.length ? `<h3>Fixes</h3><ol>${d.fixes.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}`;
+  },
+  airport: (r) => {
+    const d = r.result;
+    const tone = d.verdict === 'normal' ? 'ok' : d.verdict === 'disrupted' ? 'bad' : 'warn';
+    return `<h3>${esc(d.airport.name)} <span class="pill ${tone}">${esc(d.verdict)}</span></h3><ul class="ev">${d.points.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>${d.metar ? `<p class="meta"><code>${esc(d.metar.raw)}</code></p>` : ''}${d.taf ? `<p class="meta"><code>${esc(d.taf.raw)}</code></p>` : ''}`;
+  },
+  country: (r) => {
+    const d = r.result;
+    const fmtv = (i) => i.value == null ? 'n/a' : i.unit === 'USD' ? (i.value >= 1e12 ? '$' + (i.value / 1e12).toFixed(2) + 'T' : i.value >= 1e9 ? '$' + (i.value / 1e9).toFixed(1) + 'B' : '$' + Math.round(i.value).toLocaleString('en-US')) : i.unit === 'people' ? (i.value / 1e6).toFixed(1) + 'M' : i.value.toFixed(1) + '%';
+    const yrs = Object.keys(d.outlook.growth);
+    return `<h3>${esc(d.name)} <span class="meta">${esc(d.region || '')} · ${esc(d.incomeLevel || '')}</span></h3><p>Head of state <b>${esc(d.leaders.headOfState || 'n/a')}</b>${d.leaders.headOfGovernment && d.leaders.headOfGovernment !== d.leaders.headOfState ? ` · government <b>${esc(d.leaders.headOfGovernment)}</b>` : ''} · capital ${esc(d.capital || 'n/a')}${d.currency.perUsd ? ` · 1 USD = ${d.currency.perUsd.toFixed(2)} ${esc(d.currency.code)}` : ''}</p><div class="kpis">${d.indicators.map((i) => `<div class="kpi"><b>${esc(fmtv(i))}</b><span>${esc(i.name)} ${esc(i.year || '')}</span></div>`).join('')}</div>${yrs.length ? `<p class="meta">IMF outlook: ${yrs.map((y) => `${y} growth ${d.outlook.growth[y]}%, inflation ${d.outlook.inflation[y] ?? '?'}%`).join(' · ')}</p>` : ''}<ul class="ev">${d.advisories.us ? `<li>US advisory level ${d.advisories.us.level}: ${esc(d.advisories.us.text)} <a href="${safeUrl(d.advisories.us.url)}" target="_blank" rel="noopener noreferrer">source</a></li>` : ''}${d.advisories.uk?.alerts.length ? `<li>UK FCDO ${esc(d.advisories.uk.alerts.join('; '))}</li>` : ''}${d.outages.map((x) => `<li>Internet outage: ${esc(x)}</li>`).join('')}${d.hazards.map((h) => `<li>${esc(h.level)} alert: ${esc(h.type)} ${esc(h.name)}</li>`).join('')}</ul>${d.headlines.length ? `<h3>Headlines</h3><ul class="ev">${d.headlines.map((h) => `<li><a href="${safeUrl(h.url)}" target="_blank" rel="noopener noreferrer">${esc(h.title)}</a> <span class="meta">${esc(h.date.slice(0, 10))}</span></li>`).join('')}</ul>` : ''}`;
+  },
+  papers: (r) => {
+    const d = r.result;
+    const all = [...d.mostCited, ...d.newest, ...(d.pubmed?.papers || [])];
+    const linked = d.overview ? esc(d.overview).replace(/\[(\d+)\]/g, (m, n) => { const p = all.find((x) => x.n === Number(n)); return p ? `<a href="${safeUrl(p.openAccessUrl || p.url)}" target="_blank" rel="noopener noreferrer">[${n}]</a>` : m; }) : '';
+    const li = (p) => `<li>[${p.n}] <a href="${safeUrl(p.openAccessUrl || p.url)}" target="_blank" rel="noopener noreferrer">${esc(p.title)}</a> <span class="meta">${esc(String(p.year || ''))} · ${esc(p.venue || '')} · ${p.citations} citations</span>${p.tldr ? `<div class="meta">${esc(p.tldr)}</div>` : ''}</li>`;
+    return `<h3>${esc(d.topic)} <span class="meta">${(d.totalWorks || 0).toLocaleString('en-US')} works${d.trend ? ' · field ' + esc(d.trend) : ''}</span></h3>${d.perYear.length ? `<p>${spark(d.perYear.filter((x) => x.count > 50).map((x) => x.count))} <span class="meta">${esc(d.perYear.filter((x) => x.count > 50).map((x) => x.year).join(' · '))}</span></p>` : ''}${linked ? `<p>${linked}</p><p class="meta">AI-written from the papers below; read them before citing.</p>` : ''}<h3>Most cited</h3><ul class="ev">${d.mostCited.map(li).join('')}</ul>${d.newest.length ? `<h3>Newest</h3><ul class="ev">${d.newest.map(li).join('')}</ul>` : ''}${d.pubmed?.papers.length ? `<h3>PubMed · ${d.pubmed.count.toLocaleString('en-US')} papers in 2 years</h3><ul class="ev">${d.pubmed.papers.map(li).join('')}</ul>` : ''}`;
+  },
   url: (r) => {
     const d = r.result;
     const tone = d.verdict === 'malicious' ? 'bad' : d.verdict === 'suspicious' ? 'warn' : 'ok';
@@ -1138,12 +1174,24 @@ $('#inv-go').onclick = async () => {
   if (q.startsWith('(')) q = '';
   const out = $('#inv-out');
   if (kind === 'image') { out.innerHTML = `<p class="meta">Loading satellite image of ${esc(q)}…</p><img class="sat" alt="Satellite image of ${esc(q)}" src="/api/image?place=${encodeURIComponent(q)}">`; return; }
-  const param = { url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
+  const param = { recall: 'q', emailsec: 'domain', airport: 'code', country: 'name', papers: 'topic', url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
   $('#inv-go').disabled = true;
   out.innerHTML = '<p class="meta">Working… some sources are rate-limited and take a while.</p>';
   try {
     const r = kind === 'audit' && /^[{]/.test(q) ? await post('/api/audit', { manifest: q }) : await api(`/api/${kind}?${param}=${encodeURIComponent(q)}`);
-    out.innerHTML = views[kind](r) + `<h3>Sources</h3>${renderSources(r.provenance)}`;
+    const shareable = ['url', 'factcheck', 'travel', 'audit', 'recall', 'emailsec', 'papers', 'country', 'airport'].includes(kind) && !(kind === 'audit' && /^[{]/.test(q));
+    out.innerHTML = views[kind](r) + (shareable ? '<p class="row" style="margin-top:14px"><button class="icon-btn" id="inv-share">Share result</button><span class="meta" id="inv-share-out"></span></p>' : '') + `<h3>Sources</h3>${renderSources(r.provenance)}`;
+    if (shareable) $('#inv-share').onclick = async () => {
+      const b = $('#inv-share');
+      b.disabled = true;
+      $('#inv-share-out').textContent = ' creating link…';
+      try {
+        const sh = await post('/api/share', { kind, q });
+        const link = (location.hostname.startsWith('app.') ? location.origin.replace('//app.', '//') : location.origin) + sh.path;
+        $('#inv-share-out').innerHTML = ` <a href="${safeUrl(link)}" target="_blank" rel="noopener noreferrer">${esc(link)}</a> <button class="icon-btn" id="inv-copy">copy</button>`;
+        $('#inv-copy').onclick = () => { try { navigator.clipboard.writeText(link); $('#inv-copy').textContent = 'copied'; } catch {} };
+      } catch (err) { $('#inv-share-out').innerHTML = ` <span class="err">${esc(err.message)}</span>`; b.disabled = false; }
+    };
   } catch (err) { out.innerHTML = `<p class="err">${esc(err.message)}</p>`; }
   finally { $('#inv-go').disabled = false; }
 };

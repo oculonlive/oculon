@@ -55,6 +55,11 @@ export const HELP = [
   '/travel &lt;place&gt; — travel risk brief for the coming week',
   '/audit &lt;npm:name@ver ...&gt; — dependency vulnerabilities and health',
   '/monitor &lt;request&gt; — watch anything in plain words, e.g. /monitor internet outages in Iran',
+  '/recall &lt;VIN, "2018 Honda Accord" or product&gt; — vehicle and product recalls',
+  '/email &lt;domain&gt; — can someone spoof email from this domain?',
+  '/airport &lt;JFK|EGLL&gt; — airport weather, delays and ground stops',
+  '/country &lt;name&gt; — economy, leaders, currency, travel advice, headlines',
+  '/papers &lt;topic&gt; — research brief: most cited and newest papers',
   '/signals — latest signals',
   '/dossier &lt;name&gt; — e.g. /dossier Nvidia',
   '/hype &lt;topic&gt; — hype phase of a topic',
@@ -335,6 +340,37 @@ export class TelegramBot {
         const flagged = r.packages.filter((p) => p.flags.length).slice(0, 8);
         const body = flagged.map((p) => `<b>${esc(p.name)}@${esc(p.version ?? '?')}</b> risk ${p.risk}\n${p.flags.map((x) => `  • ${esc(x)}`).join('\n')}`).join('\n') || 'No flags.';
         return { html: `<b>${r.summary.checked} package(s)</b>: ${r.summary.vulnerable} vulnerable, ${r.summary.deprecated} deprecated\n${body}` };
+      }
+      case '/recall': {
+        if (!arg) return needArg('2018 Honda Accord');
+        const d = (await o.recall(arg)).result;
+        const head = d.vehicle ? `${d.vehicle.year} ${d.vehicle.make} ${d.vehicle.model}` : d.query;
+        const items = d.recalls.slice(0, 6).map((x) => `• ${x.parkIt ? '<b>DO NOT DRIVE</b> ' : x.parkOutside ? '<b>PARK OUTSIDE</b> ' : ''}<a href="${esc(x.url)}">${esc(x.title.slice(0, 90))}</a> <i>${esc(x.date ?? '')}</i>`).join('\n');
+        return { html: `<b>${esc(head)}</b>: ${d.recalls.length ? `${d.recalls.length} recall(s)` : 'no recalls found'}${items ? `\n${items}` : ''}${d.note ? `\n<i>${esc(d.note)}</i>` : ''}` };
+      }
+      case '/email': {
+        if (!arg) return needArg('example.com');
+        const d = (await o.emailSecurity(arg)).result;
+        const fixes = d.fixes.slice(0, 3).map((x, i) => `${i + 1}. ${esc(x)}`).join('\n');
+        return { html: `<b>${esc(d.domain)}</b>: <b>${esc(d.verdict.toUpperCase())}</b> (score ${d.score}/100)\nSPF ${esc(d.spf.all ?? (d.spf.record ? 'present' : 'missing'))} · DMARC ${esc(d.dmarc.policy ? `p=${d.dmarc.policy}` : 'missing')} · DKIM ${d.dkim.selectorsFound.length ? 'found' : 'not found'}${fixes ? `\n\n${fixes}` : ''}` };
+      }
+      case '/airport': {
+        if (!arg) return needArg('JFK');
+        const d = (await o.airport(arg)).result;
+        return { html: `<b>${esc(d.airport.name)}</b>: <b>${esc(d.verdict.toUpperCase())}</b>\n${d.points.map((x) => `• ${esc(x)}`).join('\n')}` };
+      }
+      case '/country': {
+        if (!arg) return needArg('Argentina');
+        const d = (await o.country(arg)).result;
+        const ind = d.indicators.filter((i) => i.value != null && i.unit === '%').map((i) => `${esc(i.name)} ${i.value!.toFixed(1)}% (${esc(i.year ?? '')})`).join(' · ');
+        const news = d.headlines.slice(0, 3).map((h) => `• <a href="${esc(h.url)}">${esc(h.title)}</a>`).join('\n');
+        return { html: `<b>${esc(d.name)}</b>\nHead of state: ${esc(d.leaders.headOfState ?? 'n/a')}${d.currency.perUsd ? ` · 1 USD = ${d.currency.perUsd.toFixed(2)} ${esc(d.currency.code ?? '')}` : ''}\n${ind}${d.advisories.us ? `\nUS advisory level ${d.advisories.us.level}: ${esc(d.advisories.us.text)}` : ''}${news ? `\n\n${news}` : ''}` };
+      }
+      case '/papers': {
+        if (!arg) return needArg('solid-state battery');
+        const d = (await o.papers(arg)).result;
+        const top = d.mostCited.slice(0, 4).map((p) => `[${p.n}] <a href="${esc(p.openAccessUrl ?? p.url)}">${esc(p.title.slice(0, 100))}</a> <i>${p.year} · ${p.citations} cit.</i>`).join('\n');
+        return { html: `<b>${esc(d.topic)}</b>${d.trend ? ` · field ${esc(d.trend)}` : ''}${d.overview ? `\n\n${esc(d.overview.slice(0, 900))}` : ''}\n\n${top}` };
       }
       case '/monitor': {
         if (!arg) return needArg('internet outages in Iran');
@@ -700,7 +736,7 @@ export class TelegramBot {
     const me = await this.call<{ username: string }>('getMe', {});
     this.log(`bot @${me.username} running; ${this.opts.allowedChats.length} allowed chat(s)`);
     await this.call('setMyCommands', {
-      commands: ['ask', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
+      commands: ['ask', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'recall', 'email', 'airport', 'country', 'papers', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
     }).catch(() => {});
     if (this.opts.watchMinutes && this.opts.watchMinutes > 0) {
       this.scheduler = startScheduler(this.oculon, {

@@ -184,6 +184,11 @@ ${c.bold('Everyday checks')}
   oculon audit [file|npm:name@ver ...] dependency health: vulnerabilities, deprecation, Scorecard
   oculon travel <place>                travel risk brief for the coming week
   oculon monitor "<request>"           watch anything in plain language, e.g. "outages in Iran"
+  oculon recall <VIN|"year make model"|product>  vehicle and product recalls (NHTSA, CPSC, FDA)
+  oculon email <domain>                can someone spoof email from this domain? with fixes
+  oculon papers "<topic>"              research brief: most cited and newest papers
+  oculon country <name>                country brief: economy, leaders, currency, advice, news
+  oculon airport <JFK|EGLL|name>       airport weather, FAA delays and ground stops
 
 ${c.bold('Web')}
   oculon search <query>                web search
@@ -573,6 +578,86 @@ export const COMMANDS: Record<string, Cmd> = {
       if (d.air?.pm25 != null) out(c.dim(`  air: PM2.5 ${d.air.pm25.toFixed(0)} µg/m³ (${d.air.category})`));
       if (d.advisories.us) out(c.dim(`  ${d.advisories.us.url}`));
       if (d.advisories.uk) out(c.dim(`  ${d.advisories.uk.url}`));
+      printSources(r);
+    });
+  },
+  async recall(o, a) {
+    const q = a.pos.slice(1).join(' ').trim();
+    if (!q) throw new UsageError('usage: oculon recall <VIN | "2018 Honda Accord" | product name>');
+    const r = await o.recall(q);
+    emit(a, r, () => {
+      const d = r.result;
+      const head = d.vehicle ? `${d.vehicle.year} ${d.vehicle.make} ${d.vehicle.model}${d.vehicle.vin ? c.dim(` (VIN ${d.vehicle.vin})`) : ''}` : d.query;
+      out(`${c.bold(head)}  ${d.recalls.length ? c.yellow(`${d.recalls.length} recall(s)`) : c.green('no recalls found')}`);
+      for (const x of d.recalls.slice(0, 12)) {
+        const warn = x.parkIt ? c.red(' DO NOT DRIVE') : x.parkOutside ? c.red(' PARK OUTSIDE') : x.classification === 'Class I' ? c.red(' Class I') : '';
+        out(`  ${c.dim(x.date ?? '')} ${x.source} ${x.id}${warn}\n    ${trunc(x.title, 110)}\n    ${c.dim(trunc(x.hazard, 160))}\n    ${c.cyan(x.url)}`);
+      }
+      if (d.note) out(c.dim(`  ${d.note}`));
+      printSources(r);
+    });
+  },
+  async email(o, a) {
+    const r = await o.emailSecurity(need(a, 1, 'domain'));
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.verdict === 'protected' ? c.green : d.verdict === 'partly protected' ? c.yellow : c.red;
+      out(`${c.bold(d.domain)}  ${tone(d.verdict.toUpperCase())}  ${c.dim(`score ${d.score}/100`)}`);
+      out(`  SPF    ${d.spf.record ? `${d.spf.all ?? 'no all'} · ${d.spf.lookups} lookups` : c.red('missing')}`);
+      out(`  DMARC  ${d.dmarc.record ? `p=${d.dmarc.policy}${d.dmarc.pct != null ? ` pct=${d.dmarc.pct}` : ''}${d.dmarc.reports ? ' · reports on' : ''}` : c.red('missing')}`);
+      out(`  DKIM   ${d.dkim.selectorsFound.length ? d.dkim.selectorsFound.join(', ') : c.dim('no common selector found')}`);
+      out(`  extra  MTA-STS ${d.mtaSts.mode ?? 'off'} · TLS-RPT ${d.tlsRpt ? 'on' : 'off'} · DNSSEC ${d.dnssec ? 'on' : 'off'} · CAA ${d.caa.length ? 'set' : 'none'} · MX ${d.mx.length ? d.mx.slice(0, 2).join(', ') : 'none'}`);
+      if (d.fixes.length) out(`\n${c.bold('Fixes')}`);
+      d.fixes.forEach((f, i) => out(`  ${i + 1}. ${f}`));
+      printSources(r);
+    });
+  },
+  async papers(o, a) {
+    const topic = a.pos.slice(1).join(' ').trim();
+    if (!topic) throw new UsageError('usage: oculon papers "<topic>" [--years 3]');
+    const r = await o.papers(topic, a.flags.years ? { years: Number(a.flags.years) } : {});
+    emit(a, r, () => {
+      const d = r.result;
+      out(`${c.bold(d.topic)}  ${c.dim(`${(d.totalWorks ?? 0).toLocaleString('en-US')} works${d.trend ? ` · field ${d.trend}` : ''}`)}`);
+      if (d.perYear.length) out(c.dim(`  per year: ${d.perYear.map((x) => `${x.year} ${x.count.toLocaleString('en-US')}`).join(' · ')}`));
+      if (d.overview) out(`\n${d.overview}\n`);
+      const line = (p: (typeof d.mostCited)[number]) => `  [${p.n}] ${c.bold(trunc(p.title, 100))}\n      ${c.dim(`${p.year ?? '?'} · ${p.venue ?? 'n/a'} · ${p.citations} citations`)}${p.tldr ? `\n      ${trunc(p.tldr, 160)}` : ''}\n      ${c.cyan(p.openAccessUrl ?? p.url)}`;
+      if (d.mostCited.length) out(c.bold('Most cited'));
+      d.mostCited.slice(0, 6).forEach((p) => out(line(p)));
+      if (d.newest.length) out(c.bold('Newest'));
+      d.newest.slice(0, 4).forEach((p) => out(line(p)));
+      if (d.pubmed?.papers.length) { out(c.bold(`PubMed (${d.pubmed.count.toLocaleString('en-US')} in 2 years)`)); d.pubmed.papers.slice(0, 4).forEach((p) => out(line(p))); }
+      printSources(r);
+    });
+  },
+  async country(o, a) {
+    const r = await o.country(a.pos.slice(1).join(' ') || need(a, 1, 'country'));
+    emit(a, r, () => {
+      const d = r.result;
+      out(`${c.bold(d.name)}  ${c.dim(`${d.region ?? ''} · ${d.incomeLevel ?? ''} · capital ${d.capital ?? 'n/a'}`)}`);
+      out(`  head of state ${d.leaders.headOfState ?? 'n/a'}${d.leaders.headOfGovernment && d.leaders.headOfGovernment !== d.leaders.headOfState ? ` · government ${d.leaders.headOfGovernment}` : ''}`);
+      for (const i of d.indicators) if (i.value != null) out(`  ${i.name.padEnd(15)} ${i.unit === 'USD' ? `$${i.value >= 1e9 ? `${(i.value / 1e9).toFixed(1)}B` : Math.round(i.value).toLocaleString('en-US')}` : i.unit === 'people' ? `${(i.value / 1e6).toFixed(1)}M` : `${i.value.toFixed(1)}%`}  ${c.dim(i.year ?? '')}`);
+      const yrs = Object.keys(d.outlook.growth);
+      if (yrs.length) out(`  IMF outlook    ${yrs.map((y) => `${y}: growth ${d.outlook.growth[y]}%, inflation ${d.outlook.inflation[y] ?? '?'}%`).join(' · ')}`);
+      if (d.currency.perUsd) out(`  1 USD = ${d.currency.perUsd.toFixed(2)} ${d.currency.code}`);
+      if (d.advisories.us) out(`  US advisory level ${d.advisories.us.level}: ${d.advisories.us.text}`);
+      if (d.advisories.uk?.alerts.length) out(`  UK FCDO ${d.advisories.uk.alerts.join('; ')}`);
+      for (const x of d.outages) out(c.yellow(`  internet outage: ${x}`));
+      for (const h of d.hazards) out(c.yellow(`  ${h.level.toLowerCase()} alert: ${h.type} ${h.name}`));
+      if (d.headlines.length) out(c.bold('Headlines'));
+      for (const h of d.headlines.slice(0, 5)) out(`  ${trunc(h.title, 110)}  ${c.dim(h.date.slice(0, 10))}`);
+      printSources(r);
+    });
+  },
+  async airport(o, a) {
+    const r = await o.airport(a.pos.slice(1).join(' ') || need(a, 1, 'airport'));
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.verdict === 'normal' ? c.green : d.verdict === 'disrupted' ? c.red : c.yellow;
+      out(`${c.bold(d.airport.name)}  ${tone(d.verdict.toUpperCase())}`);
+      for (const p of d.points) out(`  - ${p}`);
+      if (d.metar) out(c.dim(`  ${d.metar.raw}`));
+      if (d.taf) out(c.dim(`  ${trunc(d.taf.raw, 200)}`));
       printSources(r);
     });
   },

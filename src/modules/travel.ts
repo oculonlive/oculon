@@ -63,11 +63,11 @@ const ALIASES: Record<string, string[]> = {
   'east timor': ['timor leste'],
   'eswatini': ['swaziland'],
 };
-const namesFor = (country: string) => { const n = norm(country); return [n, ...(ALIASES[n] ?? []).map(norm), ...Object.entries(ALIASES).filter(([, v]) => v.map(norm).includes(n)).map(([k]) => norm(k))]; };
+export const namesFor = (country: string) => { const n = norm(country); return [n, ...(ALIASES[n] ?? []).map(norm), ...Object.entries(ALIASES).filter(([, v]) => v.map(norm).includes(n)).map(([k]) => norm(k))]; };
 
 interface UsAdvisory { Title: string; Link: string; Updated?: string; Published?: string }
 
-async function usAdvisory(ctx: Ctx, country: string): Promise<{ data: TravelBrief['advisories']['us']; prov: Provenance }> {
+export async function usAdvisory(ctx: Ctx, country: string): Promise<{ data: TravelBrief['advisories']['us']; prov: Provenance }> {
   const r = await ctx.http.get<UsAdvisory[]>('https://cadataapi.state.gov/api/TravelAdvisories', { source: 'us-state-dept', ttlSec: 6 * 3600, timeoutMs: 30_000, keep: (d: UsAdvisory[]) => (Array.isArray(d) ? d.map((x) => ({ Title: x.Title, Link: x.Link, Updated: x.Updated })) : []) });
   const names = namesFor(country);
   const hit = (r.data ?? []).find((a) => { const head = norm(a.Title.split(' - ')[0] ?? ''); return names.includes(head) || names.some((n) => head.split(' ').length > 1 && head.includes(n)); });
@@ -78,7 +78,7 @@ async function usAdvisory(ctx: Ctx, country: string): Promise<{ data: TravelBrie
 
 interface FcdoChild { title?: string; base_path?: string; details?: { country?: { name?: string; slug?: string; synonyms?: string[] } } }
 
-async function ukAdvice(ctx: Ctx, country: string): Promise<{ data: TravelBrief['advisories']['uk']; prov: Provenance[] }> {
+export async function ukAdvice(ctx: Ctx, country: string): Promise<{ data: TravelBrief['advisories']['uk']; prov: Provenance[] }> {
   const idx = await ctx.http.get<{ name: string; slug: string; synonyms: string[] }[]>('https://www.gov.uk/api/content/foreign-travel-advice', {
     source: 'uk-fcdo',
     ttlSec: 24 * 3600,

@@ -214,6 +214,36 @@ export const TOOLS: Tool[] = [
     run: async (o, a) => compact(await o.travel(String(a.place))),
   },
   {
+    name: 'oculon_recall',
+    description: 'Is this car or product recalled? Pass a 17-character VIN, "year make model" (e.g. "2018 Honda Accord"), or a product name ("stroller", "peanut butter"). Vehicles: NHTSA safety recalls with do-not-drive and park-outside warnings. Products: CPSC consumer recalls and FDA food, drug and device enforcement reports.',
+    inputSchema: schema({ query: str('VIN, "year make model", or product name') }, ['query']),
+    run: async (o, a) => compact(await o.recall(String(a.query))),
+  },
+  {
+    name: 'oculon_email_security',
+    description: 'Can someone send email that looks like it comes from this domain? Checks SPF, DMARC, DKIM, MTA-STS, TLS reporting, BIMI, CAA and DNSSEC from public DNS, and returns a verdict (spoofable, partly protected, protected), a 0-100 score and the fixes in order.',
+    inputSchema: schema({ domain: str('Domain or email address, e.g. "example.com"') }, ['domain']),
+    run: async (o, a) => compact(await o.emailSecurity(String(a.domain))),
+  },
+  {
+    name: 'oculon_papers',
+    description: 'Research brief on a topic: the most cited papers of recent years, the newest relevant ones, papers per year (is the field growing?), PubMed counts for medical topics, and a short overview that cites the numbered papers. Sources: OpenAlex, PubMed, Semantic Scholar.',
+    inputSchema: schema({ topic: str('Research topic, e.g. "solid-state battery"'), years: num('Look-back window in years for most cited (default 3)') }, ['topic']),
+    run: async (o, a) => compact(await o.papers(String(a.topic), a.years ? { years: Number(a.years) } : {})),
+  },
+  {
+    name: 'oculon_country',
+    description: 'Country brief: GDP, growth, GDP per person, inflation, unemployment and population (World Bank), IMF growth and inflation outlook, head of state and government, capital, currency and its rate to the US dollar, US and UK travel advice, internet outages, disaster alerts and the latest headlines.',
+    inputSchema: schema({ country: str('Country name or ISO code, e.g. "Argentina"') }, ['country']),
+    run: async (o, a) => compact(await o.country(String(a.country))),
+  },
+  {
+    name: 'oculon_airport',
+    description: 'Is an airport running normally? Current METAR and TAF (flight category, wind, visibility, ceiling), FAA ground stops, delay programs and closures for US airports, and aircraft squawking an emergency within 150 km. Accepts IATA (JFK), ICAO (EGLL) or a name.',
+    inputSchema: schema({ airport: str('IATA or ICAO code, or airport name') }, ['airport']),
+    run: async (o, a) => compact(await o.airport(String(a.airport))),
+  },
+  {
     name: 'oculon_monitor',
     description: 'Create a monitor from a plain-language request, e.g. "tell me when there is an internet outage in Iran", "watch critical CVEs for nginx", "earthquakes above 6 near Tokyo", "news about OpenAI", "travel risk changes for Bangkok". It becomes a watch rule that is re-checked on a schedule and reports only changes, with evidence. Set dry_run to see the rule without saving it.',
     inputSchema: schema({ request: str('What to watch, in plain language'), dry_run: { type: 'boolean', description: 'Only show how the request would be read' } }, ['request']),

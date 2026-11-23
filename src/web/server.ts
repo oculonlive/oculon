@@ -17,6 +17,7 @@ import { adminCookieValue, clientIp, isAdmin, lockedPage, PUBLIC_API, publicGrap
 import { accuracy, entityProfile, rhDeployers, searchEntities, signalsSince, sourceHealth, timeline } from './insights.js';
 import { McpServer } from '../mcp.js';
 import { handleMcpHttp } from './mcphttp.js';
+import { createShare, getShare, sharePage } from './share.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -83,6 +84,8 @@ export function consoleArgv(input: string): string[] | null {
   if (cmd === 'bgp' && parts.length === 2 && /^(AS\d{1,10}|[A-Za-z]{2})$/i.test(a1!)) return ['bgp', a1!.toUpperCase()];
   if (cmd === 'vulns' && parts.length === 2 && /^\d{1,2}$/.test(a1!)) return ['vulns', a1!];
   if (cmd === 'url' && parts.length === 2 && /^[\w.:/?=&%#~+@-]{4,300}$/.test(a1!) && /\./.test(a1!)) return ['url', a1!];
+  if (cmd === 'email' && parts.length === 2 && /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(a1!)) return ['email', a1!.toLowerCase()];
+  if (cmd === 'airport' && parts.length === 2 && /^[A-Za-z]{3,4}$/.test(a1!)) return ['airport', a1!.toUpperCase()];
   if (cmd === 'travel' && parts.length >= 2 && parts.slice(1).every((w) => /^[\p{L}.'-]{2,40}$/u.test(w))) return ['travel', ...parts.slice(1)];
   if (cmd === 'audit' && parts.length >= 2 && parts.slice(1).every((w) => /^(npm|pypi):[@\w./=~-]{1,80}$/i.test(w))) return ['audit', ...parts.slice(1)];
   return null;
@@ -210,6 +213,34 @@ export const ROUTES: Record<string, Handler> = {
     }
   },
   '/api/factcheck': async (q, o) => slim(await o.factCheck(need(q, 'claim', 600))),
+  '/api/recall': async (q, o) => slim(await o.recall(need(q, 'q', 120))),
+  '/api/emailsec': async (q, o) => {
+    try {
+      return slim(await o.emailSecurity(need(q, 'domain', 253)));
+    } catch (e) {
+      throw e instanceof HttpError ? e : new HttpError(400, (e as Error).message);
+    }
+  },
+  '/api/papers': async (q, o) => slim(await o.papers(need(q, 'topic', 200), q.get('years') ? { years: Number(q.get('years')) || 3 } : {})),
+  '/api/country': async (q, o) => {
+    try {
+      return slim(await o.country(need(q, 'name', 80)));
+    } catch (e) {
+      throw e instanceof HttpError ? e : new HttpError(404, (e as Error).message);
+    }
+  },
+  '/api/airport': async (q, o) => {
+    try {
+      return slim(await o.airport(need(q, 'code', 80)));
+    } catch (e) {
+      throw e instanceof HttpError ? e : new HttpError(404, (e as Error).message);
+    }
+  },
+  '/api/share': (q, o) => {
+    const s = getShare(o, need(q, 'id', 20));
+    if (!s) throw new HttpError(404, 'no such share');
+    return s;
+  },
   '/api/travel': async (q, o) => slim(await o.travel(need(q, 'place', 120))),
   '/api/audit': async (q, o) => {
     try {
@@ -316,6 +347,14 @@ export const POST_ROUTES: Record<string, PostHandler> = {
     }
   },
   '/api/watch/delete': (b, o) => ({ removed: o.watchRemove(Number(b.id)) }),
+  '/api/share': async (b, o) => {
+    try {
+      const s = await createShare(o, String(b.kind ?? ''), String(b.q ?? ''));
+      return { id: s.id, path: `/r/${s.id}`, summary: s.summary };
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+  },
   '/api/audit': async (b, o) => {
     const manifest = String(b.manifest ?? '').trim();
     if (!manifest || manifest.length > 200_000) throw new HttpError(400, 'paste a package.json or requirements.txt (up to 200 KB)');
@@ -508,6 +547,15 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       }
     }
     if (req.method !== 'GET') return send(res, 405, '{"error":"method not allowed"}', 'application/json');
+    // Shared results: /r/<id> is a public snapshot page with link-preview tags.
+    const shareId = /^\/r\/([A-Za-z0-9_-]{6,16})\/?$/.exec(url.pathname)?.[1];
+    if (shareId) {
+      const s = getShare(oculon, shareId);
+      if (!s) return send(res, 404, '<!doctype html><title>Not found</title><p>This shared result does not exist.</p>', 'text/html; charset=utf-8');
+      const origin = siteDomain ? `https://${siteDomain}` : `http://${req.headers.host ?? '127.0.0.1'}`;
+      const appUrl = siteDomain ? `https://app.${siteDomain}/#investigate` : '/app#investigate';
+      return send(res, 200, sharePage(s, origin, appUrl), 'text/html; charset=utf-8', 'public, max-age=300');
+    }
     // Pages: landing at /, dashboard at /app, docs at /docs. On app.* and docs.* hosts the root serves that page.
     const sub = hostName.split('.')[0];
     const page = url.pathname === '/' ? (sub === 'app' ? 'app' : sub === 'docs' ? 'docs' : 'landing') : url.pathname === '/app' || url.pathname === '/app/' || url.pathname === '/index.html' ? 'app' : url.pathname === '/docs' || url.pathname === '/docs/' ? 'docs' : /^\/(privacy|terms)\/?$/.test(url.pathname) ? 'legal' : null;
