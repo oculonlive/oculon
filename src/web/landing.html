@@ -1114,7 +1114,8 @@ api('/api/forecasts').then(async (r) => {
     const p = v.result;
     $('fc-proof').innerHTML = `<div class="lbl">Proof · Tortoise</div><div class="steps">${(p.steps || []).map((s) => `<div class="step"><div class="ck">✓</div><p>${esc(s)}</p></div>`).join('')}</div>
       <div class="verified">● ${esc(p.status)}${p.bitcoin?.height ? ` · BITCOIN BLOCK ${esc(p.bitcoin.height)}` : ''}</div>
-      <div class="hash">leaf ${esc(p.leaf)}${p.bitcoin?.blockHash ? `<br>block ${esc(p.bitcoin.blockHash)}` : ''}</div>`;
+      <div class="hash">leaf ${esc(p.leaf)}${p.bitcoin?.blockHash ? `<br>block ${esc(p.bitcoin.blockHash)}` : ''}</div>
+      <div class="src" style="margin-top:14px;line-height:1.8">Check it without Oculon: <a href="/proof/${encodeURIComponent(f.id)}.ots" download>OpenTimestamps proof (.ots)</a> · <a href="/api/proof?id=${encodeURIComponent(f.id)}" target="_blank" rel="noopener">forecast, hash and Merkle path</a>${p.bitcoin?.blockHash ? ` · <a href="https://blockstream.info/block/${encodeURIComponent(p.bitcoin.blockHash)}" target="_blank" rel="noopener">block on Blockstream</a>` : ''}<br><code>ots verify -d ${esc(p.root || '')} ${esc(f.id)}.ots</code></div>`;
     const steps = [...document.querySelectorAll('#fc-proof .step')];
     new IntersectionObserver((es, o) => { if (es.some((e) => e.isIntersecting)) { steps.forEach((s, i) => setTimeout(() => s.classList.add('in'), 300 + i * 450)); o.disconnect(); } }, { threshold: .3 }).observe($('fc-proof'));
   } catch { $('fc-proof').innerHTML = '<div class="lbl">Proof · Tortoise</div><p class="mut" style="margin-top:14px">Verification unavailable right now. Run oculon proof verify to check it locally.</p>'; }

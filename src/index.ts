@@ -39,7 +39,7 @@ import { ferret, type FerretOptions } from './modules/ferret.js';
 import { hound, type HoundOptions } from './modules/hound.js';
 import { owl, type OwlOptions } from './modules/owl.js';
 import { auto, getPrediction, listPredictions, predict, resolve, scoreboard, type Prediction, type Scoreboard } from './modules/raven.js';
-import { stamp, verify } from './modules/tortoise.js';
+import { proofBundle, proofOts, stamp, verify } from './modules/tortoise.js';
 import { token, wallet } from './modules/magpie.js';
 import { deployerProfile, overview, rhTokenCheck } from './modules/heron.js';
 import { addWatch, listWatch, removeWatch, runWatch } from './modules/meerkat.js';
@@ -148,6 +148,14 @@ export class Oculon {
   /** Tortoise: verify a forecast's proof down to the Bitcoin block. */
   verifyProof(predictionId: string) {
     return verify(this.ctx, predictionId);
+  }
+  /** Tortoise: the forecast, its hash, Merkle path and root, for checking without this install. */
+  proofBundle(predictionId: string) {
+    return proofBundle(this.ctx, predictionId);
+  }
+  /** Tortoise: the standard OpenTimestamps `.ots` file for a forecast's batch, or null before stamping. */
+  proofOts(predictionId: string) {
+    return proofOts(this.ctx, predictionId);
   }
   /** Magpie: wallet portfolio, history and risk (EVM or Solana address). */
   wallet(address: string) {

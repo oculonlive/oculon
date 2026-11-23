@@ -106,6 +106,21 @@ export interface Receipt {
   ots: string;
 }
 
+const OTS_MAGIC = Buffer.from('004f70656e54696d657374616d7073000050726f6f6600bf89e2e884e89294', 'hex');
+
+/**
+ * A standard detached `.ots` file for a SHA-256 digest, built from the calendar receipts.
+ * Any OpenTimestamps tool can upgrade and verify it, e.g. `ots verify -d <digest> proof.ots`.
+ */
+export function otsFile(digestHex: string, receipts: Receipt[]): Buffer {
+  const parts: Buffer[] = [OTS_MAGIC, Buffer.from([0x01, 0x08]), Buffer.from(digestHex, 'hex')];
+  receipts.forEach((rc, i) => {
+    if (i < receipts.length - 1) parts.push(Buffer.from([0xff]));
+    parts.push(Buffer.from(rc.ots, 'hex'));
+  });
+  return Buffer.concat(parts);
+}
+
 export async function submit(ctx: Ctx, digestHex: string): Promise<{ receipts: Receipt[]; provenance: Provenance[] }> {
   const body = Buffer.from(digestHex, 'hex');
   const results = await Promise.all(

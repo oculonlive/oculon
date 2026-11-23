@@ -259,6 +259,7 @@ export const ROUTES: Record<string, Handler> = {
   '/api/quota': (_q, o) => o.quota(),
   '/api/forecasts': (_q, o) => ({ scoreboard: o.scoreboard(), forecasts: o.forecasts('all', 200) }),
   '/api/verify': async (q, o) => slim(await o.verifyProof(need(q, 'id', 64))),
+  '/api/proof': (q, o) => o.proofBundle(need(q, 'id', 64)),
   '/api/entity': (q, o) => o.entity(need(q, 'id', 300)),
   '/api/exposure': async (q, o) => slim(await o.exposure(need(q, 'domain', 120))),
   '/api/podcast': async (q, o) => slim(await o.podcast(need(q, 'q', 120))),
@@ -626,6 +627,15 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     if (url.pathname === '/openapi.json') {
       res.setHeader('access-control-allow-origin', '*');
       return send(res, 200, JSON.stringify(openApiSpec(siteDomain ? `https://app.${siteDomain}` : `http://${req.headers.host ?? '127.0.0.1'}`), null, 2), 'application/json; charset=utf-8', 'public, max-age=3600');
+    }
+    // A forecast's OpenTimestamps proof as a standard .ots file, for checking with any OpenTimestamps tool.
+    const otsId = /^\/proof\/([A-Za-z0-9_-]{1,64})\.ots$/.exec(url.pathname)?.[1];
+    if (otsId) {
+      let file: Buffer | null = null;
+      try { file = oculon.proofOts(otsId); } catch {}
+      if (!file) return send(res, 404, '{"error":"no stamped proof for this forecast yet"}', 'application/json');
+      res.writeHead(200, { 'content-type': 'application/vnd.opentimestamps.v1', 'content-disposition': `attachment; filename="${otsId}.ots"`, 'cache-control': 'public, max-age=3600', 'access-control-allow-origin': '*' });
+      return void res.end(file);
     }
     // Shared results: /r/<id> is a public snapshot page with link-preview tags.
     const shareId = /^\/r\/([A-Za-z0-9_-]{6,16})\/?$/.exec(url.pathname)?.[1];

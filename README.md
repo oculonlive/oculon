@@ -89,7 +89,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 | Falcon | `oculon plane <reg>` / `oculon mil` | One aircraft (owner, live position, nearest airport, moves between checks); worldwide military air traffic with notable roles (tanker, AWACS, ISR, bomber) and surges versus history | adsb.lol, OpenSky, hexdb.io, OurAirports |
 | Condor | `oculon events` / `lights` / `image` / `space` / `air` | Natural events with severity; night-time lights of any place versus a baseline month to spot blackouts or surges; true-color satellite images; space weather (official NOAA alerts and scales, solar wind, 3-day forecast, solar flares, coronal mass ejections modelled to reach Earth, geomagnetic storms, close asteroid passes); PM2.5 air quality | NASA EONET, NASA GIBS (VIIRS, MODIS), NOAA SWPC, NASA DONKI and NeoWs, OpenAQ, Nominatim |
 | Raven | `oculon forecast ...` | Forecasts on live Polymarket markets, resolved against real outcomes and scored (Brier) against the crowd price at forecast time | Polymarket |
-| Tortoise | `oculon proof ...` | Tamper-evident proofs: forecasts hashed into a Merkle tree, timestamped on Bitcoin through OpenTimestamps, verified down to the block merkle root | OpenTimestamps, Blockstream |
+| Tortoise | `oculon proof ...` | Tamper-evident proofs: forecasts hashed into a Merkle tree, timestamped on Bitcoin through OpenTimestamps, verified down to the block merkle root. Each proof can be checked without Oculon: `/api/proof?id=<id>` gives the forecast, its canonical JSON, hash and Merkle path, and `/proof/<id>.ots` is a standard OpenTimestamps file for `ots verify -d <root> <id>.ots` | OpenTimestamps, Blockstream |
 
 ## Install
 

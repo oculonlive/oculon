@@ -8,8 +8,50 @@
 import type { Ctx } from '../core/context.js';
 import { applyPath, merkle, type PathStep } from '../core/merkle.js';
 import type { ModuleResult, Provenance } from '../core/types.js';
-import { bitcoinBlock, matchesMerkleRoot, parseTimestamp, submit, upgrade, type Attestation, type Receipt } from '../sources/opentimestamps.js';
-import { getPrediction, leafOf } from './raven.js';
+import { bitcoinBlock, matchesMerkleRoot, otsFile, parseTimestamp, submit, upgrade, type Attestation, type Receipt } from '../sources/opentimestamps.js';
+import { canonicalJson } from '../core/merkle.js';
+import { getPrediction, leafOf, predictionCore } from './raven.js';
+
+/** Everything needed to check a forecast's proof without trusting this server. */
+export interface ProofBundle {
+  forecast: ReturnType<typeof predictionCore>;
+  canonicalJson: string;
+  leaf: string;
+  merklePath: PathStep[];
+  root: string | null;
+  batchId: string | null;
+  bitcoin: { height: number; time: string } | null;
+  howToVerify: string[];
+}
+
+export function proofBundle(ctx: Ctx, predictionId: string): ProofBundle {
+  const p = getPrediction(ctx, predictionId);
+  if (!p) throw new Error(`no prediction ${predictionId}`);
+  const forecast = predictionCore(p);
+  const row = ctx.store.db.prepare('SELECT merkle_path FROM predictions WHERE id = ?').get(p.id) as { merkle_path: string | null };
+  const batch = p.batchId ? getBatch(ctx, p.batchId) : null;
+  return {
+    forecast,
+    canonicalJson: canonicalJson(forecast),
+    leaf: p.leaf,
+    merklePath: row.merkle_path ? (JSON.parse(row.merkle_path) as PathStep[]) : [],
+    root: batch?.root ?? null,
+    batchId: batch?.id ?? null,
+    bitcoin: batch?.bitcoinHeight ? { height: batch.bitcoinHeight, time: new Date((batch.bitcoinTime ?? 0) * 1000).toISOString() } : null,
+    howToVerify: [
+      'SHA-256 of canonicalJson (UTF-8) must equal leaf.',
+      'Walk merklePath from leaf: for each step, hash sha256(current || sibling) when side is R, or sha256(sibling || current) when side is L. The result must equal root.',
+      `Download the OpenTimestamps proof (/proof/${p.id}.ots) and run: ots verify -d ${batch?.root ?? '<root>'} ${p.id}.ots (or open it at opentimestamps.org). It names the Bitcoin block whose merkle root commits to root.`,
+    ],
+  };
+}
+
+/** The forecast's batch root as a standard `.ots` file, or null when it has not been stamped yet. */
+export function proofOts(ctx: Ctx, predictionId: string): Buffer | null {
+  const p = getPrediction(ctx, predictionId);
+  const batch = p?.batchId ? getBatch(ctx, p.batchId) : null;
+  return batch && batch.receipts.length ? otsFile(batch.root, batch.receipts) : null;
+}
 
 export interface Batch {
   id: string;

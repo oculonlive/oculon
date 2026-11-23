@@ -33,6 +33,7 @@ export const PUBLIC_API = new Set([
   '/api/narratives',
   '/api/forecasts',
   '/api/verify',
+  '/api/proof',
   '/api/graph',
   '/api/quota',
   '/api/url',

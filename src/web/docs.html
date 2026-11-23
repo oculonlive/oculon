@@ -109,6 +109,10 @@ aside.left a.on{text-shadow:0 0 18px rgba(0,240,255,.6)}
 .msearch span{font:12px var(--mono);color:var(--mut)}
 .msearch:focus-within{border-color:var(--y);box-shadow:0 0 22px rgba(0,240,255,.15)}
 .mods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.fusion{border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:20px 22px}
+.fusion .ft{font-size:20px;color:#fff;margin:6px 0 4px}.fusion .fs{font:12px var(--mono);color:var(--y);letter-spacing:.08em}
+.fusion ul{list-style:none;padding:0;margin:14px 0 0}.fusion li{font-size:14.5px;line-height:1.55;padding:8px 0;border-top:1px solid #151d20;color:var(--soft)}
+.fusion li b{font:12px var(--mono);color:var(--y);margin-right:8px}
 .mc{border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:16px 16px 14px;position:relative;overflow:hidden;transition:border-color .3s,transform .35s;animation:mcin .5s cubic-bezier(.2,.8,.2,1) both}
 @keyframes mcin{from{opacity:0;transform:translateY(12px)}}
 .mc:hover{border-color:rgba(0,240,255,.5);transform:translateY(-2px)}
@@ -151,6 +155,12 @@ aside.left a.on{text-shadow:0 0 18px rgba(0,240,255,.6)}
     <div class="dsec"><h2 id="module-finder">Module finder</h2><p class="sub">Every module from the table in <a href="#what-it-does">What it does</a>. Type to filter by name, command or source.</p>
       <label class="msearch"><span>⌕</span><input id="mq" placeholder="cve, ships, satellite, sanctions…" autocomplete="off" spellcheck="false"><span id="mn"></span></label>
       <div class="mods" id="mods"></div></div>
+    <div class="dsec"><h2 id="fusion-live">Cross-source fusion, live</h2><p class="sub">The strongest signal on this install right now that more than one independent source agrees on, read from <a href="/api/signals?limit=200">/api/signals</a>. Every line links to the original record.</p>
+      <div id="fusion" class="fusion"><p class="skeleton">Loading…</p></div></div>
+    <div class="dsec"><h2 id="verify-a-forecast">Verify a forecast yourself</h2><p class="sub">Forecast proofs do not depend on this server. For any forecast id: <code>/api/proof?id=&lt;id&gt;</code> gives the forecast, its canonical JSON, hash and Merkle path, and <code>/proof/&lt;id&gt;.ots</code> is a standard OpenTimestamps file.</p>
+      <pre><code>sha256(canonicalJson) == leaf               # the forecast was not edited
+leaf + merklePath -> root                   # it is in the stamped batch
+ots verify -d &lt;root&gt; &lt;id&gt;.ots              # the root is committed in a Bitcoin block</code></pre></div>
   </section>
 <div id="doc" class="skeleton">Loading…</div>
     <section id="help"><h2 id="cli-reference">CLI reference</h2><p>The full command list, printed by <code>oculon help</code> on this install.</p><div id="help-out" class="skeleton">Loading…</div></section>
@@ -217,6 +227,14 @@ fetch('/api/readme').then((r) => r.json()).then((j) => {
   }
 }).catch((e) => { $('doc').textContent = `Could not load the README: ${e.message}`; });
 fetch('/api/meta').then((r) => r.json()).then((m) => { $('ver').textContent = `v${m.version}`; }).catch(() => {});
+// Live fusion example: the top-scored signal whose evidence comes from two or more different sources.
+fetch('/api/signals?limit=200').then((r) => r.json()).then((list) => {
+  const multi = (Array.isArray(list) ? list : []).map((s) => ({ s, n: new Set((s.evidence || []).map((e) => e.source)).size })).filter((x) => x.n > 1).sort((a, b) => b.s.score - a.s.score)[0];
+  if (!multi) { $('fusion').innerHTML = '<p class="skeleton">No multi-source signal right now. Signals agree across sources a few times a day; check back later.</p>'; return; }
+  const s = multi.s;
+  const items = (s.evidence || []).slice(0, 8).map((e) => `<li><b>${esc(e.source)}</b>${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">${esc(String(e.text).slice(0, 180))}</a>` : esc(String(e.text).slice(0, 180))}</li>`).join('');
+  $('fusion').innerHTML = `<div class="fs">SCORE ${esc(s.score)} · ${multi.n} SOURCES · ${esc(s.module)} · ${esc(String(s.createdAt).slice(0, 16).replace('T', ' '))} UTC</div><div class="ft">${esc(s.title)}</div><ul>${items}</ul>`;
+}).catch(() => { $('fusion').innerHTML = '<p class="skeleton">Could not load signals right now.</p>'; });
 fetch('/api/console?cmd=help').then((r) => r.json()).then((r) => {
   const o = $('help-out'); o.className = '';
   o.innerHTML = `<pre><code>${esc(r.output).split('\n').map((l) => /^\S/.test(l) ? `<span style="color:#fff;font-weight:700">${l}</span>` : l.replace(/^(\s+)(oculon)\b/, '$1<span class="k">$2</span>')).join('\n')}</code></pre>`;
