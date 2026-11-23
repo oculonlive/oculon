@@ -123,13 +123,14 @@ test('pages drop on-chain blocks unless switched on, and point app and docs link
   assert.match(off, /<i>plain<\/i>/);
   assert.doesNotMatch(off, /onchain|offchain/, 'markers are removed');
   assert.match(off, /href="\/app"/, 'local links stay relative');
+  assert.match(off, /href="\/docs\/cli"/, 'docs sections are paths on a single host');
   process.env.OCULON_ONCHAIN = '1';
   try {
     const on = renderPage(html, 'example.org');
     assert.match(on, /<b>chain<\/b>/);
     assert.doesNotMatch(on, /<i>plain/);
     assert.match(on, /href="https:\/\/app\.example\.org\/"/);
-    assert.match(on, /href="https:\/\/docs\.example\.org\/#cli"/);
+    assert.match(on, /href="https:\/\/docs\.example\.org\/cli"/, 'docs sections are addresses, not #fragments');
     assert.match(on, /href="https:\/\/example\.org\/privacy"/);
     assert.match(on, /href="https:\/\/example\.org\/"/);
   } finally {
@@ -147,6 +148,8 @@ test('edge Worker headers pick the subdomain page only with the shared secret', 
     assert.match(viaEdge, /id="tab-overview"/, 'app.<domain> serves the dashboard');
     const docs = await (await fetch(base + '/', { headers: { 'x-oculon-edge': 'edge-secret', 'x-oculon-site': 'docs' } })).text();
     assert.match(docs, /<title>Oculon Docs<\/title>/);
+    const section = await (await fetch(base + '/install', { headers: { 'x-oculon-edge': 'edge-secret', 'x-oculon-site': 'docs' } })).text();
+    assert.match(section, /<title>Oculon Docs<\/title>/, 'docs.<domain>/install serves the docs page');
     const forged = await (await fetch(base + '/', { headers: { 'x-oculon-edge': 'wrong', 'x-oculon-site': 'app' } })).text();
     assert.doesNotMatch(forged, /id="tab-overview"/, 'a forged header gets the overview page');
   } finally {

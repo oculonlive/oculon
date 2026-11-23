@@ -211,7 +211,7 @@ void main(){
     }
     const name = decodeURIComponent(u.hash.slice(1));
     const el = document.getElementById(name);
-    if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); if (typeof window.onOculonSection === 'function') window.onOculonSection(name); return; }
     if (typeof window.onOculonHash === 'function') { e.preventDefault(); window.onOculonHash(name); }
   });
   const clear = () => { if (location.hash) history.replaceState(history.state, '', location.pathname + location.search); };

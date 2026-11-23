@@ -176,6 +176,11 @@ if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { ba
 const rvio = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); rvio.unobserve(e.target); } }), { threshold: 0.08 });
 const reveal = () => document.querySelectorAll('#doc h2, #doc h3, #doc p, #doc pre, #doc table, #doc ul, #help h2, #help pre').forEach((el) => { if (!el.classList.contains('rv')) { el.classList.add('rv'); rvio.observe(el); } });
 const $ = (id) => document.getElementById(id);
+// Sections have their own addresses: docs.<domain>/install (or /docs/install on a single host).
+const docsBase = location.pathname.startsWith('/docs') ? '/docs/' : '/';
+function sectionFromPath() { const s = location.pathname.slice(docsBase.length).replace(/\/$/, ''); return /^[a-z0-9-]+$/.test(s) ? s : ''; }
+window.onOculonSection = (id) => { const next = docsBase + id; if (location.pathname !== next) history.pushState({ section: id }, '', next + location.search); };
+addEventListener('popstate', () => { const s = sectionFromPath(); const el = s && document.getElementById(s); if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' }); else if (!s) scrollTo({ top: 0 }); });
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const slug = (s) => s.toLowerCase().replace(/<[^>]+>/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
@@ -225,7 +230,7 @@ fetch('/api/readme').then((r) => r.json()).then((j) => {
   const first = doc.querySelector('p'); if (first) first.classList.add('intro');
   buildNav(); reveal();
   // A link straight to a section (#remote-mcp) skips the rise-in, which could leave the jumped-to text hidden on phones.
-  const target = window.oculonInitialHash || decodeURIComponent(location.hash.slice(1));
+  const target = sectionFromPath() || window.oculonInitialHash || decodeURIComponent(location.hash.slice(1));
   if (target) {
     document.querySelectorAll('.rv').forEach((el) => { el.classList.add('in'); rvio.unobserve(el); });
     // Cards above the README (module finder, live fusion) fill in after this, which moves the section down;

@@ -443,12 +443,14 @@ export function renderPage(html: string, domain: string | null): string {
   let out = on ? drop('offchain')(html) : drop('onchain')(html);
   // the markers themselves are not needed once the blocks are resolved
   out = out.replace(/<!--\/?(on|off)chain-->/g, '').replace(/\/\*\/?(on|off)chain\*\//g, '');
+  // Docs sections are addresses, not #fragments: /docs#install becomes /docs/install (docs.<domain>/install below).
+  if (!domain) out = out.replace(/href="\/docs#([a-z0-9-]+)"/g, 'href="/docs/$1"');
   if (domain) {
     const main = `https://${domain}`;
     out = out
       .replace(/href="\/app(#[^"]*)?"/g, (_m, h: string | undefined) => `href="https://app.${domain}/${h ?? ''}"`)
       .replace(/href="\/report"/g, `href="https://app.${domain}/report"`)
-      .replace(/href="\/docs(#[^"]*)?"/g, (_m, h: string | undefined) => `href="https://docs.${domain}/${h ?? ''}"`)
+      .replace(/href="\/docs(?:#([^"]*))?"/g, (_m, h: string | undefined) => `href="https://docs.${domain}/${h ?? ''}"`)
       .replace(/href="\/(privacy|terms)(#[^"]*)?"/g, (_m, p: string, h: string | undefined) => `href="${main}/${p}${h ?? ''}"`)
       .replace(/href="\/"/g, `href="${main}/"`);
   }
@@ -648,7 +650,16 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     }
     // Pages: landing at /, dashboard at /app, docs at /docs. On app.* and docs.* hosts the root serves that page.
     const sub = hostName.split('.')[0];
-    const page = url.pathname === '/' ? (sub === 'app' ? 'app' : sub === 'docs' ? 'docs' : 'landing') : url.pathname === '/app' || url.pathname === '/app/' || url.pathname === '/index.html' ? 'app' : url.pathname === '/docs' || url.pathname === '/docs/' ? 'docs' : /^\/(privacy|terms)\/?$/.test(url.pathname) ? 'legal' : null;
+    // Docs sections have their own addresses: docs.<domain>/install, or /docs/install on a single host.
+    const docsSection = (sub === 'docs' ? /^\/([a-z0-9][a-z0-9-]{0,60})\/?$/ : /^\/docs\/([a-z0-9][a-z0-9-]{0,60})\/?$/).exec(url.pathname)?.[1];
+    if (docsSection && !['api', 'assets', 'app', 'report', 'r', 'proof'].includes(docsSection)) {
+      if (siteDomain && sub !== 'docs') {
+        res.writeHead(301, { location: `https://docs.${siteDomain}/${docsSection}${url.search}`, 'cache-control': 'no-store' });
+        return res.end();
+      }
+      return send(res, 200, renderPage(readFileSync(join(HERE, PAGE_FILES.docs), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
+    }
+    const page = url.pathname === '/' ?(sub === 'app' ? 'app' : sub === 'docs' ? 'docs' : 'landing') : url.pathname === '/app' || url.pathname === '/app/' || url.pathname === '/index.html' ? 'app' : url.pathname === '/docs' || url.pathname === '/docs/' ? 'docs' : /^\/(privacy|terms)\/?$/.test(url.pathname) ? 'legal' : null;
     if (page) {
       // On the public domain, /app and /docs live on their own subdomains.
       if (siteDomain && hostName === siteDomain && (page === 'app' || page === 'docs') && url.pathname !== '/') {
