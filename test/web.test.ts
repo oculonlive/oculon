@@ -187,10 +187,12 @@ test('open mode serves the full app to visitors and accepts writes from app.<dom
   try {
     assert.match(await (await fetch(base + '/', { headers: edge })).text(), /id="tab-overview"/, 'visitors get the dashboard');
     assert.equal((await fetch(base + '/api/cases', { headers: edge })).status, 200, 'private endpoints are open');
-    const write = await fetch(base + '/api/fences', { method: 'POST', headers: { ...edge, origin: 'https://app.example.org', 'content-type': 'application/json', 'x-oculon': '1' }, body: '{}' });
-    assert.notEqual(write.status, 403, 'a write from app.<domain> passes the origin check');
-    const forged = await fetch(base + '/api/fences', { method: 'POST', headers: { origin: 'https://evil.example', 'content-type': 'application/json', 'x-oculon': '1' }, body: '{}' });
+    const write = await fetch(base + '/api/feedback', { method: 'POST', headers: { ...edge, origin: 'https://app.example.org', 'content-type': 'application/json', 'x-oculon': '1' }, body: '{}' });
+    assert.equal(write.status, 400, 'a write from app.<domain> passes the origin check (and fails only on the empty body)');
+    const forged = await fetch(base + '/api/feedback', { method: 'POST', headers: { origin: 'https://evil.example', 'content-type': 'application/json', 'x-oculon': '1' }, body: '{}' });
     assert.equal(forged.status, 403, 'other origins are still refused');
+    const shared = await fetch(base + '/api/fences', { method: 'POST', headers: { ...edge, origin: 'https://app.example.org', 'content-type': 'application/json', 'x-oculon': '1' }, body: '{}' });
+    assert.equal(shared.status, 403, 'visitors cannot change the shared watchlist or fences');
   } finally {
     await stop();
     oculon.close();

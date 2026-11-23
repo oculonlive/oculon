@@ -179,6 +179,7 @@ ${c.bold('Earth & sky')}
   oculon air <place>                   PM2.5 air quality near a place
 
 ${c.bold('Everyday checks')}
+  oculon scam "<message>"              is this SMS, email or chat message a scam?
   oculon url <link>                    is a link dangerous? Safe Browsing, URLhaus, urlscan, domain age
   oculon factcheck "<claim>"|<url>     fact check a claim or a news link
   oculon audit [file|npm:name@ver ...] dependency health: vulnerabilities, deprecation, Scorecard
@@ -578,6 +579,22 @@ export const COMMANDS: Record<string, Cmd> = {
       if (d.air?.pm25 != null) out(c.dim(`  air: PM2.5 ${d.air.pm25.toFixed(0)} µg/m³ (${d.air.category})`));
       if (d.advisories.us) out(c.dim(`  ${d.advisories.us.url}`));
       if (d.advisories.uk) out(c.dim(`  ${d.advisories.uk.url}`));
+      printSources(r);
+    });
+  },
+  async scam(o, a) {
+    let msg = a.pos.slice(1).join(' ').trim();
+    if (!msg && !process.stdin.isTTY) msg = readFileSync(0, 'utf8');
+    if (!msg) throw new UsageError('usage: oculon scam "<message text>"   (or pipe the message in)');
+    const r = await o.scamCheck(msg);
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.verdict === 'likely scam' ? c.red : d.verdict === 'suspicious' ? c.yellow : c.green;
+      out(`${tone(d.verdict.toUpperCase())}  ${c.dim(`risk ${d.risk}/100`)}`);
+      if (d.explanation) out(`  ${d.explanation}`);
+      for (const x of d.reasons) out(`  - ${x}`);
+      for (const l of d.links) out(c.dim(`  link ${l.url}: ${l.verdict} (${l.risk})`));
+      for (const x of d.advice) out(`  → ${x}`);
       printSources(r);
     });
   },
@@ -1521,7 +1538,7 @@ export const COMMANDS: Record<string, Cmd> = {
     const log = (m: string) => out(c.dim(`${new Date().toISOString().slice(11, 19)} ${m}`));
     // --telegram runs the bot in the same process; the dashboard's schedule then feeds its alerts and brief.
     let bot: import('../telegram.js').TelegramBot | null = null;
-    if (a.flags.telegram) {
+    if (a.flags.telegram || process.env.OCULON_TELEGRAM === '1') {
       const { TelegramBot } = await import('../telegram.js');
       bot = new TelegramBot({
         token: process.env.TELEGRAM_BOT_TOKEN ?? '',
@@ -1551,6 +1568,10 @@ export const COMMANDS: Record<string, Cmd> = {
             },
             onReport: async (file) => {
               await bot!.pushReport(file, 'Weekly Oculon report');
+            },
+            onPersonal: async (d) => {
+              const n = await bot!.pushPersonal(d);
+              if (n) log(`telegram monitor messages: ${n}`);
             },
           }
         : {}),

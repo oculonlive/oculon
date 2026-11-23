@@ -21,9 +21,10 @@ npx oculon ask "why is Nvidia in the news this week?"
 - **Sourced by design.** Every answer names the sources it used and whether each one was live, cached or unavailable. Nothing is presented without provenance.
 - **Cross-source signals.** When independent sources move on the same subject, Oculon fuses them into one scored signal with the evidence behind it, and storylines are tracked across days.
 - **Measured, not claimed.** A time machine replays past days to calibrate the radar, a first-to-know check compares Oculon against media coverage, and forecasts are timestamped on Bitcoin so they cannot be edited later.
-- **Built for agents.** 74 MCP tools, locally over stdio or remotely at `https://mcp.oculon.live`; the SDK and CLI return the same objects, and `--json` works on every command.
-- **Everyday checks.** Is this link dangerous? Is this claim true? Is my car recalled? Can someone spoof my email domain? Are my dependencies safe? What should I know before I travel? Each answer names its sources, and any result can be shared as a link with a preview card.
-- **Monitors in plain words.** "Tell me when there is an internet outage in Iran" becomes a rule that is re-checked on a schedule and reports only what changed.
+- **Built for agents.** 75 MCP tools, locally over stdio or remotely at `https://mcp.oculon.live`; the SDK and CLI return the same objects, and `--json` works on every command.
+- **Everyday checks.** Is this message a scam? Is this link dangerous? Is this claim true? Is my car recalled? Can someone spoof my email domain? Are my dependencies safe? What should I know before I travel? Each answer names its sources, and any result can be shared as a link with a preview card.
+- **Monitors in plain words.** "Tell me when there is an internet outage in Iran" becomes a rule that is re-checked on a schedule and reports only what changed, by email, in Telegram or in the app. Every visitor keeps their own monitors, with no account.
+- **Everywhere people are.** A public Telegram bot ([@oculon_radar_bot](https://t.me/oculon_radar_bot)): forward it a suspicious message and it checks it. An OpenAPI spec at `/openapi.json` for ChatGPT Actions, n8n and Zapier.
 - **Free to run.** Daily per-source budgets keep every free tier free, and the data lives in one local SQLite file.
 
 ## Contents
@@ -34,6 +35,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 
 | Module | Command | What it does | Sources |
 |---|---|---|---|
+| Scam check | `oculon scam "<message>"` · Telegram: forward the message | Is this SMS, email or chat message a scam? Every link goes through the URL check, the sender is compared with any brand it names, and known scam patterns are matched in code (parcel fees, account locked, one-time codes, gift cards and crypto, "hi mum" new number asking for money, prizes, job and investment promises); a verdict, a 0-100 risk, the reasons and what to do | URL check sources, free-tier LLMs for the explanation |
 | URL check | `oculon url <link>` | Is a link dangerous? A verdict (malicious, suspicious, no known threats), a 0-100 risk and the reasons: Safe Browsing and URLhaus matches, community tags on urlscan.io scans, domain age and registrar, and warning signs in the URL itself (a brand name on someone else's domain, punycode look-alikes, risky top-level domains, `@` tricks). Big platforms are not blamed for files their users upload | Google Safe Browsing, URLhaus (abuse.ch), urlscan.io, RDAP |
 | Fact check | `oculon factcheck "<claim>"` or a news URL | Published fact checks about the claim (Snopes, AFP, PolitiFact, Full Fact and others) plus current reporting; an LLM weighs only that evidence and cites it by number, giving true, mostly true, mixed, misleading, false or unverified with a confidence. Without an LLM the published ratings decide | Google Fact Check Tools, Tavily or Exa, Jina Reader, free-tier LLMs |
 | Audit | `oculon audit [package.json\|requirements.txt\|npm:name@ver ...]` | Dependency health for npm and PyPI: known vulnerabilities with CVSS, deprecation, years since the last release, major versions behind, OpenSSF Scorecard and its "Maintained" check, license; a 0-100 risk per package (dev dependencies weigh less) | deps.dev (Google Open Source Insights), OpenSSF Scorecard, OSV |
@@ -44,6 +46,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 | Country | `oculon country <name>` | One-page country brief: GDP, growth, GDP per person, inflation, unemployment and population, the IMF outlook for this year and next, head of state and government, capital, currency and its rate to the dollar, US and UK travel advice, internet outages, disaster alerts and the latest headlines | World Bank, IMF, Wikidata, open.er-api.com, US State Department, UK FCDO, Cloudflare Radar, GDACS, Guardian |
 | Airport | `oculon airport <JFK\|EGLL\|name>` | Is an airport running normally? Current METAR and TAF (flight category, wind, visibility, ceiling), FAA ground stops, ground delay programs, delays and closures at US airports, and aircraft squawking an emergency within 150 km | aviationweather.gov (NOAA), FAA NAS status, adsb.lol, OurAirports |
 | Share | web app · `/r/<id>` | Any everyday check can be shared as a link: the server runs the check, keeps a snapshot and serves it as a page with a preview card for X, Telegram, WhatsApp and Slack | Oculon |
+| Personal monitors | web app · Telegram `/monitor` | Each visitor (a random id in a cookie, no account) or Telegram chat keeps up to 10 monitors of its own, written in plain language and re-checked about hourly; changes are kept as alerts and sent by email (after a confirmation link, with one-click unsubscribe) or to the Telegram chat | Resend (email), Meerkat |
 | Monitor | `oculon monitor "<request>"` | Watch anything in plain language: "internet outages in Iran", "critical CVEs for nginx", "earthquakes above 6 near Tokyo", "news about OpenAI", "travel risk changes for Bangkok", "flood or cyclone alerts for the Philippines". The request becomes a watchlist rule; only changes are reported, with evidence, in the app, Telegram and the signal feed | free-tier LLMs (with a pattern fallback), Meerkat |
 | Live | `oculon live` / `serve --live` | Listens to two real-time streams: English Wikipedia articles suddenly edited by several people (6+ human edits by 3+ editors in 15 minutes), and names or hashtags surging in English Bluesky posts against their own last hour (watched companies and topics get a lower bar) | Wikimedia EventStreams, Bluesky Jetstream |
 | Calendar | `oculon calendar [days]` | Catalysts ahead: earnings (watched companies first, then the largest by revenue estimate), IPOs, key US macro releases (CPI, jobs, GDP, PCE, JOLTS...), rules taking effect and comment periods closing at market-moving agencies, and high-volume prediction markets that close; also added to the daily brief | Finnhub, FRED, Federal Register, Polymarket |
@@ -179,7 +182,9 @@ https://mcp.oculon.live
 - **VS Code**: `{ "servers": { "oculon": { "type": "http", "url": "https://mcp.oculon.live" } } }` in `.vscode/mcp.json`
 - Any other client that supports Streamable HTTP: the same URL.
 
-Your own install serves the same endpoint at `/mcp` (for example `http://127.0.0.1:4747/mcp` while `oculon serve` runs).
+Your own install serves the same endpoint at `/mcp` (for example `http://127.0.0.1:4747/mcp` while `oculon serve` runs). On a public install the remote server leaves out the tools that change what the whole install watches (watchlist, fences, forecasts), and `oculon_monitor` only shows how a request would be read.
+
+The same checks are plain HTTP too: `https://app.oculon.live/openapi.json` describes them for ChatGPT Actions, n8n, Zapier and any OpenAPI client.
 
 ## SDK
 
@@ -274,6 +279,9 @@ Other deployment switches:
 | `OCULON_OPEN=1` | Opens the whole app to every visitor: dashboard, writes and LLM-backed endpoints, with no sign-in and no rate limit. |
 | `OCULON_DOMAIN=example.com` | Points app and docs links at `app.example.com` and `docs.example.com`, and redirects `/app` and `/docs` there. |
 | `OCULON_EDGE_SECRET` | Shared secret with the Cloudflare Worker in `edge/`, which serves the two subdomains from the same server. |
+| `OCULON_TELEGRAM=1` | Runs the Telegram bot inside `serve` (same as `--telegram`). |
+| `OCULON_TELEGRAM_PUBLIC=1` | Anyone may use the bot's public commands (rate limited per chat); chats in `TELEGRAM_ALLOWED_CHATS` keep every command. |
+| `RESEND_API_KEY`, `OCULON_MAIL_FROM` | Email alerts for personal monitors (default sender `Oculon <alerts@oculon.live>`; the domain must be verified in Resend). |
 | `OCULON_PURGE_ONCHAIN=1` | Clears data left by the paused on-chain modules each time the server starts. |
 
 The repository includes a `Dockerfile` and `railway.json`. Mount a persistent volume at `/data` (the image sets `OCULON_HOME=/data`), set your keys as environment variables, and point a domain at the service. Each deployment keeps its own database and its own daily budgets.

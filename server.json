@@ -1,0 +1,18 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.oculonlive/oculon",
+  "title": "Oculon",
+  "description": "OSINT checks with sources: scams, links, claims, recalls, travel risk, CVEs, outages, research.",
+  "repository": {
+    "url": "https://github.com/oculonlive/oculon",
+    "source": "github"
+  },
+  "websiteUrl": "https://oculon.live",
+  "version": "0.1.0",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.oculon.live"
+    }
+  ]
+}

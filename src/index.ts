@@ -64,6 +64,7 @@ import { emailSecurity } from './modules/emailsec.js';
 import { papers } from './modules/papers.js';
 import { countryBrief } from './modules/country.js';
 import { airportStatus } from './modules/airport.js';
+import { scamCheck } from './modules/scam.js';
 
 export interface OculonOptions extends Pick<ContextOptions, 'dbPath' | 'fetch' | 'throttle' | 'now'> {
   /** Contact string for User-Agents (enables SEC EDGAR). Falls back to OCULON_CONTACT. */
@@ -346,6 +347,10 @@ export class Oculon {
   /** Country brief: economy, leaders, currency, IMF outlook, travel advice, outages, disasters, headlines. */
   country(name: string) {
     return countryBrief(this.ctx, name);
+  }
+  /** Is this message a scam? Checks its links, sender domain and known scam patterns. */
+  scamCheck(message: string) {
+    return scamCheck(this.ctx, message);
   }
   /** Airport status: METAR and TAF, FAA delays and ground stops (US), emergency squawks nearby. */
   airport(code: string) {

@@ -11,6 +11,7 @@
 import { onchainEnabled } from './core/features.js';
 import type { Signal } from './core/types.js';
 import type { Oculon } from './index.js';
+import { emailDeliveries, runPersonal, type Delivery } from './modules/personal.js';
 
 export interface SchedulerOptions {
   scanMinutes?: number;
@@ -20,6 +21,12 @@ export interface SchedulerOptions {
   onSignals?: (signals: Signal[]) => Promise<void> | void;
   onBrief?: (markdown: string) => Promise<void> | void;
   onReport?: (file: string) => Promise<void> | void;
+  /** Public address of the install, for links in emails (e.g. https://oculon.live). */
+  baseUrl?: string;
+  /** Where people manage their monitors (e.g. https://app.oculon.live/#watch). */
+  appUrl?: string;
+  /** Changes found by personal monitors; emails go out here, Telegram chats through this hook. */
+  onPersonal?: (deliveries: Delivery[]) => Promise<void> | void;
 }
 
 const MIN = 60_000;
@@ -71,6 +78,16 @@ export function startScheduler(o: Oculon, opts: SchedulerOptions = {}): { stop: 
         last.scan = Date.now();
       }
       if (due('watch', watchMs) && o.watchList().length) await task('watch', async () => (await o.watchRun()).signals);
+      // Personal monitors: each is re-checked about hourly; this pass picks up the ones that are due.
+      if (due('personal', 15 * MIN)) {
+        await task('personal', async () => {
+          const d = await runPersonal(o.ctx);
+          if (!d.length) return;
+          const mailed = await emailDeliveries(o.ctx, d, opts.baseUrl ?? 'http://127.0.0.1:4747', opts.appUrl ?? 'http://127.0.0.1:4747/app#watch');
+          if (opts.onPersonal) await opts.onPersonal(d);
+          log(`personal: ${d.length} monitor(s) changed, ${mailed} email(s) sent`);
+        });
+      }
       if (due('resolve', 6 * 60 * MIN)) await task('resolve', async () => void (await o.resolveForecasts()));
       if (due('scoops', 6 * 60 * MIN)) await task('scoops', async () => void (await o.scoopsCheck(6)));
       if (due('markets', 6 * 60 * MIN)) await task('markets', async () => (await o.markets()).signals);

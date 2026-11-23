@@ -18,6 +18,10 @@ import { accuracy, entityProfile, rhDeployers, searchEntities, signalsSince, sou
 import { McpServer } from '../mcp.js';
 import { handleMcpHttp } from './mcphttp.js';
 import { createShare, getShare, sharePage } from './share.js';
+import { openApiSpec } from './openapi.js';
+import { randomBytes } from 'node:crypto';
+import { addPersonal, confirmEmail, emailStatus, listPersonal, personalAlerts, removeEmail, removePersonal, requestEmail, unsubscribeEmail, type Delivery } from '../modules/personal.js';
+import { mailEnabled } from '../sources/resend.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -42,6 +46,8 @@ export interface WebOptions {
   onSignals?: (signals: import('../core/types.js').Signal[]) => Promise<void> | void;
   onBrief?: (markdown: string) => Promise<void> | void;
   onReport?: (file: string) => Promise<void> | void;
+  /** Changes found by personal monitors (emails are sent by the server; Telegram owners need the bot). */
+  onPersonal?: (deliveries: Delivery[]) => Promise<void> | void;
 }
 
 type Handler = (q: URLSearchParams, o: Oculon) => Promise<unknown> | unknown;
@@ -214,6 +220,7 @@ export const ROUTES: Record<string, Handler> = {
   },
   '/api/factcheck': async (q, o) => slim(await o.factCheck(need(q, 'claim', 600))),
   '/api/recall': async (q, o) => slim(await o.recall(need(q, 'q', 120))),
+  '/api/scam': async (q, o) => slim(await o.scamCheck(need(q, 'message', 4000))),
   '/api/emailsec': async (q, o) => {
     try {
       return slim(await o.emailSecurity(need(q, 'domain', 253)));
@@ -316,6 +323,9 @@ async function readJson(req: IncomingMessage, limit = 10_000): Promise<Record<st
 }
 
 type PostHandler = (body: Record<string, unknown>, o: Oculon) => Promise<unknown> | unknown;
+
+/** Writes that change what the whole install watches. */
+const OWNER_ONLY = new Set(['/api/monitor', '/api/watch/delete', '/api/fences', '/api/fences/delete', '/api/cases']);
 
 export const POST_ROUTES: Record<string, PostHandler> = {
   '/api/fences': (b, o) => {
@@ -467,7 +477,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
   // OCULON_OPEN=1 opens the whole app to every visitor (no sign-in, no read-only gate, no rate limit).
   const openApp = opts.open ?? process.env.OCULON_OPEN === '1';
   // One MCP server for the HTTP transport, sharing this server's Oculon instance.
-  const mcpServer = new McpServer(() => oculon);
+  const mcpServer = new McpServer(() => oculon, { remote: publicMode });
   // OCULON_PURGE_ONCHAIN=1 clears data left by the paused on-chain modules when the server starts.
   if (!onchainEnabled() && process.env.OCULON_PURGE_ONCHAIN === '1') {
     const removed = oculon.ctx.store.purgeOnchain();
@@ -527,6 +537,56 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
         }
       }
     }
+    // Visitors get a random id in a cookie; it owns their personal monitors. No account, no personal data.
+    const visitor = (): string => {
+      const m = /(?:^|;\s*)oculon_uid=([A-Za-z0-9_-]{16,40})/.exec(String(req.headers.cookie ?? ''));
+      if (m) return m[1]!;
+      const id = randomBytes(15).toString('base64url');
+      res.setHeader('set-cookie', `oculon_uid=${id}; Path=/; HttpOnly; SameSite=Lax; Max-Age=63072000${publicMode ? '; Secure' : ''}`);
+      return id;
+    };
+    const sameSite = () => {
+      const origin = req.headers.origin;
+      const host = String(req.headers.host ?? '').toLowerCase();
+      const oh = (() => { try { return new URL(String(origin)).host.toLowerCase(); } catch { return null; } })();
+      return req.headers['x-oculon'] === '1' && String(req.headers['content-type'] ?? '').startsWith('application/json') && (!origin || oh === host || oh === hostName);
+    };
+    const mailBase = siteDomain ? `https://${siteDomain}` : `http://${req.headers.host ?? '127.0.0.1'}`;
+    if (url.pathname === '/mail/confirm' || url.pathname === '/mail/unsubscribe') {
+      const t = url.searchParams.get('t') ?? '';
+      const ok = url.pathname === '/mail/confirm' ? confirmEmail(oculon.ctx, t) : unsubscribeEmail(oculon.ctx, t);
+      if (req.method === 'POST') return send(res, ok ? 200 : 404, '{}', 'application/json');
+      const msg = url.pathname === '/mail/confirm' ? (ok ? 'Alerts confirmed. You will get an email when one of your monitors finds a change.' : 'This confirmation link is no longer valid.') : ok ? 'You are unsubscribed. No more monitor emails will be sent.' : 'This address was already unsubscribed.';
+      return send(res, 200, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Oculon alerts</title><body style="margin:0;background:#000;color:#f2f2f2;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px"><div style="max-width:460px"><p style="font:600 12px monospace;letter-spacing:.2em;color:#00f0ff">◉ OCULON</p><h1 style="font-weight:500">${msg}</h1><p><a style="color:#00f0ff" href="${siteDomain ? `https://app.${siteDomain}/#watch` : '/app#watch'}">Open your monitors →</a></p></div></body>`, 'text/html; charset=utf-8');
+    }
+    if (url.pathname === '/api/my' || url.pathname.startsWith('/api/my/')) {
+      if (!admin) return send(res, 403, '{"error":"not available on this install"}', 'application/json');
+      if (req.method === 'POST' && !sameSite()) return send(res, 403, '{"error":"forbidden"}', 'application/json');
+      const owner = `web:${visitor()}`;
+      try {
+        if (req.method === 'GET' && url.pathname === '/api/my') return send(res, 200, JSON.stringify({ monitors: listPersonal(oculon.ctx, owner), alerts: personalAlerts(oculon.ctx, owner, 40), email: emailStatus(oculon.ctx, owner), mail: mailEnabled(), owner: !publicMode || isAdmin(req, adminToken) }), 'application/json; charset=utf-8');
+        if (req.method === 'POST') {
+          const b = await readJson(req);
+          if (url.pathname === '/api/my/monitors') {
+            const text = String(b.text ?? '').trim();
+            if (text.length < 4 || text.length > 300) throw new HttpError(400, 'describe what to watch in 4-300 characters');
+            return send(res, 200, JSON.stringify(await addPersonal(oculon.ctx, owner, text)), 'application/json; charset=utf-8');
+          }
+          if (url.pathname === '/api/my/monitors/delete') return send(res, 200, JSON.stringify({ removed: removePersonal(oculon.ctx, owner, Number(b.id)) }), 'application/json');
+          if (url.pathname === '/api/my/email') return send(res, 200, JSON.stringify(await requestEmail(oculon.ctx, owner, String(b.email ?? ''), mailBase)), 'application/json');
+          if (url.pathname === '/api/my/email/delete') return send(res, 200, JSON.stringify({ removed: removeEmail(oculon.ctx, owner) }), 'application/json');
+        }
+        return send(res, 404, '{"error":"not found"}', 'application/json');
+      } catch (e) {
+        return send(res, e instanceof HttpError ? e.status : 400, JSON.stringify({ error: (e as Error).message }), 'application/json; charset=utf-8');
+      }
+    }
+    // On an open public install every visitor may use the app, but the shared watchlist, fences and the
+    // install's monitors are changed only by the owner (signed in with OCULON_ADMIN_TOKEN).
+    const owner = !publicMode || isAdmin(req, adminToken);
+    if (req.method === 'POST' && OWNER_ONLY.has(url.pathname) && !owner) {
+      return send(res, 403, '{"error":"the shared watchlist is managed by the owner; add your own monitors instead"}', 'application/json');
+    }
     if (req.method === 'POST' && POST_ROUTES[url.pathname]) {
       // Writes only from this dashboard: a custom header (forces a CORS preflight that this server never
       // grants), a JSON body, and a same-host Origin when the browser sends one.
@@ -547,6 +607,10 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       }
     }
     if (req.method !== 'GET') return send(res, 405, '{"error":"method not allowed"}', 'application/json');
+    if (url.pathname === '/openapi.json') {
+      res.setHeader('access-control-allow-origin', '*');
+      return send(res, 200, JSON.stringify(openApiSpec(siteDomain ? `https://app.${siteDomain}` : `http://${req.headers.host ?? '127.0.0.1'}`), null, 2), 'application/json; charset=utf-8', 'public, max-age=3600');
+    }
     // Shared results: /r/<id> is a public snapshot page with link-preview tags.
     const shareId = /^\/r\/([A-Za-z0-9_-]{6,16})\/?$/.exec(url.pathname)?.[1];
     if (shareId) {
@@ -617,7 +681,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
 
   const scheduler =
     opts.watchMinutes && opts.watchMinutes > 0
-      ? startScheduler(oculon, { scanMinutes: opts.watchMinutes, log: (m) => log(`schedule ${m}`), ...(opts.onSignals ? { onSignals: opts.onSignals } : {}), ...(opts.onBrief ? { onBrief: opts.onBrief } : {}), ...(opts.onReport ? { onReport: opts.onReport } : {}) })
+      ? startScheduler(oculon, { scanMinutes: opts.watchMinutes, log: (m) => log(`schedule ${m}`), baseUrl: siteDomain ? `https://${siteDomain}` : `http://127.0.0.1:${opts.port ?? 4747}`, appUrl: siteDomain ? `https://app.${siteDomain}/#watch` : `http://127.0.0.1:${opts.port ?? 4747}/app#watch`, ...(opts.onSignals ? { onSignals: opts.onSignals } : {}), ...(opts.onBrief ? { onBrief: opts.onBrief } : {}), ...(opts.onReport ? { onReport: opts.onReport } : {}), ...(opts.onPersonal ? { onPersonal: opts.onPersonal } : {}) })
       : null;
 
   server.listen(opts.port ?? 4747, opts.host ?? '127.0.0.1');

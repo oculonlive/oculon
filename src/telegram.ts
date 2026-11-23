@@ -10,6 +10,7 @@ import { alertBar, feedbackStats, recordFeedback, type Verdict } from './modules
 import { describePath } from './modules/connect.js';
 import { fmtTime } from './modules/listen.js';
 import { startScheduler } from './scheduler.js';
+import { addPersonal, listPersonal, removePersonal, type Delivery } from './modules/personal.js';
 
 export interface BotOptions {
   token: string;
@@ -21,12 +22,14 @@ export interface BotOptions {
   alertMinScore?: number;
   /** Minutes between background scans for alerts; 0 disables. */
   watchMinutes?: number;
+  /** Anyone may use the public commands (rate limited); allowlisted chats keep every command. Default OCULON_TELEGRAM_PUBLIC=1. */
+  publicMode?: boolean;
   log?: (m: string) => void;
 }
 
 interface Update {
   update_id: number;
-  message?: { chat: { id: number; type: string }; text?: string; from?: { username?: string } };
+  message?: { chat: { id: number; type: string }; text?: string; caption?: string; from?: { username?: string } };
   callback_query?: { id: string; data?: string; from: { id: number }; message?: { chat: { id: number }; message_id: number } };
 }
 
@@ -40,6 +43,35 @@ export function formatSignal(s: Signal): string {
     .join('\n');
   return `<b>[${Math.round(s.score)}] ${esc(s.title)}</b> <code>${esc(s.module)}</code>${ev ? `\n${ev}` : ''}`;
 }
+
+/** Commands anyone may use when the bot is public. Everything else stays with the allowlisted chats. */
+export const PUBLIC_COMMANDS = new Set(['/start', '/help', '/scam', '/url', '/factcheck', '/recall', '/email', '/travel', '/airport', '/country', '/papers', '/audit', '/monitor', '/monitors', '/unmonitor', '/cve', '/vulns', '/hazards', '/blackout', '/cloud', '/space', '/air', '/radar', '/signals', '/alerts', '/ask']);
+/** Commands that start many upstream calls or an LLM get a tighter budget. */
+const HEAVY = new Set(['/factcheck', '/papers', '/travel', '/country', '/ask', '/scam', '/audit', '/radar']);
+
+export const PUBLIC_HELP = [
+  '<b>Oculon</b>: check anything, every answer sourced.',
+  '',
+  'Forward or paste any suspicious message and I will check it for scams.',
+  '',
+  '/scam &lt;message&gt; — is this message a scam?',
+  '/url &lt;link&gt; — is this link dangerous?',
+  '/factcheck &lt;claim or link&gt; — fact check a claim',
+  '/recall &lt;VIN, "2018 Honda Accord" or product&gt; — recalls',
+  '/email &lt;domain&gt; — can someone spoof email from this domain?',
+  '/travel &lt;place&gt; — travel risk for the coming week',
+  '/airport &lt;JFK|EGLL&gt; — airport weather, delays and ground stops',
+  '/country &lt;name&gt; — country brief',
+  '/papers &lt;topic&gt; — research brief',
+  '/audit &lt;npm:name@ver ...&gt; — dependency vulnerabilities',
+  '/cve &lt;id&gt; · /vulns · /hazards · /blackout · /cloud · /space · /air &lt;place&gt; · /radar',
+  '',
+  '/monitor &lt;request&gt; — watch anything, e.g. /monitor internet outages in Iran',
+  '/monitors — your monitors · /unmonitor &lt;id&gt; — remove one',
+  '/alerts on|off — the strongest worldwide signals',
+  '',
+  'Web app: https://app.oculon.live · MCP: https://mcp.oculon.live',
+].join('\n');
 
 /** Help text without the paused on-chain commands (they return with OCULON_ONCHAIN=1). */
 export function helpHtml(): string {
@@ -188,8 +220,38 @@ export class TelegramBot {
     return this.opts.allowedChats.includes(chatId);
   }
 
+  get isPublic(): boolean {
+    return this.opts.publicMode ?? process.env.OCULON_TELEGRAM_PUBLIC === '1';
+  }
+
+  private usage = new Map<string, number[]>();
+
+  /** Per chat: 30 commands an hour, 8 of them heavy. */
+  rateOk(chatId: string, heavy: boolean): boolean {
+    const now = Date.now();
+    const key = heavy ? `${chatId}:h` : chatId;
+    const list = (this.usage.get(key) ?? []).filter((t) => now - t < 3_600_000);
+    if (list.length >= (heavy ? 8 : 30)) return false;
+    list.push(now);
+    this.usage.set(key, list);
+    if (heavy) return this.rateOk(chatId, false);
+    return true;
+  }
+
+  /** Changes found by personal monitors, sent to the Telegram chats that own them. */
+  async pushPersonal(deliveries: Delivery[]): Promise<number> {
+    let sent = 0;
+    for (const d of deliveries.filter((x) => x.owner.startsWith('tg:'))) {
+      const chat = d.owner.slice(3);
+      await this.send(chat, `<b>Monitor #${d.monitor.id}</b>: ${esc(d.monitor.description)}\n${d.changes.slice(0, 6).map((c) => `• ${esc(c)}`).join('\n')}`).catch(() => {});
+      sent++;
+    }
+    return sent;
+  }
+
   /** Turn one command into a reply. Exposed for tests. */
-  async respond(chatId: string, text: string): Promise<{ html?: string; photo?: { file: string; caption: string }; document?: { file: string; caption: string } }> {
+  async respond(chatId: string, text: string, ctx: { owner?: boolean } = {}): Promise<{ html?: string; photo?: { file: string; caption: string }; document?: { file: string; caption: string } }> {
+    const isOwnerChat = ctx.owner ?? this.allowed(chatId);
     const [rawCmd = '', ...rest] = text.trim().split(/\s+/);
     const cmd = rawCmd.toLowerCase().replace(/@.*$/, '');
     const arg = rest.join(' ').slice(0, 200);
@@ -200,7 +262,22 @@ export class TelegramBot {
     switch (cmd) {
       case '/start':
       case '/help':
-        return { html: helpHtml() };
+        return { html: isOwnerChat ? helpHtml() : PUBLIC_HELP };
+      case '/scam': {
+        const msg = text.trim().replace(/^\S+\s*/, '');
+        if (msg.length < 8) return { html: 'Forward or paste the message you received, or send /scam followed by the text.' };
+        const d = (await o.scamCheck(msg)).result;
+        const head = d.verdict === 'likely scam' ? '⚠️ <b>LIKELY SCAM</b>' : d.verdict === 'suspicious' ? '<b>SUSPICIOUS</b>' : '<b>No strong signs of a scam</b>';
+        return { html: `${head} (risk ${d.risk}/100)${d.explanation ? `\n\n${esc(d.explanation)}` : ''}${d.reasons.length ? `\n\n${d.reasons.slice(0, 6).map((x) => `• ${esc(x)}`).join('\n')}` : ''}\n\n${d.advice.map((x) => `→ ${esc(x)}`).join('\n')}` };
+      }
+      case '/monitors': {
+        const list = listPersonal(o.ctx, `tg:${chatId}`);
+        return { html: list.length ? `<b>Your monitors</b>\n${list.map((x) => `#${x.id} ${esc(x.description)}${x.lastChange ? ` <i>(changed ${esc(x.lastChange.slice(0, 16))}Z)</i>` : ''}`).join('\n')}\n\nRemove one with /unmonitor &lt;id&gt;.` : 'No monitors yet. Try /monitor internet outages in Iran' };
+      }
+      case '/unmonitor': {
+        const id = Number(arg);
+        return { html: Number.isInteger(id) && removePersonal(o.ctx, `tg:${chatId}`, id) ? `Removed monitor #${id}.` : 'No such monitor. See /monitors.' };
+      }
       case '/radar': {
         const r = await o.radar();
         return { html: r.signals.length ? `<b>Radar</b>: ${r.signals.length} signals\n\n${r.signals.slice(0, 8).map(formatSignal).join('\n\n')}` : 'Radar: nothing stands out right now.' };
@@ -374,8 +451,8 @@ export class TelegramBot {
       }
       case '/monitor': {
         if (!arg) return needArg('internet outages in Iran');
-        const r = await o.monitor(arg);
-        return { html: `Monitoring #${r.item.id} <b>${esc(r.rule.kind)}</b>: ${esc(r.rule.description)}. Changes arrive with /alerts on.` };
+        const r = await addPersonal(o.ctx, `tg:${chatId}`, arg);
+        return { html: `Monitoring #${r.monitor.id}: ${esc(r.rule.description)}.\nI will message you here when it changes (checked about hourly; the first check records a baseline). /monitors lists yours.` };
       }
       case '/air': {
         if (!arg) return needArg('London');
@@ -675,16 +752,33 @@ export class TelegramBot {
   async handle(u: Update): Promise<void> {
     if (u.callback_query) return this.handleCallback(u.callback_query);
     const m = u.message;
-    if (!m?.text) return;
+    const body = (m?.text ?? m?.caption ?? '').trim();
+    if (!m || !body) return;
     const chatId = String(m.chat.id);
-    if (!this.allowed(chatId)) {
+    const owner = this.allowed(chatId);
+    if (!owner && !this.isPublic) {
       await this.send(chatId, `This Oculon bot is private. Your chat id is <code>${esc(chatId)}</code>. Add it to TELEGRAM_ALLOWED_CHATS to use the bot.`);
       this.log(`rejected chat ${chatId}`);
       return;
     }
-    this.log(`chat ${chatId}: ${m.text.slice(0, 60)}`);
+    const isCmd = body.startsWith('/');
+    // In groups only commands are answered; in a private chat any other text is checked as a possible scam.
+    if (!isCmd && m.chat.type !== 'private') return;
+    const text = isCmd ? body : `/scam ${body}`;
+    const cmd = text.split(/\s+/)[0]!.toLowerCase().replace(/@.*$/, '');
+    if (!owner) {
+      if (!PUBLIC_COMMANDS.has(cmd)) {
+        await this.send(chatId, `That command is not available here.\n\n${PUBLIC_HELP}`);
+        return;
+      }
+      if (!this.rateOk(chatId, HEAVY.has(cmd))) {
+        await this.send(chatId, 'You have reached the hourly limit. Try again a bit later, or use https://app.oculon.live');
+        return;
+      }
+    }
+    this.log(`chat ${owner ? chatId : 'public'}: ${text.slice(0, 40)}`);
     try {
-      const r = await this.respond(chatId, m.text);
+      const r = await this.respond(chatId, text, { owner });
       if (r.photo) await this.sendPhoto(chatId, r.photo.file, r.photo.caption);
       if (r.document) await this.sendDocument(chatId, r.document.file, r.document.caption);
       if (r.html) await this.send(chatId, r.html);
@@ -696,7 +790,7 @@ export class TelegramBot {
   /** Push signals the chat has not seen yet. Returns how many were sent. */
   async pushAlerts(signals: Signal[]): Promise<number> {
     const db = this.oculon.ctx.store.db;
-    const subs = (db.prepare('SELECT chat_id FROM telegram_subs').all() as { chat_id: string }[]).map((r) => r.chat_id).filter((c) => this.allowed(c));
+    const subs = (db.prepare('SELECT chat_id FROM telegram_subs').all() as { chat_id: string }[]).map((r) => r.chat_id).filter((c) => this.allowed(c) || this.isPublic);
     const min = this.opts.alertMinScore ?? 70;
     let sent = 0;
     for (const chat of subs) {
@@ -735,8 +829,12 @@ export class TelegramBot {
     this.running = true;
     const me = await this.call<{ username: string }>('getMe', {});
     this.log(`bot @${me.username} running; ${this.opts.allowedChats.length} allowed chat(s)`);
-    await this.call('setMyCommands', {
-      commands: ['ask', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'recall', 'email', 'airport', 'country', 'papers', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
+    if (this.isPublic) {
+      await this.call('setMyCommands', { commands: ['scam', 'url', 'factcheck', 'recall', 'email', 'travel', 'airport', 'country', 'papers', 'audit', 'monitor', 'monitors', 'unmonitor', 'cve', 'hazards', 'blackout', 'alerts', 'help'].map((c) => ({ command: c, description: `Oculon ${c}` })) }).catch(() => {});
+    }
+    for (const chat of this.opts.allowedChats) await this.call('setMyCommands', {
+      scope: { type: 'chat', chat_id: Number(chat) },
+      commands: ['ask', 'scam', 'monitors', 'unmonitor', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'recall', 'email', 'airport', 'country', 'papers', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
     }).catch(() => {});
     if (this.opts.watchMinutes && this.opts.watchMinutes > 0) {
       this.scheduler = startScheduler(this.oculon, {

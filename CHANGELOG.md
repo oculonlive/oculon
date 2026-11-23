@@ -4,6 +4,10 @@ All notable changes are listed here. Versions follow [semantic versioning](https
 
 ## Unreleased
 
+- `oculon scam`: scam check for SMS, email and chat messages (links, sender, known patterns), also by forwarding a message to the Telegram bot.
+- Personal monitors: every visitor and Telegram chat keeps its own monitors; changes arrive by email (Resend, confirmed and one-click unsubscribe) or in Telegram. The shared watchlist is now changed only by the owner.
+- Public Telegram bot (`OCULON_TELEGRAM_PUBLIC=1`): public commands for everyone, rate limited per chat; groups get answers to commands only.
+- `/openapi.json` for ChatGPT Actions, n8n and Zapier; the remote MCP server hides tools that change the shared watchlist.
 - `oculon recall`: vehicle recalls by VIN or "year make model" (NHTSA) and product recalls (CPSC, FDA).
 - `oculon email`: email spoofing protection of a domain (SPF, DMARC, DKIM, MTA-STS, DNSSEC) with a score and fixes.
 - `oculon papers`: research briefs from OpenAlex and PubMed, with growth per year and a cited overview.
@@ -16,7 +20,7 @@ All notable changes are listed here. Versions follow [semantic versioning](https
 - `oculon audit`: dependency health for package.json, requirements.txt or package lists (deps.dev, OpenSSF Scorecard).
 - `oculon travel`: travel risk brief from official advice, weather, air quality, outbreaks, disasters, earthquakes and outages.
 - `oculon monitor`: monitors written in plain language, backed by eight new watchlist kinds (news, outage, cve, quake, hazard, url, package, travel).
-- Every new check is also in the web app (Investigate, Watchlist), the Telegram bot and the MCP server (74 tools in all).
+- Every new check is also in the web app (Investigate, Watchlist), the Telegram bot and the MCP server (75 tools in all).
 - On-chain features (Robinhood Chain pools, token and deployer checks; wallet and token checks; DeFi) are paused. Their code and tests stay in place; `OCULON_ONCHAIN=1` turns them back on.
 - Public installs serve the dashboard at `app.<domain>` and the docs at `docs.<domain>` when `OCULON_DOMAIN` is set.
 

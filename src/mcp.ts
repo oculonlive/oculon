@@ -214,6 +214,12 @@ export const TOOLS: Tool[] = [
     run: async (o, a) => compact(await o.travel(String(a.place))),
   },
   {
+    name: 'oculon_scam_check',
+    description: 'Is this message a scam? Paste an SMS, email or chat message. Every link is checked (Safe Browsing, URLhaus, urlscan.io, domain age, look-alikes), the sender domain is compared with any brand it mentions, and known scam patterns are matched (parcel fees, account locked, one-time codes, gift cards or crypto, "hi mum" new number, prizes, job and investment promises). Returns likely scam, suspicious or no strong signs, a 0-100 risk, the reasons and what to do.',
+    inputSchema: schema({ message: str('The full text of the message, including the sender line if there is one') }, ['message']),
+    run: async (o, a) => compact(await o.scamCheck(String(a.message))),
+  },
+  {
     name: 'oculon_recall',
     description: 'Is this car or product recalled? Pass a 17-character VIN, "year make model" (e.g. "2018 Honda Accord"), or a product name ("stroller", "peanut butter"). Vehicles: NHTSA safety recalls with do-not-drive and park-outside warnings. Products: CPSC consumer recalls and FDA food, drug and device enforcement reports.',
     inputSchema: schema({ query: str('VIN, "year make model", or product name') }, ['query']),
@@ -557,6 +563,9 @@ interface Request {
   params?: Json;
 }
 
+/** Tools that change the shared watchlist, fences or plugins; not offered to anonymous remote clients. */
+const REMOTE_HIDDEN = new Set(['oculon_watch_add', 'oculon_fence_add', 'oculon_watch_run', 'oculon_case_new', 'oculon_stamp_proofs', 'oculon_resolve_forecasts', 'oculon_auto_forecast', 'oculon_forecast']);
+
 /** Tools this build offers: on-chain tools are left out unless OCULON_ONCHAIN=1. */
 export function activeTools(): Tool[] {
   return onchainEnabled() ? TOOLS : TOOLS.filter((t) => !ONCHAIN_TOOLS.has(t.name));
@@ -565,7 +574,14 @@ export function activeTools(): Tool[] {
 export class McpServer {
   private oculon: Oculon | null = null;
 
-  constructor(private readonly makeOculon: () => Oculon = () => new Oculon()) {}
+  /**
+   * `remote`: the server is reached over the internet by anyone (remote MCP). Tools that change what the whole
+   * install watches are left out, and oculon_monitor only shows how a request would be read.
+   */
+  constructor(
+    private readonly makeOculon: () => Oculon = () => new Oculon(),
+    private readonly opts: { remote?: boolean } = {},
+  ) {}
 
   private get o(): Oculon {
     return (this.oculon ??= this.makeOculon());
@@ -587,7 +603,8 @@ export class McpServer {
         })),
       );
     }
-    return [...activeTools(), ...this.pluginTools];
+    const all = [...activeTools(), ...this.pluginTools];
+    return this.opts.remote ? all.filter((t) => !REMOTE_HIDDEN.has(t.name)) : all;
   }
 
   /** Handle one JSON-RPC message; returns the response, or null for notifications. */
@@ -616,7 +633,9 @@ export class McpServer {
         const tool = (await this.allTools()).find((t) => t.name === name);
         if (!tool) return fail(-32602, `unknown tool: ${name}`);
         try {
-          const out = await tool.run(this.o, (msg.params?.arguments as Json) ?? {});
+          const args = (msg.params?.arguments as Json) ?? {};
+          if (this.opts.remote && name === 'oculon_monitor') args.dry_run = true;
+          const out = await tool.run(this.o, args);
           if (out && typeof out === 'object' && '__image' in out) {
             const { __image, meta } = out as { __image: string | null; meta: unknown };
             const content: Json[] = [{ type: 'text', text: JSON.stringify(meta) }];

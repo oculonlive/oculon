@@ -549,6 +549,7 @@ nav button { white-space: nowrap; }
       <div class="row">
         <select id="inv-kind" aria-label="What to investigate">
           <optgroup label="Everyday checks">
+          <option value="scam">Is this message a scam? (paste it)</option>
           <option value="url">Is this link safe? (URL)</option>
           <option value="factcheck">Fact check (claim or news URL)</option>
           <option value="audit">Dependency audit (package.json or npm:name@version)</option>
@@ -591,11 +592,21 @@ nav button { white-space: nowrap; }
 
   <section id="tab-watch" hidden>
     <div class="card">
-      <h2>Watchlist</h2>
-      <p class="meta">Describe what to watch in plain words. Oculon turns it into a rule, re-checks it on the schedule and reports only what changed, with evidence.</p>
+      <h2>Your monitors</h2>
+      <p class="meta">Describe what to watch in plain words. Oculon turns it into a rule, re-checks it about every hour and tells you only what changed, with evidence. Your monitors are private to this browser; no account needed.</p>
       <div class="row"><input type="text" id="mon-q" placeholder="Tell me when there is an internet outage in Iran" aria-label="What to watch"><button class="go" id="mon-go">Monitor</button></div>
       <p class="meta" id="mon-ex">Try: <a href="#" data-mon>critical CVEs for nginx</a> · <a href="#" data-mon>earthquakes above 6 near Tokyo</a> · <a href="#" data-mon>news about OpenAI</a> · <a href="#" data-mon>travel risk changes for Bangkok</a> · <a href="#" data-mon>flood or cyclone alerts for the Philippines</a></p>
       <div id="mon-out"></div>
+      <div style="overflow-x:auto"><table id="my-mon"></table></div>
+      <h3>Email me when something changes</h3>
+      <div class="row"><input type="email" id="mail-q" placeholder="you@example.com" aria-label="Email for alerts" autocomplete="email"><button class="go" id="mail-go">Send confirmation</button></div>
+      <p class="meta" id="mail-state">One email per check that finds changes. Unsubscribe from any email. Telegram works too: send /monitor to <a href="https://t.me/oculon_radar_bot" id="tg-link" target="_blank" rel="noopener noreferrer">the Oculon bot</a>.</p>
+      <h3>Your recent changes</h3>
+      <div id="my-alerts"><p class="meta">Nothing yet. The first check of each monitor records a baseline.</p></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Shared watchlist</h2>
+      <p class="meta" id="shared-note">What this Oculon install watches for everyone. Managed by the owner.</p>
       <div style="overflow-x:auto"><table id="watch"></table></div>
     </div>
     <div class="card" style="margin-top:16px">
@@ -908,7 +919,7 @@ function handleMapClick(e) {
 const waitMap = setInterval(() => { if (map) { map.on('click', handleMapClick); clearInterval(waitMap); } }, 300);
 
 /* investigate */
-const placeholders = { recall: '2018 Honda Accord', emailsec: 'example.com', airport: 'JFK', country: 'Argentina', papers: 'solid-state battery', url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
+const placeholders = { scam: 'USPS: your package is on hold, pay the $1.99 fee within 24 hours at usps-redelivery-help.top/track', recall: '2018 Honda Accord', emailsec: 'example.com', airport: 'JFK', country: 'Argentina', papers: 'solid-state battery', url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
 const usd = (x) => (x == null ? '?' : '$' + Math.round(x).toLocaleString('en-US'));
 
 /* brief: tiny, safe Markdown renderer (escape first, then headings, bold, links, bullets) */
@@ -937,9 +948,38 @@ $('#brief-refresh').onclick = () => loadBrief(true);
 loadBrief(false);
 
 /* watch */
+let isOwner = false;
+async function loadMy() {
+  try {
+    const m = await api('/api/my');
+    isOwner = Boolean(m.owner);
+    const when = (t) => (t ? t.slice(0, 16).replace('T', ' ') + ' UTC' : 'not yet');
+    $('#my-mon').innerHTML = m.monitors.length
+      ? '<tr><th>#</th><th>monitor</th><th>last check</th><th></th></tr>' + m.monitors.map((x) => `<tr><td class="num">${x.id}</td><td>${esc(x.description)}<div class="meta">${esc(x.kind)} · ${esc(x.target)}${x.lastChange ? ' · changed ' + esc(when(x.lastChange)) : ''}</div></td><td class="meta">${esc(when(x.lastRun))}</td><td><button class="icon-btn" data-unmy="${x.id}">remove</button></td></tr>`).join('')
+      : '';
+    document.querySelectorAll('[data-unmy]').forEach((b) => (b.onclick = async () => { b.disabled = true; try { await post('/api/my/monitors/delete', { id: Number(b.dataset.unmy) }); loadMy(); } catch { b.disabled = false; } }));
+    $('#my-alerts').innerHTML = m.alerts.length
+      ? `<ul class="ev">${m.alerts.map((a) => `<li>${esc(a.text).replace(/https?:\/\/[^\s<]+/g, (u) => `<a href="${u}" target="_blank" rel="noopener noreferrer">link</a>`)} <span class="meta">#${a.monitorId} · ${esc(when(a.createdAt))}</span></li>`).join('')}</ul>`
+      : '<p class="meta">Nothing yet. The first check of each monitor records a baseline.</p>';
+    if (!m.mail) { $('#mail-q').disabled = true; $('#mail-go').disabled = true; $('#mail-state').textContent = 'Email alerts are not set up on this install yet.'; }
+    else if (m.email.email) $('#mail-state').innerHTML = m.email.confirmed ? `Alerts go to <b>${esc(m.email.email)}</b>. <a href="#" id="mail-off">Stop emails</a>` : `Confirmation sent to <b>${esc(m.email.email)}</b>. Click the link in that email (check spam too).`;
+    const off = document.getElementById('mail-off');
+    if (off) off.onclick = async (e) => { e.preventDefault(); await post('/api/my/email/delete', {}); loadMy(); };
+    $('#shared-note').textContent = isOwner ? 'What this install watches for everyone. You are signed in as the owner.' : 'What this Oculon install watches for everyone. Managed by the owner.';
+  } catch (err) { $('#my-alerts').innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+}
+$('#mail-go').onclick = async () => {
+  const email = $('#mail-q').value.trim();
+  if (!email) return;
+  $('#mail-go').disabled = true;
+  try { await post('/api/my/email', { email }); $('#mail-q').value = ''; loadMy(); }
+  catch (err) { $('#mail-state').innerHTML = `<span class="err">${esc(err.message)}</span>`; }
+  finally { $('#mail-go').disabled = false; }
+};
 async function loadWatch() {
+  loadMy();
   const [list, sigs, quota] = await Promise.all([api('/api/watch'), api('/api/signals?limit=200'), api('/api/quota')]);
-  $('#watch').innerHTML = '<tr><th>#</th><th>kind</th><th>target</th><th>last check</th><th></th></tr>' + (list.map((w) => `<tr><td class="num">${w.id}</td><td>${esc(w.kind)}</td><td>${esc(w.label || w.target)}${w.label ? `<div class="meta">${esc(w.target)}</div>` : ''}</td><td class="meta">${esc(w.lastRun ? w.lastRun.slice(0, 16).replace('T', ' ') + ' UTC' : 'not yet')}</td><td><button class="icon-btn" data-unwatch="${w.id}" aria-label="Stop watching">remove</button></td></tr>`).join('') || '<tr><td colspan="5" class="meta">empty</td></tr>');
+  $('#watch').innerHTML = '<tr><th>#</th><th>kind</th><th>target</th><th>last check</th><th></th></tr>' + (list.map((w) => `<tr><td class="num">${w.id}</td><td>${esc(w.kind)}</td><td>${esc(w.label || w.target)}${w.label ? `<div class="meta">${esc(w.target)}</div>` : ''}</td><td class="meta">${esc(w.lastRun ? w.lastRun.slice(0, 16).replace('T', ' ') + ' UTC' : 'not yet')}</td><td>${isOwner ? `<button class="icon-btn" data-unwatch="${w.id}" aria-label="Stop watching">remove</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="5" class="meta">empty</td></tr>');
   document.querySelectorAll('[data-unwatch]').forEach((b) => (b.onclick = async () => { b.disabled = true; try { await post('/api/watch/delete', { id: Number(b.dataset.unwatch) }); loadWatch(); } catch (err) { b.disabled = false; } }));
   const ws = sigs.filter((s) => s.module === 'meerkat');
   $('#watch-signals').innerHTML = ws.length ? ws.slice(0, 30).map(renderSignal).join('') : '<p class="meta">No changes yet. The first check of each target records a baseline.</p>';
@@ -951,10 +991,10 @@ $('#mon-go').onclick = async () => {
   $('#mon-go').disabled = true;
   $('#mon-out').innerHTML = '<p class="meta">Reading the request…</p>';
   try {
-    const r = await post('/api/monitor', { text });
-    $('#mon-out').innerHTML = `<p><span class="pill ok">monitoring</span> #${r.item.id} <b>${esc(r.rule.kind)}</b> · ${esc(r.rule.description)}</p><p class="meta">The first check records a baseline; changes after that show up below and in the Inbox.</p>`;
+    const r = await post('/api/my/monitors', { text });
+    $('#mon-out').innerHTML = `<p><span class="pill ok">monitoring</span> #${r.monitor.id} <b>${esc(r.rule.kind)}</b> · ${esc(r.rule.description)}</p><p class="meta">The first check records a baseline; changes after that appear below and by email if you add one.</p>`;
     $('#mon-q').value = '';
-    loadWatch();
+    loadMy();
   } catch (err) { $('#mon-out').innerHTML = `<p class="err">${esc(err.message)}</p>`; }
   finally { $('#mon-go').disabled = false; }
 };
@@ -1030,6 +1070,11 @@ $('#inv-kind').onchange = () => { $('#inv-q').placeholder = placeholders[$('#inv
 const spark = (xs) => { const m = Math.max(...xs, 1e-9); return `<span class="spark">${xs.map((x) => `<i style="height:${Math.max(2, Math.round((x / m) * 28))}px" title="${esc(x)}"></i>`).join('')}</span>`; };
 const sigList = (s) => (s.length ? `<h3>Signals</h3>${s.map(renderSignal).join('')}` : '');
 const views = {
+  scam: (r) => {
+    const d = r.result;
+    const tone = d.verdict === 'likely scam' ? 'bad' : d.verdict === 'suspicious' ? 'warn' : 'ok';
+    return `<h3><span class="pill ${tone}">${esc(d.verdict)}</span> <span class="meta">risk ${d.risk}/100</span></h3>${d.explanation ? `<p>${esc(d.explanation)}</p>` : ''}${d.reasons.length ? `<ul class="ev">${d.reasons.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${d.links.length ? `<h3>Links</h3><ul class="ev">${d.links.map((l) => `<li><code>${esc(l.url)}</code> <span class="pill ${l.verdict === 'malicious' ? 'bad' : l.verdict === 'suspicious' ? 'warn' : 'ok'}">${esc(l.verdict)}</span></li>`).join('')}</ul>` : ''}<h3>What to do</h3><ul class="ev">${d.advice.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  },
   recall: (r) => {
     const d = r.result;
     const head = d.vehicle ? `${d.vehicle.year} ${d.vehicle.make} ${d.vehicle.model}` : d.query;
@@ -1174,7 +1219,7 @@ $('#inv-go').onclick = async () => {
   if (q.startsWith('(')) q = '';
   const out = $('#inv-out');
   if (kind === 'image') { out.innerHTML = `<p class="meta">Loading satellite image of ${esc(q)}…</p><img class="sat" alt="Satellite image of ${esc(q)}" src="/api/image?place=${encodeURIComponent(q)}">`; return; }
-  const param = { recall: 'q', emailsec: 'domain', airport: 'code', country: 'name', papers: 'topic', url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
+  const param = { scam: 'message', recall: 'q', emailsec: 'domain', airport: 'code', country: 'name', papers: 'topic', url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
   $('#inv-go').disabled = true;
   out.innerHTML = '<p class="meta">Working… some sources are rate-limited and take a while.</p>';
   try {
