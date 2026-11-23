@@ -58,6 +58,7 @@ const HOST_GAP_MS: Record<string, number> = {
   'www.federalregister.gov': 300,
   'api.osv.dev': 100,
   'www.4byte.directory': 500,
+  'api.semanticscholar.org': 1100, // 1 request per second with a key
 };
 
 const chains = new Map<string, Promise<void>>();
