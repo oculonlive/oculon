@@ -2,7 +2,13 @@
 
 All notable changes are listed here. Versions follow [semantic versioning](https://semver.org).
 
-## Unreleased
+## 0.1.1
+
+- Scam check: many more scam families are recognized: crypto giveaways asking for a wallet or recovery phrase, token promotion and fake volume offers, paid "services" pitched to token developers, early-access and signal groups, fake wallet support, platforms that charge a fee to withdraw, task jobs that ask for deposits, recovery services, sextortion, tech support and fake renewals, advance-fee loans, and toll or tax impersonation. Each family comes with its own advice.
+- Opening the remote MCP URL in a browser shows a page with the URL, client setup and the tool list instead of redirecting to the docs.
+- Docs links that jump to a section no longer leave the text hidden on phones.
+
+## 0.1.0 · first npm release
 
 - `oculon scam`: scam check for SMS, email and chat messages (links, sender, known patterns), also by forwarding a message to the Telegram bot.
 - Personal monitors: every visitor and Telegram chat keeps its own monitors; changes arrive by email (Resend, confirmed and one-click unsubscribe) or in Telegram. The shared watchlist is now changed only by the owner.
@@ -24,20 +30,20 @@ All notable changes are listed here. Versions follow [semantic versioning](https
 - On-chain features (Robinhood Chain pools, token and deployer checks; wallet and token checks; DeFi) are paused. Their code and tests stay in place; `OCULON_ONCHAIN=1` turns them back on.
 - Public installs serve the dashboard at `app.<domain>` and the docs at `docs.<domain>` when `OCULON_DOMAIN` is set.
 
-## 0.1.0 · first public release
+### Engine, measurement and surfaces from the first public release
 
-### Engine
+#### Engine
 
 - 42 modules over more than 50 public sources, each result with full provenance (live, cached, error, unavailable).
 - Cross-source signals, storylines across days, entity resolution and a local evidence graph (SQLite).
 - Daily per-source budgets that keep free tiers free, with cached fallbacks.
 
-### Measurement
+#### Measurement
 
 - Time machine and radar calibration, first-to-know lead times against media coverage.
 - Forecasts against prediction markets, hashed into Merkle trees and timestamped on Bitcoin through OpenTimestamps.
 
-### Surfaces
+#### Surfaces
 
 - CLI with `--json` on every command, TypeScript SDK, MCP server with 64 tools, Telegram bot with Useful/Noise feedback.
 - Web app: overview page with a live console, docs, and a dashboard with Overview, Inbox, Timeline, Sources and Accuracy tabs, entity pages, Ctrl+K command palette, share cards, live updates and PWA install.

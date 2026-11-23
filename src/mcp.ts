@@ -9,7 +9,7 @@ import type { ModuleResult } from './core/types.js';
 import { ONCHAIN_TOOLS, onchainEnabled } from './core/features.js';
 import { availableKinds } from './modules/monitor.js';
 
-export const SERVER_INFO = { name: 'oculon', version: '0.1.0' };
+export const SERVER_INFO = { name: 'oculon', version: '0.1.1' };
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
 type Json = Record<string, unknown>;

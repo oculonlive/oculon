@@ -1,6 +1,6 @@
 {
   "name": "oculon",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Open-source intelligence engine and agent: cross-source signals with provenance from 50+ public sources (routing, exploits, ships, aircraft, satellites, markets), forecasts timestamped on Bitcoin. CLI, SDK, MCP server, web app and Telegram bot.",
   "keywords": [
     "osint",
