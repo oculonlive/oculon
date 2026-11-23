@@ -2,6 +2,13 @@
 
 All notable changes are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## 0.1.2
+
+- Forecast proofs can be checked without Oculon: `/api/proof?id=<id>` (forecast, canonical JSON, hash, Merkle path) and `/proof/<id>.ots` (a standard OpenTimestamps file).
+- The docs show a live cross-source signal, keep the header above the page, land on the linked section and no longer scroll sideways on phones.
+- Addresses stay clean: in-page links no longer add #section to the address bar.
+- Install instructions show the full command and the npx option.
+
 ## 0.1.1
 
 - Scam check: many more scam families are recognized: crypto giveaways asking for a wallet or recovery phrase, token promotion and fake volume offers, paid "services" pitched to token developers, early-access and signal groups, fake wallet support, platforms that charge a fee to withdraw, task jobs that ask for deposits, recovery services, sextortion, tech support and fake renewals, advance-fee loans, and toll or tax impersonation. Each family comes with its own advice.
