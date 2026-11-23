@@ -91,7 +91,7 @@ aside.left a.on{text-shadow:0 0 18px rgba(0,240,255,.6)}
 .qc h3{margin:8px 0 6px;font-size:18px;font-weight:500}
 .qc p{margin:0;font-size:14px !important;line-height:1.55 !important;color:var(--mut) !important}
 .qc .cmd{margin-top:12px;display:flex;align-items:center;gap:10px;background:#050a0b;border:1px solid #1a2629;padding:9px 10px 9px 12px;font:12.5px var(--mono);color:#e6fbff}
-.qc .cmd code{background:none;border:0;padding:0;font-size:12.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.qc .cmd code{background:none;border:0;padding:0;font-size:12.5px;flex:1;min-width:0;white-space:normal;overflow-wrap:anywhere}
 .qc .cmd .p{color:var(--y)}
 .cp{background:none;border:1px solid #2a3b3f;color:#9fd8e2;font:11px var(--mono);padding:4px 9px;cursor:pointer;flex:none;transition:all .2s}
 .cp:hover{border-color:var(--y);color:#fff}.cp.ok{border-color:#3fd16b;color:#3fd16b}
@@ -138,7 +138,7 @@ aside.left a.on{text-shadow:0 0 18px rgba(0,240,255,.6)}
     <div class="dstats"><div><span>Version</span><b id="ds-ver">—</b></div><div><span>Modules</span><b id="ds-mod">—</b></div><div><span>MCP tools</span><b id="ds-mcp">—</b></div><div><span>Public sources</span><b id="ds-src">—</b></div></div>
     <div class="dsec"><h2 id="start-here">Start here</h2><p class="sub">Four commands, in the order most people run them.</p>
       <div class="qs">
-        <div class="qc"><div class="n">01</div><h3>Install</h3><p>Needs Node.js 22.13 or newer. No runtime dependencies.</p><div class="cmd"><span class="p">$</span><code>npm i -g oculon</code><button class="cp" type="button">copy</button></div></div>
+        <div class="qc"><div class="n">01</div><h3>Install</h3><p>Needs Node.js 22.13 or newer (<a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a>). No runtime dependencies. To try it without installing, put <code>npx</code> in front of any command, e.g. <code>npx oculon tour</code>.</p><div class="cmd"><span class="p">$</span><code>npm install -g oculon</code><button class="cp" type="button">copy</button></div></div>
         <div class="qc"><div class="n">02</div><h3>Take the tour</h3><p>Shows what this install knows and what to try next.</p><div class="cmd"><span class="p">$</span><code>oculon tour</code><button class="cp" type="button">copy</button></div></div>
         <div class="qc"><div class="n">03</div><h3>Open the web app</h3><p>Overview page, console, dashboard and these docs, with the schedule and live streams running.</p><div class="cmd"><span class="p">$</span><code>oculon serve --watch 15 --live</code><button class="cp" type="button">copy</button></div></div>
         <div class="qc"><div class="n">04</div><h3>Connect an agent</h3><p>Add the remote MCP server to Claude Code, or run <code>oculon mcp</code> on stdio.</p><div class="cmd"><span class="p">$</span><code>claude mcp add --transport http oculon https://mcp.oculon.live</code><button class="cp" type="button">copy</button></div></div>

@@ -96,9 +96,13 @@ npx oculon ask "why is Nvidia in the news this week?"
 Requires Node.js 22.13 or newer (it uses the built-in `node:sqlite`).
 
 ```sh
-npm install -g oculon
-oculon doctor
+npm install -g oculon     # install the oculon command
+oculon tour               # what you can try right away
 ```
+
+Or try it without installing: put `npx` in front of any command, for example `npx oculon scam "Your package is on hold, pay the customs fee"`.
+
+`oculon doctor` checks your setup afterwards: the Node.js version, the data folder and which optional API keys are set. Keys are read from the environment or from a `.env` file in the folder you run `oculon` in.
 
 Data is stored in `~/.oculon` (set `OCULON_HOME` to change it).
 
