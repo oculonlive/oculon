@@ -32,6 +32,14 @@ test('scam check: links, sender, patterns and the "hi mum" pair', async () => {
     assert.equal(sol.result.verdict, 'likely scam');
     const seed = await scamCheck(ctx, 'Your wallet needs to be validated. Reply with your 12-word recovery phrase to keep your funds.');
     assert.notEqual(seed.result.verdict, 'no strong signs');
+    const volume = await scamCheck(ctx, 'Yo Dev\nLooking for massive volume for your project and more diamond holders?\nWe promote on all chains and aim to increase your project market cap.\nDM me your project details.');
+    assert.equal(volume.result.verdict, 'likely scam');
+    const video = await scamCheck(ctx, 'Gm. May I do Professional How to Buy Guide Video for your Token. Just check my last work in D M.$20');
+    assert.equal(video.result.verdict, 'suspicious');
+    const circle = await scamCheck(ctx, 'Some people wait for a coin to trend. Others have access to the right circle. Positioning early makes all the difference. Timing matters.');
+    assert.notEqual(circle.result.verdict, 'no strong signs');
+    const slides = await scamCheck(ctx, 'Can you DM me the slides from the meeting?');
+    assert.equal(slides.result.verdict, 'no strong signs');
     const lunch = await scamCheck(ctx, 'Are we still on for lunch Thursday at 12? I booked a table.');
     assert.equal(lunch.result.verdict, 'no strong signs');
   });
