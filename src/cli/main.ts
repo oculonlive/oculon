@@ -162,7 +162,7 @@ ${c.bold('Live')}
 ${c.bold('Graph')}
   oculon connect <A> to <B>            how two things are linked (shortest path)
   oculon resolve                       merge duplicates: org:nvidia = company:nvidia = nvidia.com
-  oculon quota                         today's API usage vs free-tier budgets
+  oculon quota                         today's API usage vs daily budgets
 
 ${c.bold('Radar')}
   oculon radar                         what the world is suddenly paying attention to
