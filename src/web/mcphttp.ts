@@ -1,7 +1,7 @@
 /**
  * Remote MCP over Streamable HTTP (MCP 2025-03-26 and later), stateless.
  * Clients POST JSON-RPC messages (one or a batch) to the endpoint and get JSON back; notifications get 202.
- * There is no server-initiated stream, so GET answers 405 (a browser GET is sent to the docs instead).
+ * There is no server-initiated stream, so GET answers 405 (a browser GET gets a page that explains how to connect).
  * Every tool call goes through the same McpServer the stdio transport uses.
  */
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -36,13 +36,14 @@ async function readBody(req: IncomingMessage): Promise<string> {
 
 type Msg = { jsonrpc?: string; id?: number | string | null; method?: string; params?: Record<string, unknown>; result?: unknown; error?: unknown };
 
-/** Answers one HTTP request on the MCP endpoint. `docsUrl` is where a browser GET is sent. */
-export async function handleMcpHttp(req: IncomingMessage, res: ServerResponse, mcp: McpServer, docsUrl: string, log: (m: string) => void = () => {}): Promise<void> {
+/** Answers one HTTP request on the MCP endpoint. `page` renders the HTML a browser GET sees. */
+export async function handleMcpHttp(req: IncomingMessage, res: ServerResponse, mcp: McpServer, page: () => Promise<string>, log: (m: string) => void = () => {}): Promise<void> {
   if (req.method === 'OPTIONS') return reply(res, 204, undefined);
   if (req.method === 'GET' || req.method === 'HEAD') {
     if (/text\/html/.test(String(req.headers.accept ?? ''))) {
-      res.writeHead(302, { ...CORS, location: docsUrl, 'cache-control': 'no-store' });
-      return void res.end();
+      const html = await page();
+      res.writeHead(200, { ...CORS, 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
+      return void res.end(req.method === 'HEAD' ? undefined : html);
     }
     return reply(res, 405, { jsonrpc: '2.0', id: null, error: { code: -32000, message: 'This server does not open a GET stream; POST JSON-RPC messages to this URL.' } }, { allow: 'POST, OPTIONS' });
   }

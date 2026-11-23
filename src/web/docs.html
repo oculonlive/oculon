@@ -210,7 +210,11 @@ fetch('/api/readme').then((r) => r.json()).then((j) => {
   const doc = $('doc'); doc.className = ''; doc.innerHTML = md(j.markdown);
   const first = doc.querySelector('p'); if (first) first.classList.add('intro');
   buildNav(); reveal();
-  if (location.hash) document.getElementById(location.hash.slice(1))?.scrollIntoView();
+  // A link straight to a section (#remote-mcp) skips the rise-in, which could leave the jumped-to text hidden on phones.
+  if (location.hash) {
+    document.querySelectorAll('.rv').forEach((el) => { el.classList.add('in'); rvio.unobserve(el); });
+    document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView({ behavior: 'instant', block: 'start' });
+  }
 }).catch((e) => { $('doc').textContent = `Could not load the README: ${e.message}`; });
 fetch('/api/meta').then((r) => r.json()).then((m) => { $('ver').textContent = `v${m.version}`; }).catch(() => {});
 fetch('/api/console?cmd=help').then((r) => r.json()).then((r) => {

@@ -179,8 +179,11 @@ test('remote MCP over HTTP: initialize, list tools, call a tool, notifications g
     assert.equal((await fetch(base + '/mcp', { method: 'POST', body: '{nope' })).status, 400);
     assert.equal((await fetch(base + '/mcp', { method: 'OPTIONS' })).status, 204);
     const browser = await fetch(base + '/mcp', { headers: { accept: 'text/html' }, redirect: 'manual' });
-    assert.equal(browser.status, 302);
-    assert.equal(browser.headers.get('location'), 'https://docs.example.org/#remote-mcp');
+    assert.equal(browser.status, 200);
+    const page = await browser.text();
+    assert.match(page, /claude mcp add --transport http oculon https:\/\/app\.example\.org\/mcp/);
+    assert.match(page, /oculon_url_check/);
+    assert.ok(!page.includes('{{'), 'every placeholder is filled');
     assert.equal((await fetch(base + '/mcp')).status, 405);
     // mcp.<domain> through the edge Worker answers at its root
     const viaEdge = await fetch(base + '/', { method: 'POST', headers: { 'content-type': 'application/json', 'x-oculon-edge': 's', 'x-oculon-site': 'mcp' }, body: JSON.stringify({ jsonrpc: '2.0', id: 9, method: 'ping' }) });

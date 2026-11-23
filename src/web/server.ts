@@ -490,6 +490,21 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
   // and the client address in headers. Those headers count only when they carry the shared edge secret.
   const edgeSecret = (opts.edgeSecret ?? process.env.OCULON_EDGE_SECRET ?? '').trim() || null;
 
+  /** The page a browser sees on the MCP endpoint: the URL to add, client snippets and the tools this endpoint lists. */
+  const mcpPage = async (onPath: boolean): Promise<string> => {
+    const r = (await mcpServer.handle({ jsonrpc: '2.0', id: 0, method: 'tools/list' })) as { result?: { tools?: { name: string; description?: string }[] } } | null;
+    const tools = r?.result?.tools ?? [];
+    const esc = (t: string) => t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+    const endpoint = siteDomain ? (onPath ? `https://app.${siteDomain}/mcp` : `https://mcp.${siteDomain}`) : `http://127.0.0.1:${opts.port ?? 4747}/mcp`;
+    const rows = tools.map((t) => `<div class="t"><b>${esc(t.name)}</b><span>${esc((t.description ?? '').split(/(?<=\.)\s/)[0]!)}</span></div>`).join('');
+    const html = readFileSync(join(HERE, 'mcp.html'), 'utf8')
+      .replaceAll('{{URL}}', endpoint)
+      .replaceAll('{{APPBASE}}', siteDomain ? `https://app.${siteDomain}` : '')
+      .replace('{{COUNT}}', String(tools.length))
+      .replace('{{TOOLS}}', rows);
+    return renderPage(html, siteDomain);
+  };
+
   const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const locked = (failed: boolean) => renderPage(lockedPage(Boolean(adminToken), failed), siteDomain);
     const url = new URL(req.url ?? '/', 'http://localhost');
@@ -501,9 +516,10 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     const mcpHost = hostName.split('.')[0] === 'mcp';
     if (url.pathname === '/mcp' || (mcpHost && url.pathname === '/')) {
       if (!admin) return send(res, 403, '{"error":"the MCP endpoint is not public on this install"}', 'application/json');
-      return handleMcpHttp(req, res, mcpServer, siteDomain ? `https://docs.${siteDomain}/#remote-mcp` : '/docs#remote-mcp', log);
+      return handleMcpHttp(req, res, mcpServer, () => mcpPage(url.pathname === '/mcp'), log);
     }
-    if (mcpHost) return send(res, 404, '{"error":"POST JSON-RPC messages to / on this host"}', 'application/json');
+    // mcp.<domain> also serves the page's icon and scripts.
+    if (mcpHost && !(/^\/assets\/[\w.-]+$/.test(url.pathname) || url.pathname === '/favicon.ico')) return send(res, 404, '{"error":"POST JSON-RPC messages to / on this host"}', 'application/json');
     // The main domain hands /app and /docs to their subdomains before anything else answers them.
     if (siteDomain && hostName === siteDomain && /^\/(app|docs)\/?$/.test(url.pathname) && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(301, { location: `https://${url.pathname.replace(/\//g, '')}.${siteDomain}/${url.search}`, 'cache-control': 'no-store' });
