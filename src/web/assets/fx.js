@@ -185,7 +185,14 @@ void main(){
 (function () {
   if (window.__oculonCleanUrl) return;
   window.__oculonCleanUrl = true;
-  window.oculonInitialHash = decodeURIComponent(location.hash.slice(1));
+  // A section asked for by a link on another Oculon page travels in window.name, so the address never shows it.
+  let carried = '';
+  try { if (window.name.startsWith('oculon-goto:')) { carried = window.name.slice(12); window.name = ''; } } catch {}
+  window.oculonInitialHash = carried || decodeURIComponent(location.hash.slice(1));
+  if (location.hash) history.replaceState(history.state, '', location.pathname + location.search);
+  // Same site: this host, or another subdomain of the same domain (oculon.live, app., docs., mcp.).
+  const site = (h) => h.split('.').slice(-2).join('.');
+  const sameSite = (u) => u.protocol === location.protocol && (u.host === location.host || (location.hostname.includes('.') && site(u.hostname) === site(location.hostname)));
   document.addEventListener('click', (e) => {
     if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     const a = e.target.closest && e.target.closest('a[href]');
@@ -193,7 +200,15 @@ void main(){
     const raw = a.getAttribute('href');
     if (raw === '#') { e.preventDefault(); return; }
     const u = new URL(a.href, location.href);
-    if (!u.hash || u.origin !== location.origin || u.pathname !== location.pathname || u.search !== location.search) return;
+    if (!u.hash) return;
+    if (u.origin !== location.origin || u.pathname !== location.pathname || u.search !== location.search) {
+      // Another page: open it at its plain address and hand over the section name.
+      if (!sameSite(u)) return;
+      e.preventDefault();
+      try { window.name = 'oculon-goto:' + decodeURIComponent(u.hash.slice(1)); } catch {}
+      location.href = u.origin + u.pathname + u.search;
+      return;
+    }
     const name = decodeURIComponent(u.hash.slice(1));
     const el = document.getElementById(name);
     if (el) { e.preventDefault(); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
@@ -202,4 +217,11 @@ void main(){
   const clear = () => { if (location.hash) history.replaceState(history.state, '', location.pathname + location.search); };
   window.oculonClearHash = clear;
   addEventListener('load', () => setTimeout(clear, 2500));
+  // Pages whose sections are in the HTML from the start (landing, legal) jump to the handed-over section here;
+  // the docs and the app handle it themselves once their content is in place.
+  addEventListener('DOMContentLoaded', () => {
+    const name = window.oculonInitialHash;
+    const el = name && document.getElementById(name);
+    if (el) setTimeout(() => el.scrollIntoView({ behavior: 'instant', block: 'start' }), 60);
+  });
 })();

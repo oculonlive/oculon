@@ -13,6 +13,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
+/* no sideways scrolling on phones: wide tables and code scroll inside their own boxes */
+html,body{overflow-x:clip;max-width:100%}
 :root {
   --bg: #000; --panel: #060606; --panel-2: #0e0e0e; --line: #222; --text: #fff; --muted: #9a9a9a;
   --accent: #00f0ff; --accent-2: #e8e8e8; --warn: #00f0ff; --bad: #ff7a6b; --chip: #111;
@@ -1775,7 +1777,7 @@ const openView = (name) => {
   else document.querySelector(`nav button[data-tab="${CSS.escape(name)}"]`)?.click();
 };
 window.onOculonHash = openView;
-const arrived = decodeURIComponent(location.hash.slice(1));
+const arrived = window.oculonInitialHash || decodeURIComponent(location.hash.slice(1));
 if (arrived) { openView(arrived); history.replaceState(null, '', location.pathname + location.search); }
 loadInbox().catch(() => {});
 if (!loaded.overview && !document.getElementById('tab-overview').hidden) { loaded.overview = true; loadOverview(); }
