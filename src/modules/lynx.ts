@@ -61,7 +61,15 @@ export function searchTerm(q: string): string {
 async function pickSame(groups: { question: string; options: string[] }[], fetchImpl?: typeof fetch): Promise<number[] | null> {
   if (!availableProviders().length) return null;
   const out: number[] = groups.map(() => -1);
-  for (let start = 0; start < groups.length; start += 8) {
+  // Batches run three at a time: one after another they took over a minute for 40 markets.
+  const starts: number[] = [];
+  for (let s = 0; s < groups.length; s += 8) starts.push(s);
+  let next = 0;
+  const worker = async () => { while (next < starts.length) await runBatch(starts[next++]!); };
+  await Promise.all([worker(), worker(), worker()]);
+  return out;
+
+  async function runBatch(start: number) {
     const batch = groups.slice(start, start + 8);
     try {
       const r = await chat(
@@ -85,7 +93,6 @@ async function pickSame(groups: { question: string; options: string[] }[], fetch
       // leave this batch unmatched
     }
   }
-  return out;
 }
 
 export async function lynx(ctx: Ctx, opts: { limit?: number; minGapPp?: number; fetchImpl?: typeof fetch } = {}): Promise<ModuleResult<LynxResult>> {
@@ -97,15 +104,13 @@ export async function lynx(ctx: Ctx, opts: { limit?: number; minGapPp?: number; 
 
   // Per market: a loose shortlist from Kalshi, plus Manifold search results for the 12 highest-volume markets.
   const groups: { pm: Market; options: OtherMarket[] }[] = [];
+  const manifold = await Promise.all(pool.slice(0, 12).map((m) => { const term = searchTerm(m.question); return term ? manifoldSearch(ctx, term, 6) : null; }));
   for (const [i, m] of pool.entries()) {
     const options = ks.data ? shortlist(m.question, ks.data, 8) : [];
-    if (i < 12) {
-      const term = searchTerm(m.question);
-      if (term) {
-        const r = await manifoldSearch(ctx, term, 6);
-        provenance.push(r.prov);
-        options.push(...(r.data ?? []));
-      }
+    const r = manifold[i];
+    if (r) {
+      provenance.push(r.prov);
+      options.push(...(r.data ?? []));
     }
     if (options.length) groups.push({ pm: m, options });
   }

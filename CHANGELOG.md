@@ -2,6 +2,16 @@
 
 All notable changes are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## 0.1.4
+
+- MCP: tool arguments are checked against each tool's schema. A misspelled or unknown argument, a missing required one or a wrong type now returns a clear tool error naming the arguments the tool takes. Before, the scam check called with `text` instead of `message` answered "no strong signs".
+- API: bad input returns 400 and a missing record 404 with a clear message, instead of 500 (for example `/api/cve?id=nope`, `/api/rewind?date=yesterday`, an unknown forecast or case).
+- Entity graph: labels no longer pile on top of each other in dense clusters, stay inside the canvas, and nodes can be tapped on phones.
+- Radar: Hacker News items without a points count are skipped instead of showing "undefined points".
+- Faster: the prediction-market cross-check (about 80 s to about 25 s) and the contradiction finder read their sources in parallel.
+- `oculon serve` explains a port that is already in use instead of crashing with a stack trace, and usage messages no longer repeat "usage:".
+- The app header fits on one row on phones.
+
 ## 0.1.3
 
 - New Oculon mark: favicon, app icons, link preview card and page headers.

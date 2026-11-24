@@ -248,7 +248,7 @@ nav { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollb
 header .spacer { display: none; }
 header .status { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 1300px) { header .status { display: none; } }
-@media (max-width: 720px) { header { flex-wrap: wrap; row-gap: 8px; } header nav { order: 5; flex-basis: 100%; } #pal-btn .kbd { display: none; } header .brand { margin-right: auto; } .ov-kpi b { font-size: 22px; overflow-wrap: anywhere; } .ov-kpi { padding: 12px 14px; } }
+@media (max-width: 720px) { header { flex-wrap: wrap; row-gap: 8px; column-gap: 12px; padding: 10px 14px; } header nav { order: 5; flex-basis: 100%; } #pal-btn .kbd { display: none; } header .brand { margin-right: auto; } .ov-kpi b { font-size: 22px; overflow-wrap: anywhere; } .ov-kpi { padding: 12px 14px; } }
 .pal input { color: var(--text) !important; }
 #pal-btn { white-space: nowrap; flex: none; }
 .ib .ev2 a { color: var(--text); text-decoration: underline; text-decoration-color: rgba(0,240,255,.4); text-underline-offset: 3px; }
@@ -1037,7 +1037,7 @@ async function loadCases() {
     : '<p class="meta">No cases yet.</p>';
   document.querySelectorAll('[data-case]').forEach((a) => (a.onclick = async (e) => {
     e.preventDefault();
-    const k = await api('/api/case?id=' + encodeURIComponent(a.dataset.case));
+    const k = await api('/api/case?id=' + encodeURIComponent(a.dataset.case)).catch(() => null);
     $('#case-view').innerHTML = k && k.markdown ? renderMd(k.markdown) : 'Not found.';
     $('#case-view').className = 'md';
   }));
@@ -1352,13 +1352,44 @@ function drawGraph() {
   const line = getComputedStyle(document.documentElement).getPropertyValue('--line');
   ctx.strokeStyle = line; ctx.lineWidth = 1;
   for (const e of edges) { const [x1, y1] = graphState.tx(nodes[e.a]); const [x2, y2] = graphState.tx(nodes[e.b]); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
-  const text = getComputedStyle(document.documentElement).getPropertyValue('--text');
-  nodes.forEach((n, i) => {
-    const [x, y] = graphState.tx(n); const r = 3 + Math.min(9, Math.sqrt(n.deg) * 2);
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = KIND_COLORS[n.kind] || '#94a3b8'; ctx.fill();
-    if (i === hover || n.deg >= 4) { ctx.fillStyle = text; ctx.font = '11px system-ui'; ctx.fillText(n.name.slice(0, 40), x + r + 3, y + 4); }
+  const css = getComputedStyle(document.documentElement);
+  const text = css.getPropertyValue('--text'), bg = css.getPropertyValue('--bg') || '#000';
+  const radius = (n) => 3 + Math.min(9, Math.sqrt(n.deg) * 2);
+  nodes.forEach((n) => {
+    const [x, y] = graphState.tx(n);
+    ctx.beginPath(); ctx.arc(x, y, radius(n), 0, Math.PI * 2); ctx.fillStyle = KIND_COLORS[n.kind] || '#94a3b8'; ctx.fill();
   });
+  // Labels: the hovered node first, then the best-connected ones, and only where a label does not overlap
+  // one already drawn, so dense clusters stay readable instead of turning into a block of text.
+  ctx.font = '11px system-ui'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+  const placed = [], max = w < 520 ? 14 : 40;
+  const order = nodes.map((n, i) => i).filter((i) => i === hover || nodes[i].deg >= 4).sort((a, b) => (b === hover) - (a === hover) || nodes[b].deg - nodes[a].deg);
+  for (const i of order) {
+    const n = nodes[i], [x, y] = graphState.tx(n), r = radius(n);
+    const label = n.name.length > 28 ? n.name.slice(0, 27) + '…' : n.name;
+    const tw = ctx.measureText(label).width;
+    let lx = x + r + 4; if (lx + tw > w - 4) lx = x - r - 4 - tw;
+    const box = [lx - 2, y - 8, lx + tw + 2, y + 8];
+    if (i !== hover && (placed.length >= max || placed.some((p) => box[0] < p[2] && box[2] > p[0] && box[1] < p[3] && box[3] > p[1]))) continue;
+    placed.push(box);
+    ctx.strokeStyle = bg; ctx.lineWidth = 3; ctx.strokeText(label, lx, y);
+    ctx.fillStyle = text; ctx.fillText(label, lx, y);
+  }
+  ctx.textBaseline = 'alphabetic';
 }
+function graphPick(e, reach) {
+  if (!graphState?.tx) return -1;
+  const rect = $('#graph').getBoundingClientRect(); const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let best = -1, bd = reach * reach;
+  graphState.nodes.forEach((n, i) => { const [x, y] = graphState.tx(n); const d = (x - mx) ** 2 + (y - my) ** 2; if (d < bd) { bd = d; best = i; } });
+  return best;
+}
+// Touch has no hover: a tap picks the nearest node within a finger's reach.
+$('#graph').addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' || !graphState) return;
+  const best = graphPick(e, 28);
+  if (best !== graphState.hover) { graphState.hover = best; drawGraph(); $('#graph-hover').textContent = best >= 0 ? `${graphState.nodes[best].kind}: ${graphState.nodes[best].name}` : 'Tap a node to see it; tap again to open its neighbors.'; }
+});
 $('#graph').addEventListener('mousemove', (e) => {
   if (!graphState?.tx) return;
   const rect = e.target.getBoundingClientRect(); const mx = e.clientX - rect.left, my = e.clientY - rect.top;

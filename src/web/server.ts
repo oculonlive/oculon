@@ -75,6 +75,17 @@ function need(q: URLSearchParams, key: string, max = 200): string {
   return v;
 }
 
+// Modules throw plain errors for bad input ("not a CVE id", "date must be YYYY-MM-DD") and for missing
+// records ("no prediction x"). Those are the caller's problem, not a server failure, so they map to 400 and
+// 404; anything else stays a 500.
+function statusFor(e: unknown): number {
+  if (e instanceof HttpError) return e.status;
+  const m = (e as Error)?.message ?? '';
+  if (/^no (such|prediction|case|share|entity|record)\b|\bnot found\b/i.test(m)) return 404;
+  if (/^(not an? |invalid |missing |expected |paste |give |that does not look|could not decode|could not read the manifest|could not turn that)|\b(must be|must include|expected) [A-Za-z0-9"(-]/i.test(m)) return 400;
+  return 500;
+}
+
 class HttpError extends Error {
   constructor(
     readonly status: number,
@@ -217,7 +228,11 @@ export const ROUTES: Record<string, Handler> = {
   '/api/rewind': async (q, o) => slim(await o.rewind(need(q, 'date', 10))),
   '/api/scoops': (_q, o) => o.scoops(),
   '/api/cases': async (_q, o) => (await o.caseList()).map((k) => ({ id: k.id, question: k.question, confidence: k.report?.confidence ?? null, findings: k.report?.findings.length ?? 0, runs: k.runs, watch: k.watch, updatedAt: k.updatedAt })),
-  '/api/case': async (q, o) => o.caseGet(Number(need(q, 'id', 10))),
+  '/api/case': async (q, o) => {
+    const id = need(q, 'id', 10);
+    if (!/^\d+$/.test(id)) throw new HttpError(400, 'id must be a case number');
+    return (await o.caseGet(Number(id))) ?? (() => { throw new HttpError(404, 'no such case'); })();
+  },
   '/api/fences': (_q, o) => o.fenceList().map((f) => ({ id: f.id, name: f.name, box: [f.south, f.west, f.north, f.east], kinds: f.kinds, lastRun: f.lastRun, now: f.lastState ? { milAircraft: Object.values(f.lastState.milAircraft), milVessels: Object.values(f.lastState.milVessels), quakes: Object.values(f.lastState.quakes), events: Object.values(f.lastState.events) } : null })),
   '/api/quakes': async (_q, o) => {
     const { recentQuakes } = await import('../sources/usgs.js');
@@ -745,7 +760,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
         if (!r.result.file) return send(res, 404, '{"error":"no image for that place/date"}', 'application/json');
         return send(res, 200, readFileSync(r.result.file), 'image/png');
       } catch (e) {
-        return send(res, e instanceof HttpError ? e.status : 500, JSON.stringify({ error: (e as Error).message }), 'application/json');
+        return send(res, statusFor(e), JSON.stringify({ error: (e as Error).message }), 'application/json');
       }
     }
 
@@ -761,7 +776,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       log(`${url.pathname}${url.search} ${Date.now() - t0}ms`);
       send(res, 200, JSON.stringify(out), 'application/json; charset=utf-8');
     } catch (e) {
-      const status = e instanceof HttpError ? e.status : 500;
+      const status = statusFor(e);
       log(`${url.pathname} ${status} ${(e as Error).message}`);
       send(res, status, JSON.stringify({ error: (e as Error).message }), 'application/json; charset=utf-8');
     }
@@ -772,6 +787,13 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       ? startScheduler(oculon, { scanMinutes: opts.watchMinutes, log: (m) => log(`schedule ${m}`), baseUrl: siteDomain ? `https://${siteDomain}` : `http://127.0.0.1:${opts.port ?? 4747}`, appUrl: siteDomain ? `https://app.${siteDomain}/#watch` : `http://127.0.0.1:${opts.port ?? 4747}/app#watch`, ...(opts.onSignals ? { onSignals: opts.onSignals } : {}), ...(opts.onBrief ? { onBrief: opts.onBrief } : {}), ...(opts.onReport ? { onReport: opts.onReport } : {}), ...(opts.onPersonal ? { onPersonal: opts.onPersonal } : {}) })
       : null;
 
+  server.on('error', (e: NodeJS.ErrnoException) => {
+    const port = opts.port ?? 4747;
+    if (e.code === 'EADDRINUSE') console.error(`Port ${port} is already in use, probably by another Oculon server. Stop that one, or pick another port: oculon serve --port ${port + 1}`);
+    else if (e.code === 'EACCES') console.error(`No permission to listen on port ${port}. Pick a port above 1024: oculon serve --port 4747`);
+    else console.error(`The server could not start: ${e.message}`);
+    process.exit(1);
+  });
   server.listen(opts.port ?? 4747, opts.host ?? '127.0.0.1');
   return {
     server,

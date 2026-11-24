@@ -43,11 +43,13 @@ export async function contradictions(ctx: Ctx, topicInput: string, opts: { maxSo
     }
   });
   const pages: { title: string; url: string; text: string }[] = [];
-  for (const c of candidates.slice(0, opts.maxSources ?? 6)) {
-    const p = await readPage(ctx, c.url, 3500);
+  // Pages are read in parallel: one at a time, a few slow sites pushed this past a minute and a half.
+  const picked = candidates.slice(0, opts.maxSources ?? 6);
+  const read = await Promise.all(picked.map((c) => readPage(ctx, c.url, 3500)));
+  read.forEach((p, i) => {
     provenance.push(p.prov);
-    if (p.data && p.data.length > 400) pages.push({ title: c.title, url: c.url, text: p.data });
-  }
+    if (p.data && p.data.length > 400) pages.push({ title: picked[i]!.title, url: picked[i]!.url, text: p.data });
+  });
   const result: ContradictionResult = { topic, sourcesRead: pages.map((p) => ({ title: p.title, url: p.url })), contradictions: [] };
   if (pages.length < 2 || !availableProviders().length) {
     if (!availableProviders().length) provenance.push({ source: 'llm', url: '', status: 'UNAVAILABLE', fetchedAt: nowIso, note: 'contradiction finding needs an LLM key' });

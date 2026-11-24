@@ -206,6 +206,8 @@ export async function owl(ctx: Ctx, opts: OwlOptions = {}): Promise<ModuleResult
   // Hacker News: front-page stories with unusual traction for their age.
   if (hn.data) {
     for (const s of hn.data) {
+      // Algolia sometimes returns hits without points or comment counts; those carry no traction signal.
+      if (!Number.isFinite(s.points) || !Number.isFinite(s.created_at_i)) continue;
       const ageH = Math.max(1, (nowMs / 1000 - s.created_at_i) / 3600);
       const velocity = s.points / ageH;
       if (s.points < 150 && velocity < 40) continue;
@@ -215,7 +217,7 @@ export async function owl(ctx: Ctx, opts: OwlOptions = {}): Promise<ModuleResult
           title: s.title,
           url: hnItemUrl(s.objectID),
           strength: clamp(Math.round(25 + 10 * Math.log2(Math.max(1, velocity))), 0, 85),
-          detail: `${s.points} points, ${s.num_comments} comments in ${ageH.toFixed(0)}h`,
+          detail: `${s.points} points, ${Number.isFinite(s.num_comments) ? s.num_comments : 0} comments in ${ageH.toFixed(0)}h`,
           value: velocity,
         }),
       );

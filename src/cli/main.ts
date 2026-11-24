@@ -1727,7 +1727,7 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     return 0;
   } catch (e) {
     if (e instanceof UsageError) {
-      out(`${c.red('usage')}: ${e.message}. See \`oculon help\`.`);
+      out(`${c.red('usage')}: ${e.message.replace(/^usage:\s*/i, '')}. See \`oculon help\`.`);
       return 2;
     }
     out(`${c.red('error')}: ${(e as Error).message}`);

@@ -9,7 +9,7 @@ import type { ModuleResult } from './core/types.js';
 import { ONCHAIN_TOOLS, onchainEnabled } from './core/features.js';
 import { availableKinds } from './modules/monitor.js';
 
-export const SERVER_INFO = { name: 'oculon', version: '0.1.3' };
+export const SERVER_INFO = { name: 'oculon', version: '0.1.4' };
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
 type Json = Record<string, unknown>;
@@ -24,6 +24,39 @@ export interface Tool {
 const str = (d: string) => ({ type: 'string', description: d });
 const num = (d: string) => ({ type: 'number', description: d });
 const schema = (props: Json = {}, required: string[] = []) => ({ type: 'object', properties: props, required, additionalProperties: false });
+
+/**
+ * Checks tool arguments against the tool's input schema before running it. A misspelled argument used
+ * to be dropped silently, so a scam check called with `text` instead of `message` ran on nothing and
+ * answered "no strong signs": the agent got a confident wrong answer instead of an error it can fix.
+ * Numeric strings are accepted for number fields and converted in place. Returns a message, or null.
+ */
+export function checkArgs(inputSchema: Json, args: Json): string | null {
+  const props = (inputSchema.properties ?? {}) as Record<string, Json>;
+  const required = (inputSchema.required ?? []) as string[];
+  const allowed = Object.keys(props);
+  if (inputSchema.additionalProperties === false) {
+    const unknown = Object.keys(args).filter((k) => !(k in props));
+    if (unknown.length) return `unknown argument${unknown.length > 1 ? 's' : ''} ${unknown.map((k) => `"${k}"`).join(', ')}; this tool takes ${allowed.length ? allowed.map((k) => `"${k}"`).join(', ') : 'no arguments'}`;
+  }
+  for (const k of required) {
+    const v = args[k];
+    if (v === undefined || v === null || (typeof v === 'string' && !v.trim())) return `missing required argument "${k}"`;
+  }
+  for (const [k, v] of Object.entries(args)) {
+    const p = props[k];
+    if (!p || v === undefined || v === null) continue;
+    if (p.type === 'string' && typeof v !== 'string') return `argument "${k}" must be a string`;
+    if (p.type === 'number' || p.type === 'integer') {
+      const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
+      if (typeof n !== 'number' || !Number.isFinite(n)) return `argument "${k}" must be a number`;
+      args[k] = n;
+    }
+    if (p.type === 'boolean' && typeof v !== 'boolean') return `argument "${k}" must be true or false`;
+    if (Array.isArray(p.enum) && !p.enum.includes(v)) return `argument "${k}" must be one of ${(p.enum as unknown[]).join(', ')}`;
+  }
+  return null;
+}
 
 /** Module results go out as result + signals + a compact provenance summary (full per-request provenance is noisy). */
 function compact(r: ModuleResult<unknown>) {
@@ -632,8 +665,12 @@ export class McpServer {
         const name = String(msg.params?.name ?? '');
         const tool = (await this.allTools()).find((t) => t.name === name);
         if (!tool) return fail(-32602, `unknown tool: ${name}`);
+        const raw = msg.params?.arguments ?? {};
+        if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return reply({ content: [{ type: 'text', text: 'Error: arguments must be a JSON object' }], isError: true });
+        const bad = checkArgs(tool.inputSchema, raw as Json);
+        if (bad) return reply({ content: [{ type: 'text', text: `Error: ${bad}` }], isError: true });
         try {
-          const args = (msg.params?.arguments as Json) ?? {};
+          const args = raw as Json;
           if (this.opts.remote && name === 'oculon_monitor') args.dry_run = true;
           const out = await tool.run(this.o, args);
           if (out && typeof out === 'object' && '__image' in out) {
