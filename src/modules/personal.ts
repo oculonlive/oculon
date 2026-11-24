@@ -102,7 +102,7 @@ const EMAIL_RE = /^[^\s@<>"']{1,64}@[a-z0-9.-]+\.[a-z]{2,}$/i;
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 
 function shell(title: string, body: string, footer: string): string {
-  return `<!doctype html><html><body style="margin:0;background:#f4f6f6;padding:24px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#111"><div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e3e7e7;padding:28px"><div style="font:600 12px monospace;letter-spacing:.18em;color:#00838f">◉ OCULON</div><h1 style="font-size:20px;font-weight:600;margin:14px 0 16px">${title}</h1>${body}<p style="font-size:12px;color:#777;margin-top:28px;border-top:1px solid #eee;padding-top:14px">${footer}</p></div></body></html>`;
+  return `<!doctype html><html><body style="margin:0;background:#f4f6f6;padding:24px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#111"><div style="max-width:560px;margin:0 auto;background:#fff;border:1px solid #e3e7e7;padding:28px"><div style="font:600 12px monospace;letter-spacing:.18em;color:#00838f">OCULON</div><h1 style="font-size:20px;font-weight:600;margin:14px 0 16px">${title}</h1>${body}<p style="font-size:12px;color:#777;margin-top:28px;border-top:1px solid #eee;padding-top:14px">${footer}</p></div></body></html>`;
 }
 
 /** Saves the address and sends a confirmation link. Limited to one email per owner every 10 minutes. */

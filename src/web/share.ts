@@ -148,7 +148,7 @@ h2{font-size:14px;font-family:'Space Mono',monospace;letter-spacing:.12em;text-t
 a{color:var(--accent)}.links a{display:block;padding:6px 0;text-decoration:none;overflow-wrap:anywhere}
 .meta{color:var(--mut);font-size:14px}.cta{display:inline-block;margin-top:34px;background:var(--accent);color:#04130d;padding:11px 18px;text-decoration:none;font-weight:600}
 </style></head><body><main>
-<a class="brand" href="${esc(origin)}/">◉ Oculon</a>
+<a class="brand" href="${esc(origin)}/"><img src="${esc(origin)}/assets/logo.svg" alt="" width="18" height="18" style="vertical-align:-4px;margin-right:10px">Oculon</a>
 <div class="kind">${esc(x.label)}</div>
 <h1>${esc(x.title)}</h1>
 <span class="verdict">${esc(x.verdict)}</span>

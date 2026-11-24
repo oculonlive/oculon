@@ -16,6 +16,9 @@
 <style>
 /* no sideways scrolling on phones: wide tables and code scroll inside their own boxes */
 html,body{overflow-x:clip;max-width:100%}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+.hero img.lm{position:static;left:auto;top:auto;transform:none;width:22px;filter:none;animation:none}
+.logo{white-space:nowrap}
 :root{--bg:#000;--bg2:#060606;--line:#222;--line2:#1a1a1a;--text:#fff;--soft:#cfcfcf;--mut:#9a9a9a;--dim:#5e5e5e;--y:#00f0ff;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace;--pad:clamp(20px,4vw,60px)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:clip}
@@ -348,8 +351,8 @@ footer.sitefoot{border-top:1px solid rgba(255,255,255,.12);background:transparen
 <header class="hero">
   <img src="/assets/night-emea.jpg" alt="">
   <div class="tint"></div><div class="grid"></div><canvas id="herofx" aria-hidden="true"></canvas><div class="scan"></div><div class="shade"></div>
-  <nav class="top"><div class="wrap"><a class="logo" href="/">OCULON</a>
-    <div class="links"><a class="opt" href="#console">Console</a><!--onchain--><a class="opt" href="#robinhood">Robinhood Chain</a><!--/onchain--><a class="opt" href="#modules">Modules</a><a href="/ask">Analyst</a><a href="/docs">Docs</a><a class="btn o" href="/app" style="padding:9px 14px;font-size:13px">Open app</a></div></div></nav>
+  <nav class="top"><div class="wrap"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a>
+    <div class="links"><a class="opt" href="#console">Console</a><!--onchain--><a class="opt" href="#robinhood">Robinhood Chain</a><!--/onchain--><a class="opt" href="#modules">Modules</a><a class="opt" href="/ask">Analyst</a><a href="/docs">Docs</a><a class="btn o" href="/app" style="padding:9px 14px;font-size:13px">Open app</a></div></div></nav>
   <div class="lbl credit"><span class="y">●</span> SCAN <span id="clock">--:--:--</span> UTC<br><span id="scanning">NASA Black Marble · Europe · Africa · Asia</span></div>
   <div class="copy"><div class="wrap">
     <h1><span class="ln"><span>See</span></span><span class="ln"><span>everything.</span></span></h1>
@@ -634,7 +637,7 @@ r.provenance       <span class="d">// every source used</span></pre></div></div>
 
 <footer class="sitefoot"><div class="wrap">
   <div class="fgrid">
-    <div class="fbrand"><a class="logo" href="/">OCULON</a><p>Open-source intelligence engine for the physical and digital world. Self-hosted, MIT licensed, zero runtime dependencies.</p><div class="fstatus"><i></i><span id="f-status">Engine online</span></div></div>
+    <div class="fbrand"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><p>Open-source intelligence engine for the physical and digital world. Self-hosted, MIT licensed, zero runtime dependencies.</p><div class="fstatus"><i></i><span id="f-status">Engine online</span></div></div>
     <div><h5>Product</h5><a href="#console">Console</a><!--onchain--><a href="#robinhood">Robinhood Chain</a><!--/onchain--><a href="#world">Live world</a><a href="#modules">Modules</a><a href="/app">Open the app</a></div>
     <div><h5>Developers</h5><a href="/docs#cli">CLI</a><a href="/docs#sdk">SDK</a><a href="/docs#mcp-server">MCP server</a><a href="/docs#telegram-bot">Telegram bot</a><a href="/docs#cli-reference">Command reference</a></div>
     <div><h5>Resources</h5><a href="/docs">Documentation</a><a href="/docs#install">Install</a><a href="/docs#configuration">Configuration</a><a href="/docs#limits">Limits</a><a href="/report">Weekly report</a></div>

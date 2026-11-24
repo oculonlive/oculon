@@ -13,6 +13,7 @@
 <style>
 /* no sideways scrolling on phones: wide tables and code scroll inside their own boxes */
 html,body{overflow-x:clip;max-width:100%}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
 :root{--bg:#000;--bg2:#060606;--line:#222;--text:#fff;--soft:#cfcfcf;--mut:#9a9a9a;--dim:#5e5e5e;--y:#00f0ff;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:clip}
@@ -62,7 +63,7 @@ footer a{color:var(--soft)}
 </head>
 <body>
 <canvas id="liquidbg" aria-hidden="true"></canvas>
-<header><div class="in"><a class="logo" href="/">OCULON<span>MCP</span></a><nav><a class="opt" href="/docs#remote-mcp">Docs</a><a class="opt" href="https://github.com/oculonlive/oculon" target="_blank" rel="noopener">GitHub</a><a class="btn" href="/app">Open app</a></nav></div></header>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON<span>MCP</span></a><nav><a class="opt" href="/docs#remote-mcp">Docs</a><a class="opt" href="https://github.com/oculonlive/oculon" target="_blank" rel="noopener">GitHub</a><a class="btn" href="/app">Open app</a></nav></div></header>
 <main>
   <div class="lbl live"><i></i>Remote MCP server · online</div>
   <h1>Oculon for your agent.<br>One URL, nothing to install.</h1>

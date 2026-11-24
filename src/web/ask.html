@@ -14,6 +14,7 @@
 <style>
 /* no sideways scrolling on phones: wide tables and code scroll inside their own boxes */
 html,body{overflow-x:clip;max-width:100%}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
 :root{--bg:#000;--panel:rgba(5,9,10,.86);--line:#1c2629;--line2:#263438;--text:#f2f6f7;--soft:#c9d3d5;--mut:#8b9a9e;--dim:#56666a;--y:#00f0ff;--ok:#3ddc97;--warn:#ffc857;--bad:#ff5d6c;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
@@ -149,7 +150,7 @@ main{max-width:880px;margin:0 auto;padding:40px clamp(16px,3vw,28px) 260px}
 </head>
 <body>
 <canvas id="liquidbg" aria-hidden="true"></canvas>
-<header><div class="in"><a class="logo" href="/">OCULON<span>ANALYST</span></a><nav><a class="opt" href="/docs">Docs</a><a class="opt" href="/mcp">MCP</a><a class="btn" href="/app">Open app</a></nav></div></header>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON<span>ANALYST</span></a><nav><a class="opt" href="/docs">Docs</a><a class="opt" href="/mcp">MCP</a><a class="btn" href="/app">Open app</a></nav></div></header>
 <main>
   <section class="intro" id="intro">
     <div class="lbl"><span style="color:var(--y)">●</span> Analyst desk · checks live public data before it answers</div>

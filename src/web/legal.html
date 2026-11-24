@@ -14,6 +14,7 @@
 <style>
 /* no sideways scrolling on phones: wide tables and code scroll inside their own boxes */
 html,body{overflow-x:clip;max-width:100%}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
 :root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
 *{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:90px}
 body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased;overflow-x:clip}
@@ -80,7 +81,7 @@ footer{background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
 </style>
 </head>
 <body>
-<header><div class="in"><a class="logo" href="/">OCULON</a><nav><a href="/privacy" id="n-privacy">Privacy</a><a href="/terms" id="n-terms">Terms</a><a href="/docs">Docs</a></nav></div></header>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/privacy" id="n-privacy">Privacy</a><a href="/terms" id="n-terms">Terms</a><a href="/docs">Docs</a></nav></div></header>
 <canvas id="liquidbg" aria-hidden="true"></canvas>
 <main>
 <article class="doc" id="privacy">

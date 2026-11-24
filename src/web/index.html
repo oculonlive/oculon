@@ -15,6 +15,7 @@
 <style>
 /* no sideways scrolling on phones: wide tables and code scroll inside their own boxes */
 html,body{overflow-x:clip;max-width:100%}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
 :root {
   --bg: #000; --panel: #060606; --panel-2: #0e0e0e; --line: #222; --text: #fff; --muted: #9a9a9a;
   --accent: #00f0ff; --accent-2: #e8e8e8; --warn: #00f0ff; --bad: #ff7a6b; --chip: #111;
@@ -350,7 +351,7 @@ nav button { white-space: nowrap; }
 </head>
 <body>
 <header>
-  <a class="brand" href="/">OCULON</a>
+  <a class="brand" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a>
   <nav role="tablist">
     <button role="tab" data-tab="overview" aria-selected="true">Overview</button>
 <!--onchain-->    <button role="tab" data-tab="robinhood" aria-selected="false">Robinhood</button><!--/onchain-->
