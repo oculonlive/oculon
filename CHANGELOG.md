@@ -2,8 +2,9 @@
 
 All notable changes are listed here. Versions follow [semantic versioning](https://semver.org).
 
-## Unreleased
+## 0.1.3
 
+- New Oculon mark: favicon, app icons, link preview card and page headers.
 - Oculon Analyst at `/ask`: questions are checked against live tools first and answered as a brief (bottom line, 0-100 confidence, findings with numbered sources, unknowns, what would change it), with a live trace of every source, cross-examination by two other models and one-click monitors. Models: Claude Haiku 5.5, Claude Opus 5.5 and GPT-6.2 Astra through OpenRouter.
 
 ## 0.1.2
