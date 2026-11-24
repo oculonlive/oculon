@@ -301,7 +301,7 @@ Other deployment switches:
 | `RESEND_API_KEY`, `OCULON_MAIL_FROM` | Email alerts for personal monitors (default sender `Oculon <alerts@oculon.live>`; the domain must be verified in Resend). |
 | `OCULON_PURGE_ONCHAIN=1` | Clears data left by the paused on-chain modules each time the server starts. |
 
-The repository includes a `Dockerfile` and `railway.json`. Mount a persistent volume at `/data` (the image sets `OCULON_HOME=/data`), set your keys as environment variables, and point a domain at the service. Each deployment keeps its own database and its own daily budgets.
+The repository includes a `Dockerfile` (on Railway, set the service health check to `/api/meta`). Mount a persistent volume at `/data` (the image sets `OCULON_HOME=/data`), set your keys as environment variables, and point a domain at the service. Each deployment keeps its own database and its own daily budgets.
 
 ## How it works
 
