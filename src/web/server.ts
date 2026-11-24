@@ -22,6 +22,20 @@ import { openApiSpec } from './openapi.js';
 import { randomBytes } from 'node:crypto';
 import { addPersonal, confirmEmail, emailStatus, listPersonal, personalAlerts, removeEmail, removePersonal, requestEmail, unsubscribeEmail, type Delivery } from '../modules/personal.js';
 import { mailEnabled } from '../sources/resend.js';
+import { analyst, crossExamine, isAnalystModel } from '../analyst.js';
+import { scrubSecrets } from '../core/keys.js';
+
+/** Analyst questions and cross-examinations per visitor address per hour on a public install. */
+const ANALYST_PER_HOUR = Number(process.env.OCULON_ANALYST_PER_HOUR ?? 40);
+const analystHits = new Map<string, number[]>();
+function analystLimit(ip: string, now = Date.now()): boolean {
+  const recent = (analystHits.get(ip) ?? []).filter((t) => now - t < 3600_000);
+  if (recent.length >= ANALYST_PER_HOUR) { analystHits.set(ip, recent); return false; }
+  recent.push(now);
+  analystHits.set(ip, recent);
+  if (analystHits.size > 20_000) for (const [k, v] of analystHits) if (!v.some((t) => now - t < 3600_000)) analystHits.delete(k);
+  return true;
+}
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -450,6 +464,7 @@ export function renderPage(html: string, domain: string | null): string {
     out = out
       .replace(/href="\/app(#[^"]*)?"/g, (_m, h: string | undefined) => `href="https://app.${domain}/${h ?? ''}"`)
       .replace(/href="\/report"/g, `href="https://app.${domain}/report"`)
+      .replace(/href="\/ask"/g, `href="https://${domain}/ask"`)
       .replace(/href="\/docs(?:#([^"]*))?"/g, (_m, h: string | undefined) => `href="https://docs.${domain}/${h ?? ''}"`)
       .replace(/href="\/(privacy|terms)(#[^"]*)?"/g, (_m, p: string, h: string | undefined) => `href="${main}/${p}${h ?? ''}"`)
       .replace(/href="\/"/g, `href="${main}/"`);
@@ -472,7 +487,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
   const oculon = opts.oculon ?? new Oculon();
   const log = opts.log ?? (() => {});
   // Pages are small and read per request, so edits to them show up without a restart.
-  const PAGE_FILES = { app: 'index.html', landing: 'landing.html', docs: 'docs.html', legal: 'legal.html' } as const;
+  const PAGE_FILES = { app: 'index.html', landing: 'landing.html', docs: 'docs.html', legal: 'legal.html', ask: 'ask.html' } as const;
 
   const publicMode = Boolean(opts.publicMode);
   const adminToken = opts.adminToken ?? (process.env.OCULON_ADMIN_TOKEN?.trim() || undefined);
@@ -600,6 +615,42 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
         return send(res, e instanceof HttpError ? e.status : 400, JSON.stringify({ error: (e as Error).message }), 'application/json; charset=utf-8');
       }
     }
+    // Oculon Analyst (/ask): the brief streams as server-sent events; cross-examination is a plain JSON call.
+    if (url.pathname === '/api/analyst' || url.pathname === '/api/analyst/review') {
+      if (req.method !== 'POST') return send(res, 405, '{"error":"method not allowed"}', 'application/json');
+      if (!admin) return send(res, 403, '{"error":"the analyst is not public on this install"}', 'application/json');
+      if (!sameSite()) return send(res, 403, '{"error":"forbidden"}', 'application/json');
+      const ip = (viaEdge && String(req.headers['x-oculon-client-ip'] ?? '').trim()) || clientIp(req);
+      if (publicMode && !isAdmin(req, adminToken) && !analystLimit(ip)) return send(res, 429, '{"error":"You have asked a lot this hour. Try again a bit later."}', 'application/json');
+      let body: Record<string, unknown>;
+      try { body = await readJson(req, 20_000); } catch (e) { return send(res, e instanceof HttpError ? e.status : 400, JSON.stringify({ error: (e as Error).message }), 'application/json'); }
+      if (url.pathname === '/api/analyst/review') {
+        try {
+          const out = await crossExamine(String(body.id ?? ''));
+          log('analyst review');
+          return send(res, 200, JSON.stringify(out), 'application/json; charset=utf-8');
+        } catch (e) {
+          return send(res, 400, JSON.stringify({ error: (e as Error).message }), 'application/json; charset=utf-8');
+        }
+      }
+      const question = String(body.q ?? '').trim();
+      if (question.length < 3 || question.length > 600) return send(res, 400, '{"error":"ask in 3-600 characters"}', 'application/json');
+      const model = isAnalystModel(body.model) ? body.model : 'haiku';
+      const history = (Array.isArray(body.history) ? body.history : []).slice(-4).map((h) => ({ q: String((h as { q?: unknown }).q ?? '').slice(0, 500), a: String((h as { a?: unknown }).a ?? '').slice(0, 700) })).filter((h) => h.q);
+      res.writeHead(200, { 'content-type': 'text/event-stream; charset=utf-8', 'cache-control': 'no-cache, no-transform', 'x-accel-buffering': 'no', connection: 'keep-alive' });
+      const write = (e: unknown) => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(e)}\n\n`); };
+      const ping = setInterval(() => { if (!res.writableEnded) res.write(': keep-alive\n\n'); }, 15_000);
+      log(`analyst ${model}: ${question.slice(0, 60)}`);
+      try {
+        await analyst(oculon, { question, model, history, onEvent: write });
+      } catch (e) {
+        write({ type: 'error', message: scrubSecrets((e as Error).message).slice(0, 300) });
+      } finally {
+        clearInterval(ping);
+        res.end();
+      }
+      return;
+    }
     // On an open public install every visitor may use the app, but the shared watchlist, fences and the
     // install's monitors are changed only by the owner (signed in with OCULON_ADMIN_TOKEN).
     const owner = !publicMode || isAdmin(req, adminToken);
@@ -652,14 +703,14 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     const sub = hostName.split('.')[0];
     // Docs sections have their own addresses: docs.<domain>/install, or /docs/install on a single host.
     const docsSection = (sub === 'docs' ? /^\/([a-z0-9][a-z0-9-]{0,60})\/?$/ : /^\/docs\/([a-z0-9][a-z0-9-]{0,60})\/?$/).exec(url.pathname)?.[1];
-    if (docsSection && !['api', 'assets', 'app', 'report', 'r', 'proof'].includes(docsSection)) {
+    if (docsSection && !['api', 'assets', 'app', 'report', 'r', 'proof', 'ask'].includes(docsSection)) {
       if (siteDomain && sub !== 'docs') {
         res.writeHead(301, { location: `https://docs.${siteDomain}/${docsSection}${url.search}`, 'cache-control': 'no-store' });
         return res.end();
       }
       return send(res, 200, renderPage(readFileSync(join(HERE, PAGE_FILES.docs), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
     }
-    const page = url.pathname === '/' ?(sub === 'app' ? 'app' : sub === 'docs' ? 'docs' : 'landing') : url.pathname === '/app' || url.pathname === '/app/' || url.pathname === '/index.html' ? 'app' : url.pathname === '/docs' || url.pathname === '/docs/' ? 'docs' : /^\/(privacy|terms)\/?$/.test(url.pathname) ? 'legal' : null;
+    const page = url.pathname === '/' ?(sub === 'app' ? 'app' : sub === 'docs' ? 'docs' : 'landing') : url.pathname === '/app' || url.pathname === '/app/' || url.pathname === '/index.html' ? 'app' : url.pathname === '/docs' || url.pathname === '/docs/' ? 'docs' : /^\/(privacy|terms)\/?$/.test(url.pathname) ? 'legal' : /^\/ask\/?$/.test(url.pathname) && sub !== 'docs' ? 'ask' : null;
     if (page) {
       // On the public domain, /app and /docs live on their own subdomains.
       if (siteDomain && hostName === siteDomain && (page === 'app' || page === 'docs') && url.pathname !== '/') {

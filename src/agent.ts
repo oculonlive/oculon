@@ -79,6 +79,14 @@ export interface AgentOptions {
   maxTokens?: number;
   /** Paid Claude first when configured; 'deep' for the most capable model. */
   premium?: boolean | 'deep';
+  /** Use exactly this OpenRouter model for every round. */
+  route?: string;
+  /** Called before a tool runs. */
+  onToolStart?: (call: { id: string; tool: string; args: Record<string, unknown> }) => void;
+  /** Called with the raw result; text it returns is appended to what the model sees (e.g. numbered sources). */
+  onToolResult?: (call: { id: string; tool: string; args: Record<string, unknown>; ok: boolean; ms: number; raw: unknown }) => string | void;
+  /** Earlier turns of a conversation, placed before the new question. */
+  history?: ChatMessage[];
 }
 
 /** The tool loop shared by `ask` and case investigations. */
@@ -86,6 +94,7 @@ export async function runAgent(o: Oculon, system: string, user: string, opts: Ag
   const tools: ToolSpec[] = agentTools().map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.inputSchema } }));
   const messages: ChatMessage[] = [
     { role: 'system', content: `${system}\nToday is ${o.ctx.now().toISOString().slice(0, 10)}.` },
+    ...(opts.history ?? []),
     { role: 'user', content: user },
   ];
   const steps: AskStep[] = [];
@@ -95,7 +104,7 @@ export async function runAgent(o: Oculon, system: string, user: string, opts: Ag
 
   for (let round = 0; round < maxSteps; round++) {
     // On the last round, withhold tools so the model must answer.
-    const r = await chat(messages, { tools: round < maxSteps - 1 ? tools : [], maxTokens: opts.maxTokens ?? 1800, premium: opts.premium ?? true, ...(opts.fetch ? { fetch: opts.fetch } : {}) });
+    const r = await chat(messages, { tools: round < maxSteps - 1 ? tools : [], maxTokens: opts.maxTokens ?? 1800, premium: opts.premium ?? true, ...(opts.route ? { route: opts.route } : {}), ...(opts.fetch ? { fetch: opts.fetch } : {}) });
     providers.push(r.provider);
     const calls = r.message.tool_calls ?? [];
     if (!calls.length) {
@@ -111,19 +120,24 @@ export async function runAgent(o: Oculon, system: string, user: string, opts: Ag
         } catch {}
         const t0 = Date.now();
         opts.onStep?.(`${c.function.name}(${JSON.stringify(args)})`);
+        opts.onToolStart?.({ id: c.id, tool: c.function.name, args });
         let content: string;
         let ok = true;
+        let raw: unknown = null;
         if (!tool) {
           content = `error: unknown tool ${c.function.name}`;
           ok = false;
         } else {
           try {
-            content = forModel(await tool.run(o, args));
+            raw = await tool.run(o, args);
+            content = forModel(raw);
           } catch (e) {
             content = `error: ${scrubSecrets((e as Error).message)}`;
             ok = false;
           }
         }
+        const extra = opts.onToolResult?.({ id: c.id, tool: c.function.name, args, ok, ms: Date.now() - t0, raw });
+        if (extra) content += `\n${extra}`;
         steps.push({ tool: c.function.name, args, ok, ms: Date.now() - t0, chars: content.length });
         for (const u of content.match(/https?:\/\/[^\s"'<>\\]+/g) ?? []) urls.add(u.replace(/[).,;]+$/, ''));
         return { role: 'tool' as const, tool_call_id: c.id, name: c.function.name, content };

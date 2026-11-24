@@ -70,6 +70,8 @@ export interface ChatOptions {
    * 'deep' picks the most capable model, for case investigations.
    */
   premium?: boolean | 'deep';
+  /** Call exactly this OpenRouter model (e.g. "anthropic/claude-opus-5.5"), with no fallback to other providers. */
+  route?: string;
 }
 
 /** Daily budget hook for the paid provider; the SDK registers one backed by the quota table. */
@@ -172,6 +174,11 @@ export function carryRaw(from: ChatMessage, to: ChatMessage): ChatMessage {
 /** One chat completion; falls through providers on errors and rate limits. */
 export async function chat(messages: ChatMessage[], opts: ChatOptions = {}): Promise<ChatResult> {
   const doFetch = opts.fetch ?? fetch;
+  if (opts.route) {
+    const or = PROVIDERS.find((p) => p.name === 'openrouter')!;
+    if (!key(or.env)) throw new Error('OPENROUTER_API_KEY is not set');
+    return callProvider({ ...or, model: opts.route, reasoningHeadroom: 6000 }, messages, opts, doFetch, opts.timeoutMs ?? 180_000);
+  }
   const providers = PROVIDERS.filter((p) => key(p.env));
   const errors: string[] = [];
   if (opts.premium && key('ANTHROPIC_API_KEY')) {
@@ -218,6 +225,28 @@ export async function chat(messages: ChatMessage[], opts: ChatOptions = {}): Pro
     }
   }
   throw new Error(`all LLM providers failed: ${errors.join(' | ')}`);
+}
+
+/** One OpenAI-compatible call to a single provider; throws on any failure. */
+async function callProvider(p: Provider, messages: ChatMessage[], opts: ChatOptions, doFetch: typeof fetch, timeoutMs: number): Promise<ChatResult> {
+  const res = await doFetch(p.url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${key(p.env)}`, ...p.extraHeaders },
+    body: JSON.stringify({
+      model: p.model,
+      messages,
+      temperature: opts.temperature ?? 0.2,
+      max_tokens: (opts.maxTokens ?? 1500) + (p.reasoningHeadroom ?? 0),
+      ...(opts.tools?.length ? { tools: opts.tools, tool_choice: 'auto' } : {}),
+    }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`${p.model}: HTTP ${res.status} ${scrubSecrets(text).replace(/\s+/g, ' ').slice(0, 160)}`);
+  const j = JSON.parse(text) as { choices?: { message?: ChatMessage }[]; model?: string };
+  const message = j.choices?.[0]?.message;
+  if (!message || (!message.content?.trim() && !message.tool_calls?.length)) throw new Error(`${p.model}: empty response`);
+  return { message: { role: 'assistant', content: message.content ?? null, ...(message.tool_calls?.length ? { tool_calls: message.tool_calls } : {}) }, provider: p.name, model: j.model ?? p.model };
 }
 
 /** Plain-text completion helper. */

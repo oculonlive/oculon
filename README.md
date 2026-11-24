@@ -29,7 +29,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 
 ## Contents
 
-[What it does](#what-it-does) · [Install](#install) · [CLI](#cli) · [MCP server](#mcp-server) · [Remote MCP](#remote-mcp) · [SDK](#sdk) · [Web app](#dashboard-and-schedule) · [Telegram bot](#telegram-bot) · [Configuration](#configuration) · [Deploy](#deploy) · [How it works](#how-it-works) · [Limits](#limits) · [Development](#development)
+[What it does](#what-it-does) · [Install](#install) · [CLI](#cli) · [MCP server](#mcp-server) · [Remote MCP](#remote-mcp) · [Analyst](#oculon-analyst) · [SDK](#sdk) · [Web app](#dashboard-and-schedule) · [Telegram bot](#telegram-bot) · [Configuration](#configuration) · [Deploy](#deploy) · [How it works](#how-it-works) · [Limits](#limits) · [Development](#development)
 
 ## What it does
 
@@ -171,6 +171,18 @@ Or with any MCP client that launches stdio servers:
 ```
 
 Every module is a tool (about 50, plus one per installed plugin tool; `tools/list` returns them with schemas). A few: `oculon_ask`, `oculon_radar`, `oculon_dossier`, `oculon_case_new`, `oculon_calendar`, `oculon_connect`, `oculon_markets_crosscheck`, `oculon_sanctions`, `oculon_health`, `oculon_narratives`, `oculon_ships`, `oculon_military_air`, `oculon_satellite_image` (returns the image), `oculon_forecast`, `oculon_verify_proof`, `oculon_watch_add`, `oculon_brief`, `oculon_signals`, `oculon_entity`.
+
+## Oculon Analyst
+
+`/ask` on any install (`https://oculon.live/ask`) is a question desk built on the same tools. It is not a chat window:
+
+- **It checks first.** Every question goes through live Oculon tools, and the page shows each source as it is touched (data feeds with LIVE, CACHED or ERROR, plus the articles and records found).
+- **It answers with a brief.** A headline and bottom line, a 0-100 confidence with its reason, 2-6 findings that each cite numbered sources, what the data could not show, and what new evidence would change the answer. Findings can only cite sources the tools returned.
+- **Cross-examine.** One click asks the two other models to judge each finding against the same evidence (supported, partly, unsupported) and to say what the brief missed.
+- **Watch.** A brief can become a personal monitor that reports when the answer changes.
+- **Pick the model:** Claude Haiku 5.5 (fast), Claude Opus 5.5 (thorough) or GPT-6.2 Astra, all through OpenRouter (`OPENROUTER_API_KEY`). Follow-up questions keep the earlier bottom lines as context; the session stays in the browser.
+
+On a public install each visitor gets `OCULON_ANALYST_PER_HOUR` questions and cross-examinations per hour (default 40).
 
 ## Remote MCP
 
