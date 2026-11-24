@@ -6,7 +6,11 @@
  * Models run through OpenRouter; the choice is the user's.
  */
 import { randomBytes } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { runAgent } from './agent.js';
+import { activeTools, SERVER_INFO, type Tool } from './mcp.js';
 import { chat, type ChatMessage } from './core/llm.js';
 import { scrubSecrets } from './core/keys.js';
 import type { Oculon } from './index.js';
@@ -37,6 +41,8 @@ export interface Finding {
 export interface Brief {
   headline: string;
   bottomLine: string;
+  /** Longer explanation for how/why/steps questions, with [n] citations inline. */
+  details: string;
   confidence: number;
   confidenceWhy: string;
   findings: Finding[];
@@ -47,7 +53,7 @@ export interface Brief {
 }
 
 export interface AnalystEvent {
-  type: 'start' | 'step' | 'stepdone' | 'brief' | 'error';
+  type: 'start' | 'plan' | 'step' | 'stepdone' | 'brief' | 'error';
   [k: string]: unknown;
 }
 
@@ -61,16 +67,23 @@ export interface AnalystResult {
   ms: number;
 }
 
-const SYSTEM = `You are Oculon Analyst, an open-source intelligence analyst. You answer by checking live public data with your tools, then writing a short intelligence brief.
+const SYSTEM = `You are Oculon Analyst. You can answer any question, and you answer by researching it first, then writing a short brief with sources.
+What you can reach:
+- Questions about Oculon itself (what it is, features, install, CLI, MCP, SDK, API, configuration, limits, pricing, privacy): call oculon_docs (its sections are the full documentation text, so there is no need to open docs pages). Never guess about Oculon.
+- Live world data that Oculon covers (outages, BGP, CVEs and exploits, quakes and disasters, weather and air, flights and military air, ships, satellites, fires, night lights, recalls, scams and risky links, email security, companies and filings, markets and prediction markets, research papers, country and travel risk, news): call the matching Oculon tools.
+- Everything else (history, science, products, people, how-to, comparisons, current events beyond the tools): oculon_web_search, then oculon_read_page on the 1-3 best pages when snippets are not enough. Prefer official and primary sources (government, standards bodies, company sites, papers, established outlets) over forums and social posts.
 How to work:
-- Check before you answer: call the tools that can verify the question (1-5 calls; independent calls in parallel). Do not answer from memory when a tool can check it.
-- Tool results end with "Numbered sources". Cite them as numbers. Never cite anything that is not in those lists.
-- Sources marked ERROR or UNAVAILABLE returned nothing; never present them as evidence.
+- First write ONE short line in this exact form, then call tools in the same turn: "Plan: <part 1> · <part 2> · <part 3>". Split the question into the parts it needs (1-4).
+- Cover every part. Run independent searches and tools in parallel; search each part separately with specific queries (names, dates, places). If results are thin or conflict, search again or read a page before answering.
+- Do not answer from memory when a tool can check it. Only general background that needs no checking may come from your own knowledge, and it gets no source number.
+- Tool results end with "Numbered sources". Cite them as numbers. Never cite anything that is not in those lists, and never invent links.
+- Sources marked ERROR or UNAVAILABLE returned nothing; never present them as evidence. When sources disagree, say so.
 - Prefer concrete facts: numbers, dates, names, places. Separate what the data shows from what it suggests.
 When you are done, reply with ONE JSON object and nothing else:
 {
   "headline": "the answer in at most 10 words",
   "bottomLine": "1-3 sentences that answer the question directly",
+  "details": "optional: when the question asks how, why, steps or a comparison, a clear explanation in short paragraphs or '- ' bullet lines (at most 180 words), citing [n] inline; otherwise an empty string",
   "confidence": 0-100 (how well the checked data supports the bottom line; low when sources are few, stale or failed),
   "confidenceWhy": "one sentence: why this confidence",
   "findings": [{"text": "one concrete finding", "sources": [1, 2]}] (2-6 findings, each with at least one source number),
@@ -154,7 +167,7 @@ const strList = (v: unknown, n: number, max: number) => (Array.isArray(v) ? v.ma
 function toBrief(answer: string, validN: Set<number>): Brief {
   const j = parseJson(answer);
   if (!j) {
-    return { headline: '', bottomLine: answer.trim().slice(0, 1200) || 'No answer.', confidence: 0, confidenceWhy: 'The model did not return a structured brief.', findings: [], unknowns: [], changeMyMind: '', followUps: [], watch: null };
+    return { headline: '', bottomLine: answer.trim().slice(0, 1200) || 'No answer.', details: '', confidence: 0, confidenceWhy: 'The model did not return a structured brief.', findings: [], unknowns: [], changeMyMind: '', followUps: [], watch: null };
   }
   const findings: Finding[] = (Array.isArray(j.findings) ? j.findings : [])
     .map((f) => {
@@ -168,6 +181,8 @@ function toBrief(answer: string, validN: Set<number>): Brief {
   return {
     headline: str(j.headline, 120),
     bottomLine: str(j.bottomLine, 900),
+    // Inline citations may only point at real sources.
+    details: str(j.details, 2400).replace(/\[(\d+)\]/g, (m, n: string) => (validN.has(Number(n)) ? m : '')),
     confidence: Number.isFinite(c) ? Math.max(0, Math.min(100, Math.round(c))) : 0,
     confidenceWhy: str(j.confidenceWhy, 300),
     findings,
@@ -177,6 +192,62 @@ function toBrief(answer: string, validN: Set<number>): Brief {
     watch: str(j.watch, 200) || null,
   };
 }
+
+/* ---------- Oculon's own documentation as a tool ---------- */
+
+interface DocSection { slug: string; title: string; text: string }
+let docsCache: DocSection[] | null = null;
+const docSlug = (s: string) => s.toLowerCase().replace(/<[^>]+>/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+/** README.md split into its ## and ### sections (the same text the docs site renders). */
+function docSections(): DocSection[] {
+  if (docsCache) return docsCache;
+  const here = dirname(fileURLToPath(import.meta.url));
+  const file = [join(here, '..', 'README.md'), join(here, '..', '..', 'README.md')].find((p) => existsSync(p));
+  const out: DocSection[] = [];
+  if (file) {
+    let cur: DocSection | null = null;
+    for (const line of readFileSync(file, 'utf8').replace(/\r\n/g, '\n').split('\n')) {
+      const h = /^(#{2,3})\s+(.*)$/.exec(line);
+      if (h) { cur = { slug: docSlug(h[2]!), title: h[2]!.trim(), text: '' }; out.push(cur); continue; }
+      if (cur && !/^\s*\[!\[/.test(line)) cur.text += line + '\n';
+    }
+  }
+  docsCache = out;
+  return out;
+}
+
+const STOP = new Set(['the', 'and', 'for', 'with', 'how', 'what', 'does', 'can', 'oculon', 'are', 'is', 'do', 'use', 'using', 'from', 'this', 'that', 'into', 'about', 'which', 'when', 'where', 'why', 'there', 'their', 'have', 'has', 'you', 'your', 'its']);
+
+export function searchDocs(query: string, max = 3): { title: string; url: string; text: string }[] {
+  const words = query.toLowerCase().match(/[a-z0-9][a-z0-9.-]{1,}/g)?.filter((w) => !STOP.has(w)) ?? [];
+  const domain = (process.env.OCULON_DOMAIN || 'oculon.live').trim();
+  const scored = docSections().filter((s) => s.slug !== 'contents').map((s) => {
+    const head = s.title.toLowerCase();
+    const body = s.text.toLowerCase();
+    let score = 0;
+    for (const w of words) {
+      if (head.includes(w)) score += 6;
+      score += Math.min(8, body.split(w).length - 1);
+    }
+    return { s, score };
+  });
+  return scored
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, max)
+    .map(({ s }) => ({ title: `Oculon docs: ${s.title}`, url: `https://docs.${domain}/${s.slug}`, text: s.text.trim().slice(0, 4000) }));
+}
+
+const DOCS_TOOL: Tool = {
+  name: 'oculon_docs',
+  description: "Oculon's own documentation: what Oculon is, every module and its sources, install, CLI commands, MCP server (local and remote), SDK, web app, Telegram bot, API, configuration and keys, deployment, how it works, limits, privacy. Use it for any question about Oculon itself.",
+  inputSchema: { type: 'object', properties: { query: { type: 'string', description: 'What to look up, e.g. "remote MCP Claude setup" or "which sources need a key"' } }, required: ['query'] },
+  run: (_o, a) => {
+    const sections = searchDocs(String(a.query ?? ''));
+    return { about: { version: SERVER_INFO.version, mcpTools: activeTools().length, site: 'https://oculon.live', docs: 'https://docs.oculon.live', analyst: 'https://oculon.live/ask', remoteMcp: 'https://mcp.oculon.live', repo: 'https://github.com/oculonlive/oculon', npm: 'https://www.npmjs.com/package/oculon' }, sections, source: 'oculon-docs', status: 'LIVE' };
+  },
+};
 
 /** "oculon_url_check" -> "URL check" */
 export function toolLabel(name: string): string {
@@ -223,12 +294,23 @@ export async function analyst(o: Oculon, opts: AnalystOptions): Promise<AnalystR
   const run = await runAgent(o, SYSTEM, opts.question, {
     route: model.id,
     premium: false,
-    maxSteps: 6,
-    maxTokens: 2200,
+    maxSteps: 8,
+    maxTokens: 3000,
     history,
+    extraTools: [DOCS_TOOL],
+    onThought: (text) => {
+      const plan = /plan:\s*(.+)/i.exec(text)?.[1];
+      if (plan) emit({ type: 'plan', parts: plan.split(/\s*[·•|;]\s*/).map((p) => p.trim()).filter(Boolean).slice(0, 5) });
+    },
     onToolStart: ({ id, tool, args }) => emit({ type: 'step', id, tool, label: toolLabel(tool), args: scrubSecrets(JSON.stringify(args)).slice(0, 160) }),
-    onToolResult: ({ id, tool, ok, ms, raw }) => {
+    onToolResult: ({ id, tool, args, ok, ms, raw }) => {
       const { feeds, links } = ok ? collectSources(raw, tool) : { feeds: [], links: [] };
+      // A page that was read is a source itself; its result carries only the text.
+      if (ok && tool === 'oculon_read_page' && typeof args.url === 'string' && /^https?:\/\//.test(args.url)) {
+        const text = String((raw as { text?: unknown })?.text ?? '');
+        const title = /^Title:\s*(.+)$/m.exec(text)?.[1] ?? /^#\s+(.+)$/m.exec(text)?.[1] ?? args.url;
+        links.unshift({ label: title.trim().slice(0, 140), url: args.url });
+      }
       const lines: string[] = [];
       const touched: Source[] = [];
       for (const f of feeds) {

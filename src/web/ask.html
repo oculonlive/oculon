@@ -117,6 +117,14 @@ main{max-width:880px;margin:0 auto;padding:40px clamp(16px,3vw,28px) 260px}
 .review p{margin:4px 0;font-size:14.5px;line-height:1.55;color:var(--soft)}
 .review b{color:#fff;font-weight:500}
 .follow{display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 20px}
+.plan{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:12px 14px 4px}
+.plan .lbl{color:var(--y);margin-right:4px}
+.plan .part{display:inline-flex;align-items:baseline;gap:6px;border:1px solid var(--line2);padding:3px 8px;font-size:13px;color:var(--soft);line-height:1.35}
+.plan .part b{font:11px var(--mono);color:var(--y)}
+.details{margin-top:16px;padding:14px 16px;border-left:2px solid var(--y);background:rgba(0,240,255,.03)}
+.details p,.details li{font-size:15.5px;line-height:1.65;color:#dfe8e9;margin:0 0 8px}
+.details ul{margin:0 0 8px;padding-left:20px}
+.details p:last-child,.details ul:last-child{margin-bottom:0}
 .err{margin-top:14px;border:1px solid #5e2128;background:#140507;padding:14px 16px;color:#ffc9ce;font-size:15px;line-height:1.5}
 
 /* dock */
@@ -146,7 +154,7 @@ main{max-width:880px;margin:0 auto;padding:40px clamp(16px,3vw,28px) 260px}
   <section class="intro" id="intro">
     <div class="lbl"><span style="color:var(--y)">●</span> Analyst desk · checks live public data before it answers</div>
     <h1>Ask anything.<br>Get a <em>brief</em>, not a guess.</h1>
-    <p>Oculon sends your question through its live sources (outages, vulnerabilities, quakes, flights, scams, papers, news and more), then writes a brief: the bottom line, how sure it is, each finding with its source, and what it could not see. Then let other models cross-examine it.</p>
+    <p>About Oculon, about the world, or anything else. It splits your question into parts, checks each one against live sources (outages, vulnerabilities, quakes, flights, scams, papers, news) or searches and reads the web, then writes a brief: the bottom line, how sure it is, each finding with its source, and what it could not see. Then let other models cross-examine it.</p>
     <div class="how">
       <div><b>01 · CHECK</b><span>Live tools run first; you watch every source it touches.</span></div>
       <div><b>02 · BRIEF</b><span>Bottom line, confidence 0-100 and numbered citations.</span></div>
@@ -160,6 +168,8 @@ main{max-width:880px;margin:0 auto;padding:40px clamp(16px,3vw,28px) 260px}
       <button class="chip" type="button">What is the travel risk for Bangkok this week?</button>
       <button class="chip" type="button">Is this a scam: "Your package is on hold, pay the $1.99 customs fee today"</button>
       <button class="chip" type="button">Were there strong earthquakes near Japan in the last 48 hours?</button>
+      <button class="chip" type="button">How do I connect Oculon to Claude, and what can it do there?</button>
+      <button class="chip" type="button">What caused the 2003 Northeast blackout, and could it happen again?</button>
     </div>
   </section>
   <div id="thread"></div>
@@ -208,6 +218,21 @@ const radarSvg = () => `<svg viewBox="0 0 100 100" aria-hidden="true"><defs><lin
 const addBlip = (svg, i) => { const a = (i * 137.5) * Math.PI / 180, r = 12 + ((i * 29) % 32); const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle'); c.setAttribute('cx', (50 + r * Math.cos(a)).toFixed(1)); c.setAttribute('cy', (50 + r * Math.sin(a)).toFixed(1)); c.setAttribute('r', '3'); c.setAttribute('class', 'blip'); svg.querySelector('.blips').appendChild(c); };
 
 const level = (c) => c >= 75 ? ['High', 'var(--ok)'] : c >= 45 ? ['Moderate', 'var(--warn)'] : ['Low', 'var(--bad)'];
+/* the analyst's plan: the parts it split the question into */
+const planHtml = (parts) => parts && parts.length ? `<div class="plan"><span class="lbl">Plan</span>${parts.map((p, i) => `<span class="part"><b>${i + 1}</b>${esc(p)}</span>`).join('')}</div>` : '';
+/* details: short paragraphs and "- " bullets, with [n] citations made clickable */
+function detailsHtml(text) {
+  const cite = (s) => esc(s).replace(/\[(\d{1,3})\]/g, (_, n) => `<a class="cite" data-n="${n}" href="#">${n}</a>`);
+  const out = []; let list = [];
+  const flush = () => { if (list.length) { out.push(`<ul>${list.map((l) => `<li>${cite(l)}</li>`).join('')}</ul>`); list = []; } };
+  for (const line of String(text).split(/\n+/)) {
+    const l = line.trim(); if (!l) continue;
+    if (/^[-*•]\s+/.test(l) || /^\d+[.)]\s+/.test(l)) list.push(l.replace(/^([-*•]|\d+[.)])\s+/, ''));
+    else { flush(); out.push(`<p>${cite(l)}</p>`); }
+  }
+  flush();
+  return out.join('');
+}
 
 /* one brief */
 function renderBrief(t) {
@@ -224,6 +249,7 @@ function renderBrief(t) {
     <div class="bbody">
       ${b.headline ? `<h2>${esc(b.headline)}</h2>` : ''}
       <p class="bl">${esc(b.bottomLine)}</p>
+      ${b.details ? `<div class="details">${detailsHtml(b.details)}</div>` : ''}
       <div class="conf"><div class="num" style="color:${color}">${b.confidence}</div><div><div class="lv" style="color:${color}">${lv} confidence</div><div class="bar"><i style="background:${color}" data-w="${b.confidence}"></i></div></div>${b.confidenceWhy ? `<p class="why">${esc(b.confidenceWhy)}</p>` : ''}</div>
       ${b.findings.length ? `<div class="sec"><h3>Findings</h3><ol class="findings">${b.findings.map((f, i) => `<li data-i="${i}"><span class="ix">${String(i + 1).padStart(2, '0')}</span><div><p>${esc(f.text)}${cites(f.sources)}</p><div class="verdicts"></div></div></li>`).join('')}</ol></div>` : ''}
       ${b.unknowns.length || b.changeMyMind ? `<div class="sec two">${b.unknowns.length ? `<div><h3 class="lbl" style="margin:0 0 8px">Not known yet</h3><ul>${b.unknowns.map((u) => `<li>${esc(u)}</li>`).join('')}</ul></div>` : ''}${b.changeMyMind ? `<div><h3 class="lbl" style="margin:0 0 8px">Would change this</h3><p>${esc(b.changeMyMind)}</p></div>` : ''}</div>` : ''}
@@ -273,7 +299,7 @@ function wireCard(card, t) {
     if (!a || a.disabled) return;
     if (a.dataset.act === 'copy') {
       const b = t.brief;
-      const text = [b.headline, '', b.bottomLine, '', `Confidence: ${b.confidence}/100 (${b.confidenceWhy})`, '', ...b.findings.map((f, i) => `${i + 1}. ${f.text} [${f.sources.join(', ')}]`), '', 'Sources:', ...(t.sources || []).map((s) => `[${s.n}] ${s.label}${s.url ? ' ' + s.url : ''}`), '', 'Oculon Analyst'].join('\n');
+      const text = [b.headline, '', b.bottomLine, ...(b.details ? ['', b.details] : []), '', `Confidence: ${b.confidence}/100 (${b.confidenceWhy})`, '', ...b.findings.map((f, i) => `${i + 1}. ${f.text} [${f.sources.join(', ')}]`), '', 'Sources:', ...(t.sources || []).map((s) => `[${s.n}] ${s.label}${s.url ? ' ' + s.url : ''}`), '', 'Oculon Analyst'].join('\n');
       try { await navigator.clipboard.writeText(text); a.textContent = 'Copied'; } catch { a.textContent = 'Copy failed'; }
       setTimeout(() => { a.textContent = 'Copy brief'; }, 1600);
     }
@@ -304,7 +330,7 @@ function renderTurn(t) {
   const el = document.createElement('section');
   el.className = 'turn';
   el.innerHTML = `<div class="q"><span class="lbl">Q</span><span>${esc(t.question)}</span></div>
-    <div class="trace done"><div class="radar">${radarSvg()}</div><ul class="steps">${(t.steps || []).map((s) => `<li><span class="st ${s.ok ? 'ok' : 'err'}">${s.ok ? '✓' : '✕'}</span><span class="nm">${esc(s.label)}</span><span class="meta">${(s.ms / 1000).toFixed(1)}s</span></li>`).join('') || '<li><span class="st">·</span><span class="nm">No tools were needed</span><span></span></li>'}</ul></div>
+    <div class="trace done"><div class="radar">${radarSvg()}</div><div>${planHtml(t.plan)}<ul class="steps">${(t.steps || []).map((s) => `<li><span class="st ${s.ok ? 'ok' : 'err'}">${s.ok ? '✓' : '✕'}</span><span class="nm">${esc(s.label)}</span><span class="meta">${(s.ms / 1000).toFixed(1)}s</span></li>`).join('') || '<li><span class="st">·</span><span class="nm">No tools were needed</span><span></span></li>'}</ul></div></div>
     ${renderBrief(t)}`;
   $('thread').appendChild(el);
   el.querySelectorAll('.radar svg').forEach((svg) => (t.sources || []).forEach((_, i) => i < 24 && addBlip(svg, i)));
@@ -318,11 +344,12 @@ async function askQuestion(question) {
   busy = true; $('send').disabled = true; $('intro').hidden = true;
   const el = document.createElement('section');
   el.className = 'turn';
-  el.innerHTML = `<div class="q"><span class="lbl">Q</span><span>${esc(question)}</span></div><div class="trace"><div class="radar">${radarSvg()}</div><div><ul class="steps"></ul><div class="thinking"><span class="spin"></span> <i>${esc(MODELS[model])}</i> is reading the question and choosing sources…</div></div></div>`;
+  el.innerHTML = `<div class="q"><span class="lbl">Q</span><span>${esc(question)}</span></div><div class="trace"><div class="radar">${radarSvg()}</div><div><div class="planbox"></div><ul class="steps"></ul><div class="thinking"><span class="spin"></span> <i>${esc(MODELS[model])}</i> is reading the question and choosing sources…</div></div></div>`;
   $('thread').appendChild(el);
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
   const steps = el.querySelector('.steps'), svg = el.querySelector('.radar svg'), thinking = el.querySelector('.thinking');
   let blips = 0;
+  let plan = null;
   const history = turns.slice(-4).map((t) => ({ q: t.question, a: t.brief?.bottomLine || '' }));
   const fail = (msg) => { el.querySelector('.trace').classList.add('done'); thinking.remove(); el.insertAdjacentHTML('beforeend', `<div class="err">${esc(msg)}</div>`); };
   try {
@@ -339,7 +366,10 @@ async function askQuestion(question) {
         const line = chunk.split('\n').find((l) => l.startsWith('data: '));
         if (!line) continue;
         let ev; try { ev = JSON.parse(line.slice(6)); } catch { continue; }
-        if (ev.type === 'step') {
+        if (ev.type === 'plan') {
+          plan = ev.parts;
+          el.querySelector('.planbox').innerHTML = planHtml(plan);
+        } else if (ev.type === 'step') {
           thinking.innerHTML = `<span class="spin"></span> checking sources…`;
           steps.insertAdjacentHTML('beforeend', `<li data-id="${esc(ev.id)}"><span class="st"><span class="spin"></span></span><span class="nm">${esc(ev.label)}<small>${esc(ev.args)}</small></span><span class="meta">…</span></li>`);
         } else if (ev.type === 'stepdone') {
@@ -352,7 +382,7 @@ async function askQuestion(question) {
           for (const _ of ev.sources) if (blips < 24) addBlip(svg, blips++);
           thinking.innerHTML = `<span class="spin"></span> <i>${esc(MODELS[model])}</i> is weighing the evidence…`;
         } else if (ev.type === 'brief') {
-          const t = { id: ev.id, question, model: ev.model, brief: ev.brief, sources: ev.sources, steps: ev.steps, ms: ev.ms };
+          const t = { id: ev.id, question, model: ev.model, brief: ev.brief, sources: ev.sources, steps: ev.steps, ms: ev.ms, plan };
           turns.push(t); save();
           el.remove();
           renderTurn(t).scrollIntoView({ behavior: 'smooth', block: 'start' });

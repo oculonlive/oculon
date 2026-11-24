@@ -6,7 +6,7 @@
 import { carryRaw, chat, type ChatMessage, type ToolSpec } from './core/llm.js';
 import { scrubSecrets } from './core/keys.js';
 import type { Oculon } from './index.js';
-import { activeTools, TOOLS } from './mcp.js';
+import { activeTools, TOOLS, type Tool } from './mcp.js';
 
 /** Tools the agent may call. Side-effecting tools and the agent itself are excluded. */
 const EXCLUDED = new Set(['oculon_ask', 'oculon_forecast', 'oculon_auto_forecast', 'oculon_stamp_proofs', 'oculon_resolve_forecasts', 'oculon_satellite_image', 'oculon_watch_add', 'oculon_watch_run', 'oculon_brief', 'oculon_case_new', 'oculon_fence_add', 'oculon_fence_check']);
@@ -87,11 +87,16 @@ export interface AgentOptions {
   onToolResult?: (call: { id: string; tool: string; args: Record<string, unknown>; ok: boolean; ms: number; raw: unknown }) => string | void;
   /** Earlier turns of a conversation, placed before the new question. */
   history?: ChatMessage[];
+  /** Extra tools for this run only (not exposed over MCP). */
+  extraTools?: Tool[];
+  /** Text the model writes alongside its tool calls (its plan for that round). */
+  onThought?: (text: string) => void;
 }
 
 /** The tool loop shared by `ask` and case investigations. */
 export async function runAgent(o: Oculon, system: string, user: string, opts: AgentOptions = {}): Promise<AgentRun> {
-  const tools: ToolSpec[] = agentTools().map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.inputSchema } }));
+  const runTools = [...(opts.extraTools ?? []), ...agentTools()];
+  const tools: ToolSpec[] = runTools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.inputSchema } }));
   const messages: ChatMessage[] = [
     { role: 'system', content: `${system}\nToday is ${o.ctx.now().toISOString().slice(0, 10)}.` },
     ...(opts.history ?? []),
@@ -111,9 +116,10 @@ export async function runAgent(o: Oculon, system: string, user: string, opts: Ag
       return { answer: (r.message.content ?? '').trim() || '(no answer)', steps, providers, messages, urls };
     }
     messages.push(carryRaw(r.message, { role: 'assistant', content: r.message.content ?? '', tool_calls: calls }));
+    if (r.message.content?.trim()) opts.onThought?.(r.message.content.trim());
     const results = await Promise.all(
       calls.map(async (c) => {
-        const tool = agentTools().find((t) => t.name === c.function.name);
+        const tool = runTools.find((t) => t.name === c.function.name);
         let args: Record<string, unknown> = {};
         try {
           args = JSON.parse(c.function.arguments || '{}') as Record<string, unknown>;

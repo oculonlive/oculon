@@ -176,8 +176,9 @@ Every module is a tool (about 50, plus one per installed plugin tool; `tools/lis
 
 `/ask` on any install (`https://oculon.live/ask`) is a question desk built on the same tools. It is not a chat window:
 
-- **It checks first.** Every question goes through live Oculon tools, and the page shows each source as it is touched (data feeds with LIVE, CACHED or ERROR, plus the articles and records found).
-- **It answers with a brief.** A headline and bottom line, a 0-100 confidence with its reason, 2-6 findings that each cite numbered sources, what the data could not show, and what new evidence would change the answer. Findings can only cite sources the tools returned.
+- **Ask anything.** Questions about Oculon itself are answered from its documentation, live-data questions from Oculon's tools, and everything else by searching the web and reading the best pages, preferring official and primary sources.
+- **It plans, then checks.** The analyst splits the question into parts and shows that plan, then runs the checks for every part in parallel. The page shows each source as it is touched (data feeds with LIVE, CACHED or ERROR, plus the pages, articles and records found).
+- **It answers with a brief.** A headline and bottom line, a short explanation for how and why questions, a 0-100 confidence with its reason, 2-6 findings that each cite numbered sources, what the data could not show, and what new evidence would change the answer. Findings can only cite sources the tools returned.
 - **Cross-examine.** One click asks the two other models to judge each finding against the same evidence (supported, partly, unsupported) and to say what the brief missed.
 - **Watch.** A brief can become a personal monitor that reports when the answer changes.
 - **Pick the model:** Claude Haiku 5.5 (fast), Claude Opus 5.5 (thorough) or GPT-6.2 Astra, all through OpenRouter (`OPENROUTER_API_KEY`). Follow-up questions keep the earlier bottom lines as context; the session stays in the browser.
