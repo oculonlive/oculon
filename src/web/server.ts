@@ -551,7 +551,8 @@ export function tokenBlock(t: Partial<TokenInfo>): string {
   // The third cell links to the launchpad page when there is one, otherwise to a block explorer.
   const link = launchpad ? { k: 'Launchpad', u: launchpad, label: new URL(launchpad).hostname.replace(/^www\./, '') } : explorer ? { k: 'Explorer', u: explorer, label: 'view' } : null;
   const cell = (k: string, v: string) => `<div><b>${k}</b><span>${v ? esc(v) : '-'}</span></div>`;
-  return `<div class="ca"><div class="lbl">Contract address</div><div class="addr"><code id="ca-value">${esc(ca)}</code><button id="copy-ca" type="button">COPY</button></div>`
+  const badge = /^0x[0-9a-fA-F]{40}$/.test(ca) ? `<a class="sbadge" href="/safety/${esc(ca.toLowerCase())}" title="Live safety check of this token"><img src="/badge/${esc(ca.toLowerCase())}.svg" alt="Oculon safety badge" height="22"></a>` : '';
+  return `<div class="ca"><div class="lbl">Contract address</div><div class="addr"><code id="ca-value">${esc(ca)}</code><button id="copy-ca" type="button">COPY</button></div>${badge}`
     + `<div class="meta">${cell('Chain', (t.chain ?? '').trim())}${cell('Ticker', (t.ticker ?? '').trim() ? `$${(t.ticker ?? '').trim().replace(/^\$/, '')}` : '')}<div><b>${link ? link.k : 'Explorer'}</b><span>${link ? `<a href="${esc(link.u)}" target="_blank" rel="noopener">${esc(link.label)}</a>` : '-'}</span></div></div></div>`;
 }
 

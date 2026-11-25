@@ -8,6 +8,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-00f0ff.svg)](LICENSE)
 ![Node 22.13+](https://img.shields.io/badge/node-%E2%89%A522.13-00f0ff.svg)
 ![Runtime dependencies: 0](https://img.shields.io/badge/runtime%20dependencies-0-00f0ff.svg)
+[![Oculon safety](https://oculon.live/badge/0x12a3f1a05d827007f17a43a250cce44868c4a263.svg)](https://oculon.live/safety/0x12a3f1a05d827007f17a43a250cce44868c4a263)
 
 It ships as a CLI, a TypeScript SDK, an MCP server for Claude and other agents (local, or remote at `https://mcp.oculon.live` with nothing to install), a web app and a Telegram bot, all over the same result objects. It has no runtime dependencies. About 20 sources work with no key; optional free-tier keys switch on the rest (see `.env.example`).
 
@@ -404,6 +405,10 @@ Token and deployer verdicts are heuristics over pool and explorer data, not cont
 ## Official token
 
 The only official Oculon token is `$OCULON` on Robinhood Chain:
+
+[![Oculon safety](https://oculon.live/badge/0x12a3f1a05d827007f17a43a250cce44868c4a263.svg)](https://oculon.live/safety/0x12a3f1a05d827007f17a43a250cce44868c4a263)
+
+The badge is Oculon's own live safety check of the token, re-run about every 15 minutes (funded by a 2,288,777 OCULON burn). It is a heuristic over pool and explorer data, not an audit.
 
 ```
 0x12a3f1a05d827007f17a43a250cce44868c4a263
