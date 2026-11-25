@@ -21,8 +21,8 @@ npx oculon ask "why is Nvidia in the news this week?"
 - **Sourced by design.** Every answer names the sources it used and whether each one was live, cached or unavailable. Nothing is presented without provenance.
 - **Cross-source signals.** When independent sources move on the same subject, Oculon fuses them into one scored signal with the evidence behind it, and storylines are tracked across days.
 - **Measured, not claimed.** A time machine replays past days to calibrate the radar, a first-to-know check compares Oculon against media coverage, and forecasts are timestamped on Bitcoin so they cannot be edited later.
-- **Built for agents.** 75 MCP tools locally over stdio, and the 67 read-only ones remotely at `https://mcp.oculon.live`; the SDK and CLI return the same objects, and `--json` works on every command.
-- **Everyday checks.** Is this message a scam? Is this link dangerous? Is this claim true? Is my car recalled? Can someone spoof my email domain? Are my dependencies safe? What should I know before I travel? Each answer names its sources, and any result can be shared as a link with a preview card.
+- **Built for agents.** 83 MCP tools locally over stdio, and 74 of them remotely at `https://mcp.oculon.live`; the SDK and CLI return the same objects, and `--json` works on every command.
+- **Everyday checks.** Is this message a scam? Is this link dangerous? Is this claim true? Is my car recalled? Can someone spoof my email domain? Are my dependencies safe? What should I know before I travel? Who is calling me? Has my password leaked? Is this supplier real? Each answer names its sources, and any result can be shared as a link with a preview card.
 - **Monitors in plain words.** "Tell me when there is an internet outage in Iran" becomes a rule that is re-checked on a schedule and reports only what changed, by email, in Telegram or in the app. Every visitor keeps their own monitors, with no account.
 - **Everywhere people are.** A public Telegram bot ([@oculon_radar_bot](https://t.me/oculon_radar_bot)): forward it a suspicious message and it checks it. An OpenAPI spec at `/openapi.json` for ChatGPT Actions, n8n and Zapier.
 - **Free to run.** Daily per-source budgets keep every free tier free, and the data lives in one local SQLite file.
@@ -45,6 +45,14 @@ npx oculon ask "why is Nvidia in the news this week?"
 | Papers | `oculon papers "<topic>"` | Research brief: the most cited papers of recent years among the most relevant, the newest relevant ones, papers per year (growing, steady or shrinking), PubMed counts for medical topics, and a short overview that cites the numbered papers | OpenAlex, PubMed, Semantic Scholar, Groq, Gemini, Mistral |
 | Country | `oculon country <name>` | One-page country brief: GDP, growth, GDP per person, inflation, unemployment and population, the IMF outlook for this year and next, head of state and government, capital, currency and its rate to the dollar, US and UK travel advice, internet outages, disaster alerts and the latest headlines | World Bank, IMF, Wikidata, open.er-api.com, US State Department, UK FCDO, Cloudflare Radar, GDACS, Guardian |
 | Airport | `oculon airport <JFK\|EGLL\|name>` | Is an airport running normally? Current METAR and TAF (flight category, wind, visibility, ceiling), FAA ground stops, ground delay programs, delays and closures at US airports, and aircraft squawking an emergency within 150 km | aviationweather.gov (NOAA), FAA NAS status, adsb.lol, OurAirports |
+| Phone | `oculon phone <+number> [--country US]` | Who is behind a number in a suspicious SMS or a missed call: country from the calling code, line type (mobile, landline, VoIP, premium rate), carrier and location, and warnings for premium-rate numbers, UK 070 personal numbers and the Caribbean area codes the FCC names in "one ring" callback scams. Never looks up the owner | ITU calling codes (offline), Numverify (free key, 100 a month) |
+| Password | `oculon password` · web app | Has a password appeared in a data breach? Only the first 5 characters of its SHA-1 hash are sent and the match happens locally (in the web app, in the browser); the password is never stored, logged or shown | Have I Been Pwned (Pwned Passwords) |
+| Breaches | `oculon breaches [domain]` | The newest breaches added to Have I Been Pwned, or every breach of one domain or company: date, accounts affected and the kinds of data exposed. Sensitive breaches are left out | Have I Been Pwned (CC BY 4.0) |
+| Company | `oculon company <name\|LEI\|EU VAT>` | Is a supplier real before you pay its invoice? An EU VAT number is checked live (valid or not, registered name and address); a name or LEI returns the legal entity, registered address, status, registration number and ultimate parent, with warnings for invalid numbers, inactive companies and lapsed records | EU VIES, GLEIF (Global LEI Index) |
+| IP check | `oculon ip <IP\|domain>` | Who runs an address and is it known for abuse: network, owner and type, location, abuse reports, internet scanning, threat reports, antivirus verdicts, malware infrastructure, hijacked or criminal networks, Tor exits and open ports; a verdict, a 0-100 risk and the reasons. Big shared services that collect stray reports are not blamed | AbuseIPDB, GreyNoise, AlienVault OTX, VirusTotal, ThreatFox, Spamhaus DROP, Tor Project, ip-api.com, IPinfo, PeeringDB, Shodan InternetDB |
+| Hash check | `oculon hash <md5\|sha1\|sha256>` | Is a file known malware, a known good file, or unknown? Malware family, first seen, detections, and the known-software sets it belongs to | CIRCL hashlookup (NIST NSRL), MalwareBazaar, ThreatFox, AlienVault OTX, VirusTotal |
+| Ransomware | `oculon ransomware [CC\|sector\|name]` | Claims posted on ransomware leak sites, newest first, by country, sector or a company or domain, with counts by group, country and sector. Leak-site links are never passed on | ransomware.live |
+| Satellites | `oculon satellite [name\|NORAD id]` | Everything launched in the last 30 days grouped by launch, or one object's orbit (perigee, apogee, period, inclination), owner, launch date and status | CelesTrak |
 | Share | web app · `/r/<id>` | Any everyday check can be shared as a link: the server runs the check, keeps a snapshot and serves it as a page with a preview card for X, Telegram, WhatsApp and Slack | Oculon |
 | Personal monitors | web app · Telegram `/monitor` | Each visitor (a random id in a cookie, no account) or Telegram chat keeps up to 10 monitors of its own, written in plain language and re-checked about hourly; changes are kept as alerts and sent by email (after a confirmation link, with one-click unsubscribe) or to the Telegram chat | Resend (email), Meerkat |
 | Monitor | `oculon monitor "<request>"` | Watch anything in plain language: "internet outages in Iran", "critical CVEs for nginx", "earthquakes above 6 near Tokyo", "news about OpenAI", "travel risk changes for Bangkok", "flood or cyclone alerts for the Philippines". The request becomes a watchlist rule; only changes are reported, with evidence, in the app, Telegram and the signal feed | Groq, Gemini, Mistral (with a pattern fallback), Meerkat |
@@ -129,6 +137,14 @@ oculon watch add company Nvidia               # watchlist: company domain plane 
 oculon watch run                              # report only what changed since last time
 oculon brief                                  # today's brief
 oculon quota                                  # today's API usage vs daily budgets
+oculon phone "+1 876 555 0100"                # who is calling? one-ring scam area code
+oculon password                               # has my password leaked? (asked without echo)
+oculon breaches adobe.com                     # breaches of a domain
+oculon company NL004495445B01                 # EU VAT number, LEI or company name
+oculon ip 185.220.101.1                       # abuse reports, scanners, Tor, threat reports
+oculon hash <sha256>                          # known malware or a known good file?
+oculon ransomware Healthcare                  # ransomware leak-site claims
+oculon satellite 25544                        # ISS orbit, owner, status
 oculon ask "is there a geomagnetic storm right now?"
 oculon radar                                  # what the world is suddenly watching
 oculon dossier Nvidia                         # company / person dossier
@@ -263,7 +279,7 @@ TELEGRAM_ALERT_MIN_SCORE=70
 TELEGRAM_WATCH_MINUTES=15
 ```
 
-Run `oculon telegram` (or `oculon serve --telegram`). Every module has a command (`/help` lists them), including `/ask`, `/case`, `/calendar`, `/connect Nvidia to Jensen Huang`, `/live`, `/brief`, `/report` and `/alerts on|off`. Alerts arrive with Useful and Noise buttons; `/feedback` shows how the votes moved each module's alert bar. Chats outside the allowlist are refused and cannot vote.
+Run `oculon telegram` (or `oculon serve --telegram`). Every module has a command (`/help` lists them; the password check is left out so nobody types a password into a chat), including `/ask`, `/case`, `/calendar`, `/connect Nvidia to Jensen Huang`, `/live`, `/brief`, `/report` and `/alerts on|off`. Alerts arrive with Useful and Noise buttons; `/feedback` shows how the votes moved each module's alert bar. Chats outside the allowlist are refused and cannot vote.
 
 ## Configuration
 
@@ -337,6 +353,8 @@ The repository includes a `Dockerfile` (on Railway, set the service health check
 - Social pulse samples are small (X returns about 10 posts per search on Apify's free plan) and X, TikTok and Bluesky are fetched by popularity, so pace is measured on Reddit only. Address labels come from a community dataset (MIT) and can be incomplete or stale.
 - Plugins run with full Node permissions; install only code you trust.
 - `oculon ask` answers are written by an LLM from tool results; they can still misread data, so check the cited sources.
+- The VirusTotal public API is for non-commercial use and allows 4 lookups a minute, so IP and hash checks can wait up to 15 s for it. Numverify's free plan allows 100 lookups a month (Oculon uses at most 3 a day); after that the phone check answers from the offline calling-code table. ip-api.com and Numverify free plans are HTTP only.
+- Ransomware claims are posted by criminal groups and are sometimes wrong or exaggerated. EU VIES often answers "too many requests" for a country for a few minutes; the check retries once and then says so. Germany does not publish VAT holders' names through VIES.
 - Respect each data provider's terms. OpenStreetMap, Nominatim and adsb.lol data are ODbL-licensed and require attribution.
 
 ## Development

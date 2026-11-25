@@ -70,6 +70,26 @@ export const DAILY_BUDGET: Record<string, number> = {
   apify: 40,
   deepgram: 30, // transcriptions per day
   'shodan-internetdb': 2000,
+  // IP, hash, phone, breach, company and satellite checks.
+  abuseipdb: 900, // 1,000/day free
+  virustotal: 450, // 500/day public API (and 4/minute, see the host gap)
+  otx: 5000,
+  ipinfo: 1500, // 50,000/month Lite
+  numverify: 3, // 100/month free; the offline check still answers
+  greynoise: 40, // community API is rate limited for unauthenticated use
+  'ip-api': 5000, // 45/minute
+  peeringdb: 500,
+  'tor-exits': 50,
+  'spamhaus-drop': 30,
+  'circl-hashlookup': 3000,
+  malwarebazaar: 2000,
+  threatfox: 2000,
+  'ransomware-live': 1000,
+  'pwned-passwords': 20_000,
+  hibp: 200,
+  gleif: 3000,
+  vies: 1000,
+  celestrak: 200, // asks for at most one fetch of the same data per two hours
 };
 
 const envName = (source: string) => `OCULON_QUOTA_${source.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;

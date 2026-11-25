@@ -45,9 +45,9 @@ export function formatSignal(s: Signal): string {
 }
 
 /** Commands anyone may use when the bot is public. Everything else stays with the allowlisted chats. */
-export const PUBLIC_COMMANDS = new Set(['/start', '/help', '/scam', '/url', '/factcheck', '/recall', '/email', '/travel', '/airport', '/country', '/papers', '/audit', '/monitor', '/monitors', '/unmonitor', '/cve', '/vulns', '/hazards', '/blackout', '/cloud', '/space', '/air', '/radar', '/signals', '/alerts', '/ask']);
+export const PUBLIC_COMMANDS = new Set(['/start', '/help', '/scam', '/url', '/factcheck', '/recall', '/email', '/travel', '/airport', '/country', '/papers', '/audit', '/monitor', '/monitors', '/unmonitor', '/cve', '/vulns', '/hazards', '/blackout', '/cloud', '/space', '/air', '/radar', '/signals', '/alerts', '/ask', '/ip', '/hash', '/ransomware', '/company', '/breaches', '/phone', '/satellite']);
 /** Commands that start many upstream calls or an LLM get a tighter budget. */
-const HEAVY = new Set(['/factcheck', '/papers', '/travel', '/country', '/ask', '/scam', '/audit', '/radar']);
+const HEAVY = new Set(['/factcheck', '/papers', '/travel', '/country', '/ask', '/scam', '/audit', '/radar', '/ip', '/hash', '/company']);
 
 export const PUBLIC_HELP = [
   '<b>Oculon</b>: check anything, every answer sourced.',
@@ -64,7 +64,13 @@ export const PUBLIC_HELP = [
   '/country &lt;name&gt; — country brief',
   '/papers &lt;topic&gt; — research brief',
   '/audit &lt;npm:name@ver ...&gt; — dependency vulnerabilities',
-  '/cve &lt;id&gt; · /vulns · /hazards · /blackout · /cloud · /space · /air &lt;place&gt; · /radar',
+  '/phone &lt;+number&gt; — who is calling? premium-rate and callback-scam warnings',
+  '/company &lt;name, LEI or EU VAT&gt; — is this supplier real?',
+  '/breaches [domain] — newest data breaches, or one domain',
+  '/ip &lt;address or domain&gt; — abuse reports, scanners, Tor, threat reports',
+  '/hash &lt;md5|sha1|sha256&gt; — is this file known malware?',
+  '/ransomware [country, sector or name] — ransomware leak-site claims',
+  '/cve &lt;id&gt; · /vulns · /hazards · /blackout · /cloud · /space · /air &lt;place&gt; · /satellite · /radar',
   '',
   '/monitor &lt;request&gt; — watch anything, e.g. /monitor internet outages in Iran',
   '/monitors — your monitors · /unmonitor &lt;id&gt; — remove one',
@@ -89,6 +95,7 @@ export const HELP = [
   '/monitor &lt;request&gt; — watch anything in plain words, e.g. /monitor internet outages in Iran',
   '/recall &lt;VIN, "2018 Honda Accord" or product&gt; — vehicle and product recalls',
   '/email &lt;domain&gt; — can someone spoof email from this domain?',
+  '/phone · /company · /breaches · /ip · /hash · /ransomware · /satellite — caller, supplier, breach and threat checks',
   '/airport &lt;JFK|EGLL&gt; — airport weather, delays and ground stops',
   '/country &lt;name&gt; — economy, leaders, currency, travel advice, headlines',
   '/papers &lt;topic&gt; — research brief: most cited and newest papers',
@@ -430,6 +437,44 @@ export class TelegramBot {
         const d = (await o.emailSecurity(arg)).result;
         const fixes = d.fixes.slice(0, 3).map((x, i) => `${i + 1}. ${esc(x)}`).join('\n');
         return { html: `<b>${esc(d.domain)}</b>: <b>${esc(d.verdict.toUpperCase())}</b> (score ${d.score}/100)\nSPF ${esc(d.spf.all ?? (d.spf.record ? 'present' : 'missing'))} · DMARC ${esc(d.dmarc.policy ? `p=${d.dmarc.policy}` : 'missing')} · DKIM ${d.dkim.selectorsFound.length ? 'found' : 'not found'}${fixes ? `\n\n${fixes}` : ''}` };
+      }
+      case '/ip': {
+        if (!arg) return needArg('185.220.101.1');
+        const d = (await o.ipCheck(arg.split(/\s+/)[0]!)).result;
+        const where = d.location ? [d.location.city, d.location.country].filter(Boolean).join(', ') : '';
+        return { html: `<b>${esc(d.ip)}</b>${d.resolvedFrom ? ` (${esc(d.resolvedFrom)})` : ''}: <b>${esc(d.verdict.toUpperCase())}</b> · risk ${d.risk}/100\n${esc([d.network.asn, d.network.name].filter(Boolean).join(' '))}${where ? ` · ${esc(where)}` : ''}\n${d.reasons.map((x) => `• ${esc(x)}`).join('\n') || 'No source reports abuse.'}` };
+      }
+      case '/hash': {
+        if (!arg) return needArg('sha256 hash');
+        const d = (await o.hashCheck(arg.split(/\s+/)[0]!)).result;
+        return { html: `<b>${esc(d.verdict.toUpperCase())}</b>${d.family ? ` · ${esc(d.family)}` : ''}\n<code>${esc(d.hash)}</code>\n${d.reasons.map((x) => `• ${esc(x)}`).join('\n')}${d.virustotal ? `\n<a href="${esc(d.virustotal.link)}">VirusTotal</a>` : ''}` };
+      }
+      case '/ransomware': {
+        const d = (await o.ransomware(arg)).result;
+        const items = d.victims.slice(0, 8).map((v) => `• ${v.url ? `<a href="${esc(v.url)}">${esc(v.victim.slice(0, 60))}</a>` : esc(v.victim.slice(0, 60))} <i>${esc(v.group)}${v.country ? ` · ${esc(v.country)}` : ''} · ${esc((v.discovered ?? '').slice(0, 10))}</i>`).join('\n');
+        return { html: `<b>${d.query ? `Ransomware claims: ${esc(d.query)}` : 'Newest ransomware claims'}</b> (${d.total})\n${items || 'None found.'}\n<i>Claims by criminal groups; they can be wrong.</i>` };
+      }
+      case '/company': {
+        if (!arg) return needArg('NL004495445B01');
+        const d = (await o.companyCheck(arg)).result;
+        const vat = d.vat ? `<b>VAT ${esc(d.vat.country + d.vat.number)}: ${d.vat.valid ? 'VALID' : 'NOT VALID'}</b>${d.vat.name ? `\n${esc(d.vat.name)}` : ''}\n` : '';
+        const recs = d.records.slice(0, 3).map((x) => `• <a href="${esc(x.url)}">${esc(x.name)}</a> <i>${esc(x.status ?? '')} · ${esc(x.country ?? '')}${x.parent ? ` · parent ${esc(x.parent.name)}` : ''}</i>`).join('\n');
+        return { html: `${vat}${recs}${d.warnings.length ? `\n${d.warnings.map((w) => `! ${esc(w)}`).join('\n')}` : ''}`.trim() || 'Nothing found.' };
+      }
+      case '/breaches': {
+        const d = (await o.breaches(arg)).result;
+        const items = d.breaches.slice(0, 8).map((b) => `• <b>${esc(b.title)}</b> <i>${esc(b.breachDate ?? '')} · ${b.accounts.toLocaleString('en-US')} accounts</i>`).join('\n');
+        return { html: `<b>${d.query ? `Breaches: ${esc(d.query)}` : 'Newest breaches'}</b>${d.query ? ` (${d.total})` : ''}\n${items || 'None found.'}\n<i>Source: Have I Been Pwned (CC BY 4.0)</i>` };
+      }
+      case '/phone': {
+        if (!arg) return needArg('+1 876 555 0100');
+        const d = (await o.phoneCheck(arg)).result;
+        return { html: `<b>${esc(d.e164)}</b>: <b>${esc(d.risk.toUpperCase())} RISK</b>\n${esc([d.country, d.lineType, d.carrier].filter(Boolean).join(' · '))}${d.warnings.length ? `\n${d.warnings.map((w) => `! ${esc(w)}`).join('\n')}` : ''}\n${esc(d.advice[0] ?? '')}` };
+      }
+      case '/satellite': {
+        const d = (await o.satellites(arg)).result;
+        if (d.mode === 'recent') return { html: `<b>Launched in the last 30 days</b> (${d.total} objects)\n${d.launches.slice(0, 10).map((l) => `• ${esc(l.id)} ${esc(l.names.join(', '))} (${l.objects})`).join('\n')}` };
+        return { html: d.objects.length ? d.objects.slice(0, 4).map((x) => `<b>${esc(x.name)}</b> NORAD ${x.norad}${x.status ? ` · ${esc(x.status)}` : ''}${x.orbit ? `\n${x.orbit.regime} ${x.orbit.perigeeKm}-${x.orbit.apogeeKm} km · ${x.orbit.periodMin} min · ${x.orbit.inclination}°` : ''}`).join('\n\n') : esc(d.note) };
       }
       case '/airport': {
         if (!arg) return needArg('JFK');
@@ -830,11 +875,11 @@ export class TelegramBot {
     const me = await this.call<{ username: string }>('getMe', {});
     this.log(`bot @${me.username} running; ${this.opts.allowedChats.length} allowed chat(s)`);
     if (this.isPublic) {
-      await this.call('setMyCommands', { commands: ['scam', 'url', 'factcheck', 'recall', 'email', 'travel', 'airport', 'country', 'papers', 'audit', 'monitor', 'monitors', 'unmonitor', 'cve', 'hazards', 'blackout', 'alerts', 'help'].map((c) => ({ command: c, description: `Oculon ${c}` })) }).catch(() => {});
+      await this.call('setMyCommands', { commands: ['scam', 'url', 'factcheck', 'recall', 'email', 'phone', 'company', 'breaches', 'ip', 'hash', 'ransomware', 'travel', 'airport', 'country', 'papers', 'audit', 'monitor', 'monitors', 'unmonitor', 'cve', 'hazards', 'blackout', 'alerts', 'help'].map((c) => ({ command: c, description: `Oculon ${c}` })) }).catch(() => {});
     }
     for (const chat of this.opts.allowedChats) await this.call('setMyCommands', {
       scope: { type: 'chat', chat_id: Number(chat) },
-      commands: ['ask', 'scam', 'monitors', 'unmonitor', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'recall', 'email', 'airport', 'country', 'papers', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
+      commands: ['ask', 'scam', 'monitors', 'unmonitor', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'recall', 'email', 'phone', 'company', 'breaches', 'ip', 'hash', 'ransomware', 'satellite', 'airport', 'country', 'papers', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
     }).catch(() => {});
     if (this.opts.watchMinutes && this.opts.watchMinutes > 0) {
       this.scheduler = startScheduler(this.oculon, {

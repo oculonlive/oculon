@@ -107,7 +107,14 @@ export function consoleArgv(input: string): string[] | null {
   if (!parts.length || parts.length > 4) return null;
   const [cmd, a1, a2, a3] = parts;
   const onchain = onchainEnabled();
-  const bare = ['bgp', 'vulns', 'hazards', 'cloud', 'squawk', 'blackout', 'regs', 'calendar', 'quota', 'help', ...(onchain ? ['rh', 'defi'] : [])];
+  const bare = ['bgp', 'vulns', 'hazards', 'cloud', 'squawk', 'blackout', 'regs', 'calendar', 'quota', 'help', 'ransomware', 'breaches', 'satellite', ...(onchain ? ['rh', 'defi'] : [])];
+  if (cmd === 'ip' && parts.length === 2 && /^([\d.]{7,15}|[0-9a-f:]{2,39}|[a-z0-9.-]+\.[a-z]{2,})$/i.test(a1!)) return ['ip', a1!.toLowerCase()];
+  if (cmd === 'hash' && parts.length === 2 && /^([a-f0-9]{32}|[a-f0-9]{40}|[a-f0-9]{64})$/i.test(a1!)) return ['hash', a1!.toLowerCase()];
+  if (cmd === 'phone' && parts.length === 2 && /^\+\d{7,15}$/.test(a1!)) return ['phone', a1!];
+  if (cmd === 'breaches' && parts.length === 2 && /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(a1!)) return ['breaches', a1!.toLowerCase()];
+  if (cmd === 'ransomware' && parts.length === 2 && /^[\p{L}\d.-]{2,40}$/u.test(a1!)) return ['ransomware', a1!];
+  if (cmd === 'satellite' && parts.length === 2 && /^[\w()-]{3,30}$/.test(a1!)) return ['satellite', a1!];
+  if (cmd === 'company' && parts.length === 2 && /^[A-Z0-9]{8,20}$/i.test(a1!)) return ['company', a1!.toUpperCase()];
   if (parts.length === 1 && bare.includes(cmd!)) return [cmd!];
   if (onchain && cmd === 'deployer' && parts.length === 2 && HEX_ADDR.test(a1!)) return ['deployer', a1!];
   if (onchain && cmd === 'token' && HEX_ADDR.test(a1!) && ((parts.length === 2) || (a2 === '--chain' && /^(eth|base|arbitrum|bsc|polygon|robinhood)$/.test(a3 ?? '')))) return parts as string[];
@@ -257,6 +264,21 @@ export const ROUTES: Record<string, Handler> = {
       throw e instanceof HttpError ? e : new HttpError(400, (e as Error).message);
     }
   },
+  '/api/ip': async (q, o) => slim(await o.ipCheck(need(q, 'ip', 253))),
+  '/api/hash': async (q, o) => slim(await o.hashCheck(need(q, 'hash', 64))),
+  '/api/ransomware': async (q, o) => slim(await o.ransomware((q.get('q') ?? '').slice(0, 80))),
+  '/api/company': async (q, o) => slim(await o.companyCheck(need(q, 'q', 120))),
+  // Password checks hash in the browser and send only 5 characters of the SHA-1; the server never sees the password.
+  '/api/pwned': async (q, o) => {
+    const prefix = need(q, 'prefix', 5);
+    if (!/^[0-9a-f]{5}$/i.test(prefix)) throw new HttpError(400, 'prefix must be the first 5 hex characters of a SHA-1 hash');
+    const r = await o.pwnedRange(prefix);
+    if (!r.data) throw new HttpError(502, `Pwned Passwords is not answering right now (${r.prov.note ?? r.prov.status})`);
+    return { prefix: prefix.toUpperCase(), suffixes: [...r.data], provenance: [r.prov] };
+  },
+  '/api/breaches': async (q, o) => slim(await o.breaches((q.get('domain') ?? '').slice(0, 120))),
+  '/api/phone': async (q, o) => slim(await o.phoneCheck(need(q, 'number', 32), q.get('country') ? { country: q.get('country')!.slice(0, 2) } : {})),
+  '/api/satellites': async (q, o) => slim(await o.satellites((q.get('q') ?? '').slice(0, 60))),
   '/api/papers': async (q, o) => slim(await o.papers(need(q, 'topic', 200), q.get('years') ? { years: Number(q.get('years')) || 3 } : {})),
   '/api/country': async (q, o) => {
     try {

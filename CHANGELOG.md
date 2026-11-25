@@ -2,6 +2,21 @@
 
 All notable changes are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## 0.1.5
+
+Seven new checks over 19 new sources, in the CLI, SDK, MCP server, web app, Telegram bot and API.
+
+- `oculon phone`: who is behind a number in a suspicious SMS or missed call. Country, line type (mobile, landline, VoIP, premium rate), carrier and location, with warnings for premium-rate numbers, UK 070 personal numbers and the Caribbean area codes named in "one ring" callback scams. Works offline from the calling code; Numverify (free key) adds carrier and line type. Never looks up the owner.
+- `oculon password`: has a password leaked? Only the first 5 characters of its SHA-1 hash are sent (Have I Been Pwned, k-anonymity). In the web app the hash is made in the browser, so the server never sees the password. Not offered on the remote MCP server or in Telegram.
+- `oculon breaches [domain]`: the newest data breaches, or every breach of one domain (Have I Been Pwned).
+- `oculon company <name|LEI|EU VAT>`: is a supplier real? EU VAT numbers are checked live in VIES; names and LEIs come from the Global LEI Index with status, address and ultimate parent.
+- `oculon ip <IP|domain>`: abuse reports (AbuseIPDB), internet scanners (GreyNoise), threat reports (AlienVault OTX), antivirus verdicts (VirusTotal), malware infrastructure (ThreatFox), Spamhaus DROP, Tor exits, network type (PeeringDB, IPinfo, ip-api.com) and open ports, with a verdict and risk.
+- `oculon hash <md5|sha1|sha256>`: known malware or a known good file (CIRCL hashlookup with NIST NSRL, MalwareBazaar, ThreatFox, OTX, VirusTotal).
+- `oculon ransomware [country|sector|name]`: ransomware leak-site claims from ransomware.live, without leak-site links.
+- `oculon satellite [name|NORAD id]`: launches of the last 30 days, or one object's orbit, owner and status (CelesTrak).
+- New optional keys: `ABUSEIPDB_API_KEY`, `OTX_API_KEY`, `IPINFO_TOKEN`, `VIRUSTOTAL_API_KEY`, `NUMVERIFY_API_KEY` (all free). Without them those sources are skipped and say how to turn them on.
+- MCP: 83 tools locally, 74 on the remote server.
+
 ## 0.1.4
 
 - MCP: tool arguments are checked against each tool's schema. A misspelled or unknown argument, a missing required one or a wrong type now returns a clear tool error naming the arguments the tool takes. Before, the scam check called with `text` instead of `message` answered "no strong signs".

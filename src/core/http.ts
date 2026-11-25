@@ -59,6 +59,10 @@ const HOST_GAP_MS: Record<string, number> = {
   'api.osv.dev': 100,
   'www.4byte.directory': 500,
   'api.semanticscholar.org': 1100, // 1 request per second with a key
+  'www.virustotal.com': 15_500, // public API: 4 requests a minute
+  'ip-api.com': 1400, // 45 requests a minute
+  'api.greynoise.io': 1000,
+  'www.peeringdb.com': 3100, // anonymous: 20 requests a minute
 };
 
 const chains = new Map<string, Promise<void>>();

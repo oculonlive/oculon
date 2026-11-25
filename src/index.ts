@@ -65,6 +65,13 @@ import { papers } from './modules/papers.js';
 import { countryBrief } from './modules/country.js';
 import { airportStatus } from './modules/airport.js';
 import { scamCheck } from './modules/scam.js';
+import { ipCheck } from './modules/ipintel.js';
+import { hashCheck } from './modules/hashcheck.js';
+import { ransomware } from './modules/ransomware.js';
+import { companyCheck } from './modules/company.js';
+import { breaches, passwordCheck, pwnedRange } from './modules/breach.js';
+import { phoneCheck } from './modules/phone.js';
+import { satellites } from './modules/satellites.js';
 
 export interface OculonOptions extends Pick<ContextOptions, 'dbPath' | 'fetch' | 'throttle' | 'now'> {
   /** Contact string for User-Agents (enables SEC EDGAR). Falls back to OCULON_CONTACT. */
@@ -359,6 +366,42 @@ export class Oculon {
   /** Is this message a scam? Checks its links, sender domain and known scam patterns. */
   scamCheck(message: string) {
     return scamCheck(this.ctx, message);
+  }
+  /** Who runs this IP (or domain), and is it known for abuse? AbuseIPDB, GreyNoise, OTX, VirusTotal, ThreatFox, Spamhaus DROP, Tor. */
+  ipCheck(ipOrDomain: string) {
+    return ipCheck(this.ctx, ipOrDomain);
+  }
+  /** Is this file hash (MD5, SHA-1, SHA-256) known malware or a known good file? */
+  hashCheck(hash: string) {
+    return hashCheck(this.ctx, hash);
+  }
+  /** Ransomware leak-site claims: newest, or by country code, sector, company or domain (ransomware.live). */
+  ransomware(query = '') {
+    return ransomware(this.ctx, query);
+  }
+  /** Company identity: EU VAT number (VIES), LEI or name (GLEIF), with status and ultimate parent. */
+  companyCheck(nameLeiOrVat: string) {
+    return companyCheck(this.ctx, nameLeiOrVat);
+  }
+  /** Is this password in known breaches? Only 5 characters of its SHA-1 hash leave the machine. */
+  passwordCheck(password: string) {
+    return passwordCheck(this.ctx, password);
+  }
+  /** Pwned Passwords suffix counts for a 5-character SHA-1 prefix (for checks that hash on the client). */
+  pwnedRange(prefix: string) {
+    return pwnedRange(this.ctx, prefix);
+  }
+  /** Newest breaches in Have I Been Pwned, or the breaches of one domain or company. */
+  breaches(domain = '') {
+    return breaches(this.ctx, domain);
+  }
+  /** Phone number check: country, line type, carrier, premium-rate and callback-scam warnings. */
+  phoneCheck(number: string, opts: { country?: string } = {}) {
+    return phoneCheck(this.ctx, number, opts);
+  }
+  /** Satellites: launches of the last 30 days, or one object's orbit, owner and status (CelesTrak). */
+  satellites(query = '') {
+    return satellites(this.ctx, query);
   }
   /** Airport status: METAR and TAF, FAA delays and ground stops (US), emergency squawks nearby. */
   airport(code: string) {

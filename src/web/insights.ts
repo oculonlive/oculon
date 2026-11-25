@@ -95,6 +95,8 @@ const KEY_GROUPS: [string, string[]][] = [
   ['Companies', ['ADZUNA_APP_KEY', 'COURTLISTENER_TOKEN', 'COMPANIES_HOUSE_API_KEY', 'BRANDFETCH_API_KEY']],
   ['Social and audio', ['APIFY_TOKEN', 'YOUTUBE_API_KEY', 'BLUESKY_APP_PASSWORD', 'DEEPGRAM_API_KEY']],
   ['Web security', ['URLSCAN_API_KEY', 'SAFE_BROWSING_KEY', 'ABUSECH_AUTH_KEY']],
+  ['Threat intel', ['ABUSEIPDB_API_KEY', 'OTX_API_KEY', 'IPINFO_TOKEN', 'VIRUSTOTAL_API_KEY']],
+  ['Phone', ['NUMVERIFY_API_KEY']],
   ['Fact checks', ['GOOGLE_API_KEY']],
   ['Telegram bot', ['TELEGRAM_BOT_TOKEN']],
 ];

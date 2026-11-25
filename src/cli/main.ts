@@ -190,6 +190,16 @@ ${c.bold('Everyday checks')}
   oculon papers "<topic>"              research brief: most cited and newest papers
   oculon country <name>                country brief: economy, leaders, currency, advice, news
   oculon airport <JFK|EGLL|name>       airport weather, FAA delays and ground stops
+  oculon phone <+number> [--country US]  who is calling? country, line type, premium-rate and callback-scam warnings
+  oculon password                      has this password leaked? (asked without echo; k-anonymity)
+  oculon breaches [domain]             newest data breaches, or every breach of one domain (HIBP)
+  oculon company <name|LEI|EU VAT>     is this supplier real? VAT check (VIES), LEI register (GLEIF)
+
+${c.bold('Threat intel')}
+  oculon ip <IP|domain>                abuse reports, scanners, threat reports, Tor, Spamhaus DROP, open ports
+  oculon hash <md5|sha1|sha256>        is this file known malware or a known good file?
+  oculon ransomware [CC|sector|name]   ransomware leak-site claims, newest first
+  oculon satellite [name|NORAD id]     launches of the last 30 days, or one object's orbit (CelesTrak)
 
 ${c.bold('Web')}
   oculon search <query>                web search
@@ -235,6 +245,34 @@ const need = (a: Args, i: number, what: string): string => {
 };
 
 class UsageError extends Error {}
+
+/** Read one line from the terminal without echoing it (for passwords). */
+function readHidden(prompt: string): Promise<string> {
+  return new Promise((resolveLine) => {
+    const stdin = process.stdin;
+    process.stdout.write(prompt);
+    let buf = '';
+    stdin.setRawMode?.(true);
+    stdin.resume();
+    stdin.setEncoding('utf8');
+    const done = (v: string) => {
+      stdin.setRawMode?.(false);
+      stdin.pause();
+      stdin.removeListener('data', onData);
+      process.stdout.write('\n');
+      resolveLine(v);
+    };
+    const onData = (ch: string) => {
+      for (const k of ch) {
+        if (k === '\r' || k === '\n') return done(buf);
+        if (k === '\u0003') { done(''); process.exit(130); }
+        if (k === '\u007f' || k === '\b') buf = buf.slice(0, -1);
+        else buf += k;
+      }
+    };
+    stdin.on('data', onData);
+  });
+}
 
 const json = (a: Args) => a.flags.json === true;
 const emit = (a: Args, data: unknown, human: () => void) => (json(a) ? out(JSON.stringify(data, null, 2)) : human());
@@ -626,6 +664,125 @@ export const COMMANDS: Record<string, Cmd> = {
       out(`  extra  MTA-STS ${d.mtaSts.mode ?? 'off'} · TLS-RPT ${d.tlsRpt ? 'on' : 'off'} · DNSSEC ${d.dnssec ? 'on' : 'off'} · CAA ${d.caa.length ? 'set' : 'none'} · MX ${d.mx.length ? d.mx.slice(0, 2).join(', ') : 'none'}`);
       if (d.fixes.length) out(`\n${c.bold('Fixes')}`);
       d.fixes.forEach((f, i) => out(`  ${i + 1}. ${f}`));
+      printSources(r);
+    });
+  },
+  async ip(o, a) {
+    const q = a.pos[1]?.trim();
+    if (!q) throw new UsageError('usage: oculon ip <IP address | domain>');
+    const r = await o.ipCheck(q);
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.verdict === 'malicious' ? c.red : d.verdict === 'suspicious' ? c.yellow : c.green;
+      out(`${c.bold(d.ip)}${d.resolvedFrom ? c.dim(` (${d.resolvedFrom})`) : ''}  ${tone(d.verdict.toUpperCase())}  ${c.dim(`risk ${d.risk}/100`)}`);
+      const where = d.location ? [d.location.city, d.location.region, d.location.country].filter(Boolean).join(', ') : 'unknown';
+      out(`  network  ${[d.network.asn, d.network.name].filter(Boolean).join(' ') || 'unknown'}${d.network.type ? c.dim(` · ${d.network.type}`) : ''}`);
+      out(`  where    ${where}${d.network.reverse ? c.dim(` · ${d.network.reverse}`) : ''}`);
+      const fl = Object.entries(d.flags).filter(([, v]) => v).map(([k]) => k);
+      if (fl.length) out(`  flags    ${fl.join(', ')}`);
+      if (d.ports?.ports.length) out(`  ports    ${d.ports.ports.slice(0, 12).join(', ')}${d.ports.vulns.length ? c.yellow(` · ${d.ports.vulns.length} known CVEs`) : ''}`);
+      for (const x of d.reasons) out(`  - ${x}`);
+      for (const x of d.advice) out(`  → ${x}`);
+      printSources(r);
+    });
+  },
+  async hash(o, a) {
+    const q = a.pos[1]?.trim();
+    if (!q) throw new UsageError('usage: oculon hash <MD5 | SHA-1 | SHA-256>');
+    const r = await o.hashCheck(q);
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.verdict === 'malicious' ? c.red : d.verdict === 'suspicious' ? c.yellow : d.verdict === 'known good' ? c.green : c.gray;
+      out(`${tone(d.verdict.toUpperCase())}  ${c.dim(`${d.algorithm} ${d.hash}`)}`);
+      if (d.name || d.family) out(`  ${[d.name, d.family && `family ${d.family}`].filter(Boolean).join(' · ')}`);
+      for (const x of d.reasons) out(`  - ${x}`);
+      if (d.bazaar) out(c.dim(`  ${d.bazaar.link}`));
+      if (d.virustotal) out(c.dim(`  ${d.virustotal.link}`));
+      for (const x of d.advice) out(`  → ${x}`);
+      printSources(r);
+    });
+  },
+  async ransomware(o, a) {
+    const r = await o.ransomware(a.pos.slice(1).join(' ').trim());
+    emit(a, r, () => {
+      const d = r.result;
+      out(`${c.bold(d.query ? `Ransomware claims: ${d.query}` : 'Newest ransomware claims')}  ${c.dim(`${d.total} found`)}`);
+      if (d.byGroup.length) out(c.dim(`  groups   ${d.byGroup.slice(0, 6).map((x) => `${x.name} ${x.count}`).join(' · ')}`));
+      if (d.byCountry.length && d.mode !== 'country') out(c.dim(`  countries ${d.byCountry.slice(0, 6).map((x) => `${x.name} ${x.count}`).join(' · ')}`));
+      for (const v of d.victims.slice(0, 15)) out(`  ${c.dim((v.discovered ?? v.attacked ?? '').slice(0, 10))} ${c.bold(trunc(v.victim, 60))} ${c.red(v.group)}${v.country ? c.dim(` ${v.country}`) : ''}${v.sector ? c.dim(` · ${v.sector}`) : ''}`);
+      out(c.dim(`  ${d.note}`));
+      printSources(r);
+    });
+  },
+  async company(o, a) {
+    const q = a.pos.slice(1).join(' ').trim();
+    if (!q) throw new UsageError('usage: oculon company <name | LEI | EU VAT number>');
+    const r = await o.companyCheck(q);
+    emit(a, r, () => {
+      const d = r.result;
+      if (d.vat) out(`${c.bold(`VAT ${d.vat.country}${d.vat.number}`)}  ${d.vat.valid ? c.green('VALID') : c.red('NOT VALID')}${d.vat.name ? `  ${d.vat.name}` : ''}${d.vat.address ? c.dim(`\n  ${d.vat.address}`) : ''}`);
+      for (const x of d.records.slice(0, 6)) {
+        out(`${c.bold(x.name)}  ${c.dim(x.lei)}  ${x.status === 'ACTIVE' ? c.green(x.status) : c.yellow(x.status ?? '?')} ${x.registration === 'ISSUED' ? c.dim('LEI issued') : c.yellow(`LEI ${(x.registration ?? '?').toLowerCase()}`)}`);
+        out(c.dim(`  ${[x.address, x.registeredAs && `reg. ${x.registeredAs}`, x.created && `since ${x.created}`].filter(Boolean).join(' · ')}`));
+        if (x.parent) out(c.dim(`  ultimate parent ${x.parent.name} (${x.parent.lei})`));
+      }
+      for (const w of d.warnings) out(c.yellow(`  ! ${w}`));
+      printSources(r);
+    });
+  },
+  async password(o, a) {
+    let pw = a.pos.slice(1).join(' ');
+    if (!pw && !process.stdin.isTTY) pw = readFileSync(0, 'utf8').replace(/\r?\n$/, '');
+    if (!pw && process.stdin.isTTY) pw = await readHidden('Password (not shown, not stored): ');
+    if (!pw) throw new UsageError('usage: oculon password   (asks without echo; or pipe it in)');
+    const r = await o.passwordCheck(pw);
+    emit(a, r, () => {
+      const d = r.result;
+      out(d.pwned ? c.red(`PWNED  seen ${d.count.toLocaleString('en-US')} times in breaches`) : c.green('NOT FOUND in known breaches'));
+      for (const x of d.advice) out(`  → ${x}`);
+      out(c.dim('  Only the first 5 characters of the SHA-1 hash were sent (Have I Been Pwned, k-anonymity).'));
+    });
+  },
+  async breaches(o, a) {
+    const r = await o.breaches(a.pos.slice(1).join(' ').trim());
+    emit(a, r, () => {
+      const d = r.result;
+      out(c.bold(d.query ? `Breaches: ${d.query}  ${d.total ? c.red(`${d.total} found`) : c.green('none found')}` : 'Newest breaches in Have I Been Pwned'));
+      for (const b of d.breaches) out(`  ${c.dim(b.breachDate ?? '')} ${c.bold(b.title)}${b.domain ? c.dim(` ${b.domain}`) : ''}  ${b.accounts.toLocaleString('en-US')} accounts\n    ${c.dim(trunc(b.dataClasses.join(', '), 120))}`);
+      out(c.dim(`  ${d.note}`));
+      printSources(r);
+    });
+  },
+  async phone(o, a) {
+    const q = a.pos.slice(1).join(' ').trim();
+    if (!q) throw new UsageError('usage: oculon phone <+number> [--country US]');
+    const r = await o.phoneCheck(q, typeof a.flags.country === 'string' ? { country: a.flags.country } : {});
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.risk === 'high' ? c.red : d.risk === 'medium' ? c.yellow : c.green;
+      out(`${c.bold(d.e164)}  ${tone(`${d.risk.toUpperCase()} RISK`)}${d.valid === false ? c.red('  not valid') : ''}`);
+      out(`  ${[d.country, d.location, d.lineType, d.carrier].filter(Boolean).join(' · ')}`);
+      for (const w of d.warnings) out(c.yellow(`  ! ${w}`));
+      for (const x of d.advice) out(`  → ${x}`);
+      printSources(r);
+    });
+  },
+  async satellite(o, a) {
+    const r = await o.satellites(a.pos.slice(1).join(' ').trim());
+    emit(a, r, () => {
+      const d = r.result;
+      if (d.mode === 'recent') {
+        out(`${c.bold('Launched in the last 30 days')}  ${c.dim(`${d.total} objects`)}`);
+        for (const l of d.launches.slice(0, 20)) out(`  ${c.dim(l.id)} ${l.names.join(', ')} ${c.dim(`(${l.objects})`)}`);
+      } else {
+        if (!d.objects.length) out(c.yellow(`  ${d.note}`));
+        for (const x of d.objects) {
+          out(`${c.bold(x.name)}  ${c.dim(`NORAD ${x.norad} · ${x.intlId}`)}${x.status ? `  ${x.status}` : ''}`);
+          if (x.orbit) out(`  ${x.orbit.regime} ${x.orbit.perigeeKm}-${x.orbit.apogeeKm} km · ${x.orbit.periodMin} min · ${x.orbit.inclination}°`);
+          const meta = [x.owner && `owner ${x.owner}`, x.type, x.launchDate && `launched ${x.launchDate}`, x.decayed && `decayed ${x.decayed}`].filter(Boolean);
+          if (meta.length) out(c.dim(`  ${meta.join(' · ')}`));
+        }
+      }
       printSources(r);
     });
   },
@@ -1607,6 +1764,8 @@ export const COMMANDS: Record<string, Cmd> = {
       ['on-chain', ['ZERION_API_KEY', 'ETHERSCAN_API_KEY', 'WEBACY_API_KEY', 'HELIUS_API_KEY', 'ROBINHOOD_PUBLIC_RPC_URL']],
       ['companies', ['ADZUNA_APP_KEY', 'COURTLISTENER_TOKEN', 'COMPANIES_HOUSE_API_KEY', 'BRANDFETCH_API_KEY']],
       ['web security', ['URLSCAN_API_KEY', 'SAFE_BROWSING_KEY', 'ABUSECH_AUTH_KEY']],
+      ['threat intel', ['ABUSEIPDB_API_KEY', 'OTX_API_KEY', 'IPINFO_TOKEN', 'VIRUSTOTAL_API_KEY']],
+      ['phone', ['NUMVERIFY_API_KEY']],
       ['fact checks', ['GOOGLE_API_KEY']],
       ['social/research', ['YOUTUBE_API_KEY', 'BLUESKY_APP_PASSWORD', 'OPENALEX_API_KEY']],
       ['air quality', ['OPENAQ_API_KEY']],

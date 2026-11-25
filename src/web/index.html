@@ -563,6 +563,16 @@ nav button { white-space: nowrap; }
           <option value="airport">Airport status (JFK, EGLL…)</option>
           <option value="country">Country brief</option>
           <option value="papers">Research papers (topic)</option>
+          <option value="phone">Who is calling? (phone number)</option>
+          <option value="password">Has my password leaked?</option>
+          <option value="breaches">Data breaches (domain, or empty for newest)</option>
+          <option value="company">Is this supplier real? (name, LEI or EU VAT)</option>
+          </optgroup>
+          <optgroup label="Threat intel">
+          <option value="ip">IP address check (IP or domain)</option>
+          <option value="hash">File hash check (MD5, SHA-1, SHA-256)</option>
+          <option value="ransomware">Ransomware claims (country, sector, name, or empty)</option>
+          <option value="satellites">Satellites (name, NORAD number, or empty for new launches)</option>
           </optgroup>
           <optgroup label="Investigate">
           <option value="dossier">Dossier (company, person)</option>
@@ -923,7 +933,7 @@ function handleMapClick(e) {
 const waitMap = setInterval(() => { if (map) { map.on('click', handleMapClick); clearInterval(waitMap); } }, 300);
 
 /* investigate */
-const placeholders = { scam: 'USPS: your package is on hold, pay the $1.99 fee within 24 hours at usps-redelivery-help.top/track', recall: '2018 Honda Accord', emailsec: 'example.com', airport: 'JFK', country: 'Argentina', papers: 'solid-state battery', url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
+const placeholders = { phone: '+1 876 555 0100', password: 'type a password (it never leaves your browser)', breaches: '(empty = newest breaches) or adobe.com', company: 'NL004495445B01', ip: '185.220.101.1', hash: '094fd325049b8a9cf6d3e5ef2a6d4cc6a567d7d49c35f8bb8dd9e3c6acf3d78d', ransomware: '(empty = newest claims) or Healthcare, DE, a company', satellites: '(empty = new launches) or ISS, 25544', scam: 'USPS: your package is on hold, pay the $1.99 fee within 24 hours at usps-redelivery-help.top/track', recall: '2018 Honda Accord', emailsec: 'example.com', airport: 'JFK', country: 'Argentina', papers: 'solid-state battery', url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
 const usd = (x) => (x == null ? '?' : '$' + Math.round(x).toLocaleString('en-US'));
 
 /* brief: tiny, safe Markdown renderer (escape first, then headings, bold, links, bullets) */
@@ -1070,10 +1080,49 @@ $('#ask-go').onclick = async () => {
   finally { $('#ask-go').disabled = false; }
 };
 $('#ask-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#ask-go').click(); });
-$('#inv-kind').onchange = () => { $('#inv-q').placeholder = placeholders[$('#inv-kind').value]; };
+$('#inv-kind').onchange = () => { const k = $('#inv-kind').value; $('#inv-q').placeholder = placeholders[k]; $('#inv-q').type = k === 'password' ? 'password' : 'text'; if (k === 'password') $('#inv-q').value = ''; };
 const spark = (xs) => { const m = Math.max(...xs, 1e-9); return `<span class="spark">${xs.map((x) => `<i style="height:${Math.max(2, Math.round((x / m) * 28))}px" title="${esc(x)}"></i>`).join('')}</span>`; };
 const sigList = (s) => (s.length ? `<h3>Signals</h3>${s.map(renderSignal).join('')}` : '');
+const link = (u, t) => `<a href="${safeUrl(u)}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>`;
+const tonePill = (t, txt) => `<span class="pill ${t}">${esc(txt)}</span>`;
 const views = {
+  ip: (r) => {
+    const d = r.result;
+    const t = d.verdict === 'malicious' ? 'bad' : d.verdict === 'suspicious' ? 'warn' : 'ok';
+    const row = (k, v) => (v ? `<tr><td>${k}</td><td>${v}</td></tr>` : '');
+    const flags = Object.entries(d.flags).filter(([, v]) => v).map(([k]) => `<span class="chip">${esc(k === 'knownGood' ? 'known benign' : k)}</span>`).join('');
+    return `<h3>${esc(d.ip)}${d.resolvedFrom ? ` <span class="meta">${esc(d.resolvedFrom)}</span>` : ''} ${tonePill(t, d.verdict)} <span class="meta">risk ${d.risk}/100</span></h3>${flags ? `<p>${flags}</p>` : ''}<table>${row('Network', esc([d.network.asn, d.network.name].filter(Boolean).join(' ')) + (d.network.type ? ` <span class="meta">${esc(d.network.type)}</span>` : ''))}${row('Location', d.location ? esc([d.location.city, d.location.region, d.location.country].filter(Boolean).join(', ')) : '')}${row('Reverse DNS', esc(d.network.reverse || ''))}${row('AbuseIPDB', d.abuseipdb ? `${d.abuseipdb.reports} reports · confidence ${d.abuseipdb.score}%` : '')}${row('VirusTotal', d.virustotal ? `${d.virustotal.malicious} of ${d.virustotal.engines} engines flag it · ${link(d.virustotal.link, 'open')}` : '')}${row('GreyNoise', d.greynoise ? (d.greynoise.noise ? `scanning, ${esc(d.greynoise.classification || 'unknown')}` : d.greynoise.riot ? 'known benign service' : 'not seen scanning') : '')}${row('OTX', d.otx ? `${d.otx.count} threat report${d.otx.count === 1 ? '' : 's'}` : '')}${row('Open ports', d.ports && d.ports.ports.length ? esc(d.ports.ports.slice(0, 16).join(', ')) + (d.ports.vulns.length ? ` <span class="err">${d.ports.vulns.length} known CVEs</span>` : '') : '')}</table>${d.reasons.length ? `<h3>Why</h3><ul class="ev">${d.reasons.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}<h3>What to do</h3><ul class="ev">${d.advice.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  },
+  hash: (r) => {
+    const d = r.result;
+    const t = d.verdict === 'malicious' ? 'bad' : d.verdict === 'suspicious' ? 'warn' : d.verdict === 'known good' ? 'ok' : '';
+    return `<h3>${tonePill(t, d.verdict)} ${d.family ? `<b>${esc(d.family)}</b>` : ''} <span class="meta">${esc(d.algorithm)}</span></h3><p class="meta"><code>${esc(d.hash)}</code>${d.name ? `<br>${esc(d.name)}` : ''}</p><ul class="ev">${d.reasons.map((x) => `<li>${esc(x)}</li>`).join('')}</ul><p>${[d.bazaar && link(d.bazaar.link, 'MalwareBazaar'), d.virustotal && link(d.virustotal.link, 'VirusTotal')].filter(Boolean).join(' · ')}</p><h3>What to do</h3><ul class="ev">${d.advice.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  },
+  ransomware: (r) => {
+    const d = r.result;
+    const tally = (xs) => xs.map((x) => `<span class="chip">${esc(x.name)} ${x.count}</span>`).join('');
+    return `<h3>${d.query ? `Ransomware claims: ${esc(d.query)}` : 'Newest ransomware claims'} <span class="meta">${d.total} found</span></h3>${d.byGroup.length ? `<p class="meta">Groups ${tally(d.byGroup.slice(0, 6))}</p>` : ''}${d.byCountry.length && d.mode !== 'country' ? `<p class="meta">Countries ${tally(d.byCountry.slice(0, 6))}</p>` : ''}${d.victims.length ? `<ul class="ev">${d.victims.slice(0, 25).map((v) => `<li><b>${v.url ? link(v.url, v.victim) : esc(v.victim)}</b> <span class="pill bad">${esc(v.group)}</span> <span class="meta">${esc([v.country, v.sector, (v.discovered || v.attacked || '').slice(0, 10)].filter(Boolean).join(' · '))}</span>${v.description ? `<div class="meta">${esc(v.description)}</div>` : ''}</li>`).join('')}</ul>` : '<p>No claims found.</p>'}<p class="meta">${esc(d.note)}</p>`;
+  },
+  company: (r) => {
+    const d = r.result;
+    const vat = d.vat ? `<h3>VAT ${esc(d.vat.country + d.vat.number)} ${tonePill(d.vat.valid ? 'ok' : 'bad', d.vat.valid ? 'valid' : 'not valid')}</h3>${d.vat.name ? `<p><b>${esc(d.vat.name)}</b>${d.vat.address ? `<br><span class="meta">${esc(d.vat.address)}</span>` : ''}</p>` : ''}` : '';
+    const recs = d.records.map((x) => `<li><b>${link(x.url, x.name)}</b> ${tonePill(x.status === 'ACTIVE' ? 'ok' : 'warn', (x.status || '?').toLowerCase())} ${x.registration && x.registration !== 'ISSUED' ? tonePill('warn', 'LEI ' + x.registration.toLowerCase()) : ''}<div class="meta">LEI ${esc(x.lei)}${x.registeredAs ? ' · reg. ' + esc(x.registeredAs) : ''}${x.created ? ' · since ' + esc(x.created) : ''}</div>${x.address ? `<div class="meta">${esc(x.address)}</div>` : ''}${x.parent ? `<div class="meta">Ultimate parent: ${esc(x.parent.name)}</div>` : ''}</li>`).join('');
+    return `${vat}${d.warnings.length ? `<ul class="ev">${d.warnings.map((w) => `<li class="err">${esc(w)}</li>`).join('')}</ul>` : ''}${recs ? `<h3>LEI register</h3><ul class="ev">${recs}</ul>` : ''}<p class="meta">${esc(d.note)}</p>`;
+  },
+  breaches: (r) => {
+    const d = r.result;
+    return `<h3>${d.query ? `Breaches: ${esc(d.query)} ${tonePill(d.total ? 'bad' : 'ok', d.total ? d.total + ' found' : 'none found')}` : 'Newest breaches'}</h3>${d.breaches.length ? `<ul class="ev">${d.breaches.map((b) => `<li><b>${link(b.url, b.title)}</b> <span class="meta">${esc(b.breachDate || '')} · ${b.accounts.toLocaleString('en-US')} accounts${b.domain ? ' · ' + esc(b.domain) : ''}</span><div class="meta">${esc(b.dataClasses.join(', '))}</div><div>${esc(b.description)}</div></li>`).join('')}</ul>` : ''}<p class="meta">${esc(d.note)}</p>`;
+  },
+  phone: (r) => {
+    const d = r.result;
+    const t = d.risk === 'high' ? 'bad' : d.risk === 'medium' ? 'warn' : 'ok';
+    return `<h3>${esc(d.e164)} ${tonePill(t, d.risk + ' risk')}${d.valid === false ? ' ' + tonePill('bad', 'not valid') : ''}</h3><p>${esc([d.country, d.location, d.lineType, d.carrier].filter(Boolean).join(' · '))}</p>${d.warnings.length ? `<ul class="ev">${d.warnings.map((w) => `<li class="err">${esc(w)}</li>`).join('')}</ul>` : ''}<h3>What to do</h3><ul class="ev">${d.advice.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  },
+  satellites: (r) => {
+    const d = r.result;
+    if (d.mode === 'recent') return `<h3>Launched in the last 30 days <span class="meta">${d.total} objects</span></h3><table><tr><th>launch</th><th>objects</th><th>names</th></tr>${d.launches.map((l) => `<tr><td>${esc(l.id)}</td><td class="num">${l.objects}</td><td>${esc(l.names.join(', '))}</td></tr>`).join('')}</table><p class="meta">${esc(d.note)}</p>`;
+    return d.objects.length ? `<ul class="ev">${d.objects.map((x) => `<li><b>${link(x.url, x.name)}</b> <span class="meta">NORAD ${x.norad} · ${esc(x.intlId)}</span>${x.status ? ' ' + tonePill(x.status === 'operational' ? 'ok' : '', x.status) : ''}${x.orbit ? `<div>${esc(x.orbit.regime)} · ${x.orbit.perigeeKm}-${x.orbit.apogeeKm} km · ${x.orbit.periodMin} min · ${x.orbit.inclination}°</div>` : ''}<div class="meta">${esc([x.owner && 'owner ' + x.owner, x.type, x.launchDate && 'launched ' + x.launchDate, x.decayed && 'decayed ' + x.decayed].filter(Boolean).join(' · '))}</div></li>`).join('')}</ul><p class="meta">${esc(d.note)}</p>` : `<p>${esc(d.note)}</p>`;
+  },
   scam: (r) => {
     const d = r.result;
     const tone = d.verdict === 'likely scam' ? 'bad' : d.verdict === 'suspicious' ? 'warn' : 'ok';
@@ -1223,7 +1272,25 @@ $('#inv-go').onclick = async () => {
   if (q.startsWith('(')) q = '';
   const out = $('#inv-out');
   if (kind === 'image') { out.innerHTML = `<p class="meta">Loading satellite image of ${esc(q)}…</p><img class="sat" alt="Satellite image of ${esc(q)}" src="/api/image?place=${encodeURIComponent(q)}">`; return; }
-  const param = { scam: 'message', recall: 'q', emailsec: 'domain', airport: 'code', country: 'name', papers: 'topic', url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
+  if (kind === 'password') {
+    // k-anonymity: hash here, send 5 characters of the SHA-1, match the rest in this browser.
+    const pw = $('#inv-q').value;
+    if (!pw) { out.innerHTML = '<p class="err">Type a password first.</p>'; return; }
+    if (!crypto.subtle) { out.innerHTML = '<p class="err">This browser cannot hash here (it needs a secure https page).</p>'; return; }
+    $('#inv-go').disabled = true;
+    out.innerHTML = '<p class="meta">Checking…</p>';
+    try {
+      const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(pw));
+      const hex = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+      const r = await api('/api/pwned?prefix=' + hex.slice(0, 5));
+      const hit = r.suffixes.find(([s]) => s === hex.slice(5));
+      const n = hit ? hit[1] : 0;
+      out.innerHTML = `<h3><span class="pill ${n ? 'bad' : 'ok'}">${n ? 'leaked' : 'not found'}</span> ${n ? `<span class="meta">seen ${n.toLocaleString('en-US')} times in data breaches</span>` : '<span class="meta">not in any known breach</span>'}</h3><ul class="ev">${n ? '<li>Stop using this password everywhere you use it, starting with email and banking.</li><li>Use a password manager to make a different password for every site, and turn on two-factor sign-in.</li>' : '<li>Still use it on one site only, and keep two-factor sign-in on.</li>'}</ul><p class="meta">Your password never left this browser: only the first 5 characters of its SHA-1 hash (${esc(hex.slice(0, 5))}) were sent, and the match happened here. Data: Have I Been Pwned, Pwned Passwords.</p>`;
+    } catch (err) { out.innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+    finally { $('#inv-go').disabled = false; }
+    return;
+  }
+  const param = { phone: 'number', breaches: 'domain', company: 'q', ip: 'ip', hash: 'hash', ransomware: 'q', satellites: 'q', scam: 'message', recall: 'q', emailsec: 'domain', airport: 'code', country: 'name', papers: 'topic', url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
   $('#inv-go').disabled = true;
   out.innerHTML = '<p class="meta">Working… some sources are rate-limited and take a while.</p>';
   try {

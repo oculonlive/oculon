@@ -9,7 +9,7 @@ import type { ModuleResult } from './core/types.js';
 import { ONCHAIN_TOOLS, onchainEnabled } from './core/features.js';
 import { availableKinds } from './modules/monitor.js';
 
-export const SERVER_INFO = { name: 'oculon', version: '0.1.4' };
+export const SERVER_INFO = { name: 'oculon', version: '0.1.5' };
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
 type Json = Record<string, unknown>;
@@ -263,6 +263,54 @@ export const TOOLS: Tool[] = [
     description: 'Can someone send email that looks like it comes from this domain? Checks SPF, DMARC, DKIM, MTA-STS, TLS reporting, BIMI, CAA and DNSSEC from public DNS, and returns a verdict (spoofable, partly protected, protected), a 0-100 score and the fixes in order.',
     inputSchema: schema({ domain: str('Domain or email address, e.g. "example.com"') }, ['domain']),
     run: async (o, a) => compact(await o.emailSecurity(String(a.domain))),
+  },
+  {
+    name: 'oculon_ip_check',
+    description: 'Who runs this IP address, and is it known for abuse? Pass an IPv4 or IPv6 address, or a domain (its first address is checked). Returns network (ASN, owner, type), location, flags (Tor exit, proxy, hosting, internet scanner, known benign service), AbuseIPDB reports, GreyNoise scanner status, AlienVault OTX threat reports, VirusTotal engine verdicts, ThreatFox malware infrastructure, Spamhaus DROP listing and open ports, with a verdict (malicious, suspicious, no known abuse), a 0-100 risk and the reasons.',
+    inputSchema: schema({ ip: str('IP address or domain, e.g. "185.220.101.1"') }, ['ip']),
+    run: async (o, a) => compact(await o.ipCheck(String(a.ip))),
+  },
+  {
+    name: 'oculon_hash_check',
+    description: 'Is this file known malware, a known good file, or unknown? Pass an MD5, SHA-1 or SHA-256 hash. Checks CIRCL hashlookup (NIST NSRL and other known-software sets), MalwareBazaar, ThreatFox, AlienVault OTX and VirusTotal, and returns a verdict, the malware family when known, the reasons and what to do.',
+    inputSchema: schema({ hash: str('MD5, SHA-1 or SHA-256 in hex') }, ['hash']),
+    run: async (o, a) => compact(await o.hashCheck(String(a.hash))),
+  },
+  {
+    name: 'oculon_ransomware',
+    description: 'Ransomware leak-site claims collected by ransomware.live. Leave query empty for the newest claims, or pass a two-letter country code ("DE"), a sector ("Healthcare", "Manufacturing") or a company name or domain. Returns victims with group, country, sector and dates, plus counts by group, country and sector. These are claims by criminals and can be wrong.',
+    inputSchema: schema({ query: str('Optional: country code, sector, company or domain') }, []),
+    run: async (o, a) => compact(await o.ransomware(a.query ? String(a.query) : '')),
+  },
+  {
+    name: 'oculon_company_lookup',
+    description: 'Is this company or supplier real? Pass an EU VAT number (checked live in the European Commission VIES service: valid or not, registered name and address), a 20-character LEI, or a company name (Global LEI Index: legal name, registered address, status, registration number, ultimate parent). Useful before paying an invoice from a new supplier.',
+    inputSchema: schema({ query: str('Company name, LEI, or EU VAT number such as "NL004495445B01"') }, ['query']),
+    run: async (o, a) => compact(await o.companyCheck(String(a.query))),
+  },
+  {
+    name: 'oculon_password_check',
+    description: 'Has this password appeared in known data breaches (Have I Been Pwned Pwned Passwords)? Only the first 5 characters of its SHA-1 hash are sent; the match is done locally and the password is never stored. Pass the password, or "sha1:<40 hex>" if you already have the hash. Local only: this tool is not offered on the remote server.',
+    inputSchema: schema({ password: str('The password, or "sha1:<hash>"') }, ['password']),
+    run: async (o, a) => compact(await o.passwordCheck(String(a.password))),
+  },
+  {
+    name: 'oculon_breaches',
+    description: 'Data breaches from Have I Been Pwned: leave domain empty for the newest breaches, or pass a domain or company name for all of its breaches, with date, accounts affected and the kinds of data exposed.',
+    inputSchema: schema({ domain: str('Optional: domain or company name, e.g. "adobe.com"') }, []),
+    run: async (o, a) => compact(await o.breaches(a.domain ? String(a.domain) : '')),
+  },
+  {
+    name: 'oculon_phone_check',
+    description: 'Who is behind this phone number? Pass it in international format (+44 20 7946 0958), or a national number with country. Returns country, line type (mobile, landline, VoIP, premium rate), carrier and location when known, and warnings for premium-rate numbers, UK 070 personal numbers and the Caribbean "one ring" callback-scam area codes. Never looks up the owner.',
+    inputSchema: schema({ number: str('Phone number'), country: str('ISO country code for a national number, e.g. "US"') }, ['number']),
+    run: async (o, a) => compact(await o.phoneCheck(String(a.number), a.country ? { country: String(a.country) } : {})),
+  },
+  {
+    name: 'oculon_satellites',
+    description: 'Satellites from CelesTrak. Leave query empty for everything launched in the last 30 days, grouped by launch. Or pass a satellite name ("ISS", "starlink-1007") or NORAD catalog number for its orbit (perigee, apogee, period, inclination, regime), owner, launch date and status.',
+    inputSchema: schema({ query: str('Optional: satellite name or NORAD number') }, []),
+    run: async (o, a) => compact(await o.satellites(a.query ? String(a.query) : '')),
   },
   {
     name: 'oculon_papers',
@@ -597,7 +645,8 @@ interface Request {
 }
 
 /** Tools that change the shared watchlist, fences or plugins; not offered to anonymous remote clients. */
-const REMOTE_HIDDEN = new Set(['oculon_watch_add', 'oculon_fence_add', 'oculon_watch_run', 'oculon_case_new', 'oculon_stamp_proofs', 'oculon_resolve_forecasts', 'oculon_auto_forecast', 'oculon_forecast']);
+// Tools that change the shared watchlist, plus the password check: a password should never travel to a public server.
+const REMOTE_HIDDEN = new Set(['oculon_watch_add', 'oculon_fence_add', 'oculon_watch_run', 'oculon_case_new', 'oculon_stamp_proofs', 'oculon_resolve_forecasts', 'oculon_auto_forecast', 'oculon_forecast', 'oculon_password_check']);
 
 /** Tools this build offers: on-chain tools are left out unless OCULON_ONCHAIN=1. */
 export function activeTools(): Tool[] {
