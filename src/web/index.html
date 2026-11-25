@@ -347,6 +347,10 @@ nav button { white-space: nowrap; }
 .ov-hidden button { background: none; border: 1px solid var(--line); color: var(--muted); font: 11.5px var(--mono); padding: 3px 8px; margin: 0 6px 6px 0; cursor: pointer; }
 @media (max-width: 1100px) { .hosts { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .hosts { grid-template-columns: minmax(0, 1fr); } .ib { grid-template-columns: 44px minmax(0, 1fr); } .ib .acts { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; } .tl-it { grid-template-columns: 90px 40px minmax(0, 1fr); } }
+.filepick{flex:1 1 260px;display:flex;align-items:center;gap:10px;border:1px dashed rgba(0,240,255,.45);padding:10px 12px;cursor:pointer;color:var(--soft,#cfcfcf);font-size:14px;min-width:0}
+.filepick input{max-width:110px}
+#inv-ta{flex:1 1 100%;width:100%;font:13px/1.5 ui-monospace,Consolas,monospace;background:#05090a;color:#e8eef0;border:1px solid #2a3437;padding:10px;resize:vertical}
+.seen{margin-top:14px;border-left:3px solid #00f0ff;padding:8px 12px;background:rgba(0,240,255,.05)}
 </style>
 </head>
 <body>
@@ -555,6 +559,9 @@ nav button { white-space: nowrap; }
           <optgroup label="Everyday checks">
           <option value="scam">Is this message a scam? (paste it)</option>
           <option value="url">Is this link safe? (URL)</option>
+          <option value="doc">Was this document edited? (PDF, screenshot or photo)</option>
+          <option value="iban">Is this IBAN valid? (IBAN)</option>
+          <option value="headers">Was this email spoofed? (paste raw headers)</option>
           <option value="factcheck">Fact check (claim or news URL)</option>
           <option value="audit">Dependency audit (package.json or npm:name@version)</option>
           <option value="travel">Travel risk (place)</option>
@@ -571,6 +578,9 @@ nav button { white-space: nowrap; }
           <optgroup label="Threat intel">
           <option value="ip">IP address check (IP or domain)</option>
           <option value="hash">File hash check (MD5, SHA-1, SHA-256)</option>
+          <option value="lookalike">Lookalike domains of a brand (domain)</option>
+          <option value="address">Crypto address check (BTC, 0x, Solana, Tron)</option>
+          <option value="honeypot">Can this token be sold? (0x, Ethereum, BNB, Base)</option>
           <option value="ransomware">Ransomware claims (country, sector, name, or empty)</option>
           <option value="satellites">Satellites (name, NORAD number, or empty for new launches)</option>
           </optgroup>
@@ -598,6 +608,8 @@ nav button { white-space: nowrap; }
           </optgroup>
         </select>
         <input type="text" id="inv-q" placeholder="paypa1-secure-login.top/verify" aria-label="Query">
+        <label id="inv-file-l" class="filepick" hidden><input type="file" id="inv-file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"><span id="inv-file-n">Choose a PDF, PNG or JPEG (max 10 MB)</span></label>
+        <textarea id="inv-ta" rows="7" hidden aria-label="Raw email headers" placeholder="Paste the full raw headers. Gmail: open the email, ⋮ menu, Show original. Outlook: File, Properties, Internet headers."></textarea>
         <button class="go" id="inv-go">Investigate</button>
       </div>
       <div id="inv-out" class="out"></div>
@@ -933,7 +945,7 @@ function handleMapClick(e) {
 const waitMap = setInterval(() => { if (map) { map.on('click', handleMapClick); clearInterval(waitMap); } }, 300);
 
 /* investigate */
-const placeholders = { phone: '+1 876 555 0100', password: 'type a password (it never leaves your browser)', breaches: '(empty = newest breaches) or adobe.com', company: 'NL004495445B01', ip: '185.220.101.1', hash: '094fd325049b8a9cf6d3e5ef2a6d4cc6a567d7d49c35f8bb8dd9e3c6acf3d78d', ransomware: '(empty = newest claims) or Healthcare, DE, a company', satellites: '(empty = new launches) or ISS, 25544', scam: 'USPS: your package is on hold, pay the $1.99 fee within 24 hours at usps-redelivery-help.top/track', recall: '2018 Honda Accord', emailsec: 'example.com', airport: 'JFK', country: 'Argentina', papers: 'solid-state battery', url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
+const placeholders = { doc: '', headers: '', iban: 'GB82 WEST 1234 5698 7654 32', lookalike: 'paypal.com', address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', honeypot: '0x6982508145454ce325ddbe47a25d4ec3d2311933', phone: '+1 876 555 0100', password: 'type a password (it never leaves your browser)', breaches: '(empty = newest breaches) or adobe.com', company: 'NL004495445B01', ip: '185.220.101.1', hash: '094fd325049b8a9cf6d3e5ef2a6d4cc6a567d7d49c35f8bb8dd9e3c6acf3d78d', ransomware: '(empty = newest claims) or Healthcare, DE, a company', satellites: '(empty = new launches) or ISS, 25544', scam: 'USPS: your package is on hold, pay the $1.99 fee within 24 hours at usps-redelivery-help.top/track', recall: '2018 Honda Accord', emailsec: 'example.com', airport: 'JFK', country: 'Argentina', papers: 'solid-state battery', url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
 const usd = (x) => (x == null ? '?' : '$' + Math.round(x).toLocaleString('en-US'));
 
 /* brief: tiny, safe Markdown renderer (escape first, then headings, bold, links, bullets) */
@@ -1080,7 +1092,15 @@ $('#ask-go').onclick = async () => {
   finally { $('#ask-go').disabled = false; }
 };
 $('#ask-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#ask-go').click(); });
-$('#inv-kind').onchange = () => { const k = $('#inv-kind').value; $('#inv-q').placeholder = placeholders[k]; $('#inv-q').type = k === 'password' ? 'password' : 'text'; if (k === 'password') $('#inv-q').value = ''; };
+$('#inv-kind').onchange = () => { const k = $('#inv-kind').value; $('#inv-q').placeholder = placeholders[k]; $('#inv-q').type = k === 'password' ? 'password' : 'text'; if (k === 'password') $('#inv-q').value = ''; $('#inv-q').hidden = k === 'doc' || k === 'headers'; $('#inv-file-l').hidden = k !== 'doc'; $('#inv-ta').hidden = k !== 'headers'; };
+$('#inv-file').onchange = () => { const f = $('#inv-file').files[0]; $('#inv-file-n').textContent = f ? f.name + ' · ' + Math.round(f.size / 1024) + ' KB' : 'Choose a PDF, PNG or JPEG (max 10 MB)'; };
+/* Under every recorded check: what changed since last time, the replay log and the PDF report. */
+function checkFoot(r) {
+  const c = r && r.check;
+  if (!c) return '';
+  const seen = c.seenBefore ? `<div class="seen"><b>Seen before</b> on ${esc(c.seenBefore.at.slice(0, 16).replace('T', ' '))} UTC${c.seenBefore.changes.length ? `: what changed<ul class="ev">${c.seenBefore.changes.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '. Nothing changed since then.'}</div>` : '';
+  return `${seen}<p class="row" style="margin-top:12px;gap:14px"><a class="icon-btn" href="${esc(c.replay)}" target="_blank" rel="noopener">Replay log</a><a class="icon-btn" href="${esc(c.report)}" target="_blank" rel="noopener">PDF report</a><span class="meta">check ${esc(c.id.slice(0, 8))}</span></p>`;
+}
 const spark = (xs) => { const m = Math.max(...xs, 1e-9); return `<span class="spark">${xs.map((x) => `<i style="height:${Math.max(2, Math.round((x / m) * 28))}px" title="${esc(x)}"></i>`).join('')}</span>`; };
 const sigList = (s) => (s.length ? `<h3>Signals</h3>${s.map(renderSignal).join('')}` : '');
 const link = (u, t) => `<a href="${safeUrl(u)}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>`;
@@ -1133,6 +1153,36 @@ const views = {
     const head = d.vehicle ? `${d.vehicle.year} ${d.vehicle.make} ${d.vehicle.model}` : d.query;
     const park = d.recalls.some((x) => x.parkIt || x.parkOutside);
     return `<h3>${esc(head)} <span class="pill ${park ? 'bad' : d.recalls.length ? 'warn' : 'ok'}">${d.recalls.length ? d.recalls.length + ' recall' + (d.recalls.length === 1 ? '' : 's') : 'no recalls found'}</span></h3>${d.recalls.length ? `<ul class="ev">${d.recalls.slice(0, 15).map((x) => `<li>${x.parkIt ? '<b class="err">DO NOT DRIVE</b> ' : x.parkOutside ? '<b class="err">PARK OUTSIDE</b> ' : x.classification === 'Class I' ? '<b class="err">Class I</b> ' : ''}<b>${esc(x.title)}</b> <span class="meta">${esc(x.source)} ${esc(x.id)} · ${esc(x.date || '')}</span><div>${esc(x.hazard)}</div>${x.remedy ? `<div class="meta">${esc(x.remedy)}</div>` : ''}<a href="${safeUrl(x.url)}" target="_blank" rel="noopener noreferrer">details</a></li>`).join('')}</ul>` : ''}${d.note ? `<p class="meta">${esc(d.note)}</p>` : ''}`;
+  },
+  doc: (r) => {
+    const d = r.result;
+    const t = d.verdict === 'dangerous file' || d.verdict === 'likely edited' ? 'bad' : d.verdict === 'signs of editing' ? 'warn' : 'ok';
+    const meta = ['producer', 'creator', 'creator tool', 'software', 'created', 'modified', 'edit history'].filter((k) => d.metadata[k]).map((k) => `<tr><td>${esc(k)}</td><td>${esc(d.metadata[k])}</td></tr>`).join('');
+    return `<h3>${esc(d.name)} ${tonePill(t, d.verdict)} <span class="meta">risk ${d.risk}/100 · ${esc(d.type)} · ${Math.round(d.bytes / 1024)} KB${d.revisions > 1 ? ' · saved ' + d.revisions + ' times' : ''}${d.signed ? ' · digitally signed' : ''}</span></h3>${d.flags.length ? `<ul class="ev">${d.flags.map((x) => `<li class="err">${esc(x)}</li>`).join('')}</ul>` : ''}${d.ibans.length ? `<h3>IBANs in the document</h3><ul class="ev">${d.ibans.map((i) => `<li><code>${esc(i.iban)}</code> ${tonePill(i.valid ? 'ok' : 'bad', i.valid ? 'valid' : 'not valid')} <span class="meta">${esc(i.country || '')}</span></li>`).join('')}</ul>` : ''}${meta ? `<h3>Made with</h3><table>${meta}</table>` : ''}${d.domains.length ? `<p class="meta">Domains in the text: ${esc(d.domains.join(', '))}</p>` : ''}<p class="meta">Text: ${d.text.chars} characters from the ${esc(d.text.from)}.</p>${d.notes.map((n) => `<p class="meta">${esc(n)}</p>`).join('')}<h3>What to do</h3><ul class="ev">${d.advice.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  },
+  iban: (r) => {
+    const d = r.result;
+    return `<h3><code>${esc(d.formatted || d.input)}</code> ${tonePill(d.valid ? 'ok' : 'bad', d.valid ? 'valid format' : 'not valid')}</h3>${d.countryName ? `<p>${esc([d.countryName, d.bank ? d.bank.kind + ' ' + d.bank.code : null, d.sortCode ? 'sort code ' + d.sortCode : null].filter(Boolean).join(' · '))}</p>` : ''}${d.problems.length || d.warnings.length ? `<ul class="ev">${[...d.problems, ...d.warnings].map((x) => `<li class="err">${esc(x)}</li>`).join('')}</ul>` : ''}<h3>What to do</h3><ul class="ev">${d.advice.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  },
+  headers: (r) => {
+    const d = r.result;
+    const t = d.verdict === 'likely spoofed' ? 'bad' : d.verdict === 'suspicious' ? 'warn' : 'ok';
+    return `<h3>${esc(d.from.address || 'unknown sender')} ${tonePill(t, d.verdict)} <span class="meta">risk ${d.risk}/100</span></h3><p>SPF ${esc(d.auth.spf || '?')} · DKIM ${esc(d.auth.dkim || '?')} · DMARC ${esc(d.auth.dmarc || '?')}${d.origin.ip ? ` · sent from ${esc(d.origin.ip)}${d.origin.country ? ' · ' + esc(d.origin.country) : ''}${d.origin.isp ? ' · ' + esc(d.origin.isp) : ''}` : ''}</p>${d.flags.length ? `<ul class="ev">${d.flags.map((x) => `<li class="err">${esc(x)}</li>`).join('')}</ul>` : ''}<h3>What to do</h3><ul class="ev">${d.advice.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  },
+  lookalike: (r) => {
+    const d = r.result;
+    const t = d.risk === 'high' ? 'bad' : d.risk === 'medium' ? 'warn' : 'ok';
+    return `<h3>${esc(d.domain)} ${tonePill(t, d.risk + ' risk')} <span class="meta">${d.live.length} of ${d.checked} lookalikes exist</span></h3>${d.live.length ? `<table><tr><th>domain</th><th>kind</th><th></th></tr>${d.live.slice(0, 30).map((l) => `<tr><td><code>${esc(l.domain)}</code></td><td>${esc(l.kind)}</td><td>${l.mx ? '<span class="err">receives mail</span> ' : ''}${l.certSeen ? '<span class="err">new cert ' + esc(l.certSeen.slice(0, 10)) + '</span>' : ''}</td></tr>`).join('')}</table>` : ''}${d.certs.length ? `<h3>Certificates naming the brand, last 90 days</h3><ul class="ev">${d.certs.slice(0, 12).map((x) => `<li><code>${esc(x.name)}</code> <span class="meta">${esc(x.firstSeen.slice(0, 10))} · ${esc(x.issuer)}</span></li>`).join('')}</ul>` : ''}<p class="meta">${esc(d.note)}</p>`;
+  },
+  honeypot: (r) => {
+    const d = r.result;
+    const t = d.verdict === 'honeypot' || d.verdict === 'high risk' ? 'bad' : d.verdict === 'caution' ? 'warn' : 'ok';
+    return `<h3>${esc(d.symbol || d.address)} <span class="meta">${esc(d.chain)}</span> ${tonePill(t, d.verdict)}</h3><p>Buy tax ${d.buyTax ?? '?'}% · sell tax ${d.sellTax ?? '?'}%${d.holders ? ` · ${d.holders.failed} of ${d.holders.checked} recent holders could not sell` : ''}</p>${d.reasons.length ? `<ul class="ev">${d.reasons.map((x) => `<li class="err">${esc(x)}</li>`).join('')}</ul>` : ''}<h3>What to do</h3><ul class="ev">${d.advice.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  },
+  address: (r) => {
+    const d = r.result;
+    const t = d.sanctioned ? 'bad' : d.warnings.length ? 'warn' : 'ok';
+    return `<h3><code>${esc(d.address)}</code> ${tonePill(t, d.sanctioned ? 'sanctioned' : d.warnings.length ? 'check first' : 'no red flags')}</h3><p>${esc(d.format)}${d.network ? ' · ' + esc(d.network) : ''}${d.activity ? ' · ' + esc([d.activity.label, d.activity.balance, d.activity.txCount != null ? d.activity.txCount + ' transactions' : null, d.activity.isContract ? 'smart contract' : null].filter(Boolean).join(' · ')) : ''}</p>${d.warnings.length ? `<ul class="ev">${d.warnings.map((x) => `<li class="err">${esc(x)}</li>`).join('')}</ul>` : ''}<h3>What to do</h3><ul class="ev">${d.advice.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>`;
   },
   emailsec: (r) => {
     const d = r.result;
@@ -1290,13 +1340,35 @@ $('#inv-go').onclick = async () => {
     finally { $('#inv-go').disabled = false; }
     return;
   }
-  const param = { phone: 'number', breaches: 'domain', company: 'q', ip: 'ip', hash: 'hash', ransomware: 'q', satellites: 'q', scam: 'message', recall: 'q', emailsec: 'domain', airport: 'code', country: 'name', papers: 'topic', url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
+  if (kind === 'doc' || kind === 'headers') {
+    $('#inv-go').disabled = true;
+    try {
+      let r;
+      if (kind === 'doc') {
+        const f = $('#inv-file').files[0];
+        if (!f) throw new Error('Choose a file first.');
+        if (f.size > 10 * 1024 * 1024) throw new Error('The file is larger than 10 MB.');
+        out.innerHTML = '<p class="meta">Reading the file…</p>';
+        const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => rej(new Error('could not read the file')); fr.readAsDataURL(f); });
+        r = await post('/api/doc', { name: f.name, data });
+      } else {
+        const h = $('#inv-ta').value.trim();
+        if (h.length < 20) throw new Error('Paste the raw headers first.');
+        out.innerHTML = '<p class="meta">Checking…</p>';
+        r = await post('/api/headers', { headers: h });
+      }
+      out.innerHTML = views[kind](r) + checkFoot(r) + `<h3>Sources</h3>${renderSources(r.provenance)}`;
+    } catch (err) { out.innerHTML = `<p class="err">${esc(err.message)}</p>`; }
+    finally { $('#inv-go').disabled = false; }
+    return;
+  }
+  const param = { iban: 'iban', lookalike: 'domain', address: 'address', honeypot: 'address', phone: 'number', breaches: 'domain', company: 'q', ip: 'ip', hash: 'hash', ransomware: 'q', satellites: 'q', scam: 'message', recall: 'q', emailsec: 'domain', airport: 'code', country: 'name', papers: 'topic', url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
   $('#inv-go').disabled = true;
   out.innerHTML = '<p class="meta">Working… some sources are rate-limited and take a while.</p>';
   try {
     const r = kind === 'audit' && /^[{]/.test(q) ? await post('/api/audit', { manifest: q }) : await api(`/api/${kind}?${param}=${encodeURIComponent(q)}`);
     const shareable = ['url', 'factcheck', 'travel', 'audit', 'recall', 'emailsec', 'papers', 'country', 'airport'].includes(kind) && !(kind === 'audit' && /^[{]/.test(q));
-    out.innerHTML = views[kind](r) + (shareable ? '<p class="row" style="margin-top:14px"><button class="icon-btn" id="inv-share">Share result</button><span class="meta" id="inv-share-out"></span></p>' : '') + `<h3>Sources</h3>${renderSources(r.provenance)}`;
+    out.innerHTML = views[kind](r) + checkFoot(r) + (shareable ? '<p class="row" style="margin-top:14px"><button class="icon-btn" id="inv-share">Share result</button><span class="meta" id="inv-share-out"></span></p>' : '') + `<h3>Sources</h3>${renderSources(r.provenance)}`;
     if (shareable) $('#inv-share').onclick = async () => {
       const b = $('#inv-share');
       b.disabled = true;

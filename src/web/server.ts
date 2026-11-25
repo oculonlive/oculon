@@ -25,6 +25,8 @@ import { mailEnabled } from '../sources/resend.js';
 import { analyst, crossExamine, isAnalystModel } from '../analyst.js';
 import { scrubSecrets } from '../core/keys.js';
 import { readBurns, rpcClient, type BurnInfo } from './burns.js';
+import { CHECK_ROUTES } from '../modules/checks.js';
+import { llmsFull, llmsTxt, replayPage, statusPage, type ToolDoc } from './pages.js';
 import { UTILITY, badgeSvg, createNonce, getInvestigation, holderFor, listInvestigations, runSafety, safetyState, signOutHolder, startInvestigation, startInvestigationHold, startSafety, startSafetyHold, tokenConfig, verifyHolder } from '../modules/utility.js';
 
 /** Analyst questions and cross-examinations per visitor address per hour on a public install. */
@@ -393,7 +395,7 @@ export const POST_ROUTES: Record<string, PostHandler> = {
   '/api/headers': async (b, o) => {
     const raw = String(b.headers ?? '');
     if (!raw.trim()) throw new HttpError(400, 'missing headers');
-    return o.headerCheck(raw.slice(0, 100_000));
+    return slim(await o.headerCheck(raw.slice(0, 100_000)));
   },
   '/api/fences': (b, o) => {
     const box = Array.isArray(b.box) ? (b.box.map(Number) as [number, number, number, number]) : null;
@@ -567,6 +569,10 @@ function send(res: ServerResponse, status: number, body: string | Buffer, type: 
   res.end(body);
 }
 
+function siteDomainEarly(opts: WebOptions): string | null {
+  return (opts.domain ?? process.env.OCULON_DOMAIN ?? '').trim().toLowerCase() || null;
+}
+
 export function createWebServer(opts: WebOptions = {}): { server: Server; oculon: Oculon; stop: () => Promise<void> } {
   const oculon = opts.oculon ?? new Oculon();
   const log = opts.log ?? (() => {});
@@ -579,7 +585,8 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
   // OCULON_OPEN=1 opens the whole app to every visitor (no sign-in, no read-only gate, no rate limit).
   const openApp = opts.open ?? process.env.OCULON_OPEN === '1';
   // One MCP server for the HTTP transport, sharing this server's Oculon instance.
-  const mcpServer = new McpServer(() => oculon, { remote: publicMode });
+  const appBase = siteDomainEarly(opts) ? `https://app.${siteDomainEarly(opts)}` : `http://127.0.0.1:${opts.port ?? 4747}`;
+  const mcpServer = new McpServer(() => oculon, { remote: publicMode, baseUrl: appBase });
   // OCULON_PURGE_ONCHAIN=1 clears data left by the paused on-chain modules when the server starts.
   if (!onchainEnabled() && process.env.OCULON_PURGE_ONCHAIN === '1') {
     const removed = oculon.ctx.store.purgeOnchain();
@@ -794,6 +801,24 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     if (req.method === 'POST' && OWNER_ONLY.has(url.pathname) && !owner) {
       return send(res, 403, '{"error":"the shared watchlist is managed by the owner; add your own monitors instead"}', 'application/json');
     }
+    if (url.pathname === '/api/doc' && req.method === 'POST') {
+      if (!sameSite()) return send(res, 403, '{"error":"forbidden"}', 'application/json');
+      const ip = (viaEdge && String(req.headers['x-oculon-client-ip'] ?? '').trim()) || clientIp(req);
+      if (publicMode && !isAdmin(req, adminToken) && !analystLimit(ip)) return send(res, 429, '{"error":"You have checked a lot this hour. Try again a bit later."}', 'application/json');
+      try {
+        const b = await readJson(req, 15_000_000);
+        const b64 = String(b.data ?? '').replace(/^data:[^;]+;base64,/, '');
+        if (!b64) throw new HttpError(400, 'choose a file first');
+        const file = Buffer.from(b64, 'base64');
+        const name = String(b.name ?? 'document').slice(0, 120);
+        const { createHash } = await import('node:crypto');
+        const r = await oculon.recordCheck('doc', createHash('sha256').update(file).digest('hex'), () => oculon.docCheck(file, name), { label: name });
+        log('POST /api/doc');
+        return send(res, 200, JSON.stringify({ ...slim(r.value), check: r.check }), 'application/json; charset=utf-8');
+      } catch (e) {
+        return send(res, e instanceof HttpError ? e.status : 400, JSON.stringify({ error: (e as Error).message }), 'application/json; charset=utf-8');
+      }
+    }
     if (req.method === 'POST' && POST_ROUTES[url.pathname]) {
       // Writes only from this dashboard: a custom header (forces a CORS preflight that this server never
       // grants), a JSON body, and a same-host Origin when the browser sends one.
@@ -805,8 +830,10 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
         return send(res, 403, '{"error":"forbidden"}', 'application/json');
       }
       try {
-        const body = await readJson(req);
-        const out = await POST_ROUTES[url.pathname]!(body, oculon);
+        const body = await readJson(req, url.pathname === '/api/headers' ? 200_000 : undefined);
+        const out = url.pathname === '/api/headers'
+          ? await oculon.recordCheck('headers', String(body.headers ?? ''), async () => POST_ROUTES[url.pathname]!(body, oculon), { label: `email headers: ${(/^subject:\s*(.+)$/im.exec(String(body.headers ?? ''))?.[1] ?? 'pasted').slice(0, 70)}` }).then((r) => ({ ...(r.value as object), check: r.check }))
+          : await POST_ROUTES[url.pathname]!(body, oculon);
         log(`POST ${url.pathname}`);
         return send(res, 200, JSON.stringify(out), 'application/json; charset=utf-8');
       } catch (e) {
@@ -814,6 +841,43 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       }
     }
     if (req.method !== 'GET') return send(res, 405, '{"error":"method not allowed"}', 'application/json');
+    {
+      const base = siteDomain ? `https://app.${siteDomain}` : `http://${req.headers.host ?? '127.0.0.1'}`;
+      if (url.pathname === '/llms.txt' || url.pathname === '/llms-full.txt') {
+        const r = (await mcpServer.handle({ jsonrpc: '2.0', id: 0, method: 'tools/list' })) as { result?: { tools?: ToolDoc[] } } | null;
+        const tools = r?.result?.tools ?? [];
+        const mcpUrl = siteDomain ? `https://mcp.${siteDomain}` : `${base}/mcp`;
+        res.setHeader('access-control-allow-origin', '*');
+        return send(res, 200, url.pathname === '/llms.txt' ? llmsTxt(tools, base, mcpUrl) : llmsFull(tools, base, mcpUrl), 'text/plain; charset=utf-8', 'public, max-age=3600');
+      }
+      if (url.pathname === '/status' || url.pathname === '/status/') {
+        const hours = Math.min(48, Number(url.searchParams.get('hours') ?? 24) || 24);
+        return send(res, 200, statusPage(oculon.sourceStatus(hours), base, hours), 'text/html; charset=utf-8', 'no-cache');
+      }
+      if (url.pathname === '/api/status') {
+        const hours = Math.min(48, Number(url.searchParams.get('hours') ?? 24) || 24);
+        res.setHeader('access-control-allow-origin', '*');
+        return send(res, 200, JSON.stringify({ hours, sources: oculon.sourceStatus(hours) }), 'application/json; charset=utf-8');
+      }
+      const replayId = /^\/replay\/([A-Za-z0-9_-]{10,40})\/?$/.exec(url.pathname)?.[1];
+      if (replayId) {
+        const c = oculon.check(replayId);
+        if (!c) return send(res, 404, '<!doctype html><meta charset="utf-8"><title>Not found</title><body style="background:#000;color:#ccc;font-family:system-ui;padding:40px"><p>This check does not exist, or it is older than 90 days.</p>', 'text/html; charset=utf-8');
+        return send(res, 200, replayPage(c, oculon.checkHistory(replayId), base), 'text/html; charset=utf-8', 'private, max-age=60');
+      }
+      if (url.pathname === '/api/check') {
+        const c = oculon.check(url.searchParams.get('id') ?? '');
+        if (!c) return send(res, 404, '{"error":"no such check"}', 'application/json');
+        return send(res, 200, JSON.stringify({ ...c, history: oculon.checkHistory(c.id) }), 'application/json; charset=utf-8');
+      }
+      const reportId = /^\/report\/([A-Za-z0-9_-]{10,40})\.pdf$/.exec(url.pathname)?.[1];
+      if (reportId) {
+        const pdf = oculon.checkPdf(reportId, base);
+        if (!pdf) return send(res, 404, '{"error":"no such check"}', 'application/json');
+        res.writeHead(200, { 'content-type': 'application/pdf', 'content-disposition': `inline; filename="oculon-${reportId.slice(0, 8)}.pdf"`, 'cache-control': 'private, max-age=300', 'x-content-type-options': 'nosniff' });
+        return void res.end(pdf);
+      }
+    }
     if (url.pathname === '/openapi.json') {
       res.setHeader('access-control-allow-origin', '*');
       return send(res, 200, JSON.stringify(openApiSpec(siteDomain ? `https://app.${siteDomain}` : `http://${req.headers.host ?? '127.0.0.1'}`), null, 2), 'application/json; charset=utf-8', 'public, max-age=3600');
@@ -897,7 +961,10 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     const t0 = Date.now();
     try {
       if (!onchainEnabled() && ONCHAIN_ROUTES.has(url.pathname)) return send(res, 404, '{"error":"on-chain features are paused"}', 'application/json');
-      let out = await route(url.searchParams, oculon);
+      const ck = CHECK_ROUTES[url.pathname];
+      let out = ck && url.searchParams.get(ck.param)?.trim()
+        ? await oculon.recordCheck(ck.kind, url.searchParams.get(ck.param)!.trim(), async () => route(url.searchParams, oculon)).then((r) => (r.value && typeof r.value === 'object' ? { ...(r.value as object), check: r.check } : r.value))
+        : await route(url.searchParams, oculon);
       if (!onchainEnabled()) out = withoutOnchain(url.pathname, out);
       if (!admin && url.pathname === '/api/signals') out = publicSignals(out as { module: string }[]);
       if (!admin && url.pathname === '/api/graph') out = publicGraph(out as Parameters<typeof publicGraph>[0]);

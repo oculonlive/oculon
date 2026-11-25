@@ -163,6 +163,8 @@ ${c.bold('Graph')}
   oculon connect <A> to <B>            how two things are linked (shortest path)
   oculon resolve                       merge duplicates: org:nvidia = company:nvidia = nvidia.com
   oculon quota                         today's API usage vs daily budgets
+  oculon status [--hours 24]           which sources are up, slow or down (from real calls)
+  oculon replay <check id> [--pdf f]   every source a check called; --pdf writes the report
 
 ${c.bold('Radar')}
   oculon radar                         what the world is suddenly paying attention to
@@ -197,6 +199,7 @@ ${c.bold('Everyday checks')}
   oculon iban <IBAN> [--country NL]    is this IBAN valid, and is the account in the supplier's country?
   oculon headers < headers.txt         raw email headers: SPF, DKIM, DMARC, path, origin, spoofing signs
   oculon address <crypto address>      chain, OFAC sanctions, balance and activity, no keys needed
+  oculon doc <file.pdf|.png|.jpg>      was this invoice, statement or screenshot edited? checks its IBANs too
 
 ${c.bold('Threat intel')}
   oculon ip <IP|domain>                abuse reports, scanners, threat reports, Tor, Spamhaus DROP, open ports
@@ -801,6 +804,67 @@ export const COMMANDS: Record<string, Cmd> = {
       for (const x of d.advice) out(`  → ${x}`);
       printSources(r);
     });
+  },
+  async doc(o, a) {
+    const file = a.pos.slice(1).join(' ').trim();
+    if (!file) throw new UsageError('usage: oculon doc <file.pdf|file.png|file.jpg>');
+    if (!existsSync(file)) throw new UsageError(`no such file: ${file}`);
+    const bytes = readFileSync(file);
+    const { createHash } = await import('node:crypto');
+    const name = file.split(/[\\/]/).pop()!;
+    const { value: r, check } = await o.recordCheck('doc', createHash('sha256').update(bytes).digest('hex'), () => o.docCheck(bytes, name), { label: name });
+    emit(a, { ...r, check } as typeof r, () => {
+      const d = r.result;
+      const tone = d.verdict === 'dangerous file' || d.verdict === 'likely edited' ? c.red : d.verdict === 'signs of editing' ? c.yellow : c.green;
+      out(`${c.bold(d.name)}  ${tone(d.verdict.toUpperCase())}  ${c.dim(`risk ${d.risk}/100 · ${d.type} · ${(d.bytes / 1024).toFixed(0)} KB`)}`);
+      const meta = ['producer', 'creator', 'creator tool', 'software', 'created', 'modified'].filter((k) => d.metadata[k]).map((k) => `${k} ${d.metadata[k]}`);
+      if (meta.length) out(c.dim(`  ${meta.join(' · ')}`));
+      if (d.revisions && d.revisions > 1) out(c.dim(`  saved ${d.revisions} times${d.signed ? ' (digitally signed)' : ''}`));
+      for (const f of d.flags) out(c.yellow(`  ! ${f}`));
+      for (const ib of d.ibans) out(`  IBAN ${ib.iban}  ${ib.valid ? c.green('valid') : c.red('NOT VALID')}${ib.country ? c.dim(` · ${ib.country}`) : ''}`);
+      if (d.domains.length) out(c.dim(`  domains in the text: ${d.domains.join(', ')}`));
+      out(c.dim(`  text: ${d.text.chars} characters from the ${d.text.from}`));
+      for (const n of d.notes) out(c.dim(`  ${n}`));
+      for (const x of d.advice) out(`  → ${x}`);
+      if (check.seenBefore) out(c.cyan(`  seen before ${check.seenBefore.at.slice(0, 16).replace('T', ' ')} UTC${check.seenBefore.changes.length ? `: ${check.seenBefore.changes.join('; ')}` : ', nothing changed'}`));
+      out(c.dim(`  check ${check.id} · oculon replay ${check.id} --pdf report.pdf`));
+      printSources(r);
+    });
+  },
+  async replay(o, a) {
+    const id = String(a.pos[1] ?? '').trim();
+    if (!id) throw new UsageError('usage: oculon replay <check id> [--pdf report.pdf]');
+    const ck = o.check(id);
+    if (!ck) throw new UsageError(`no check ${id} in this install's database (checks are kept for 90 days)`);
+    if (typeof a.flags.pdf === 'string') {
+      const { writeFileSync } = await import('node:fs');
+      writeFileSync(a.flags.pdf, o.checkPdf(id)!);
+      out(`wrote ${a.flags.pdf}`);
+      return;
+    }
+    if (a.flags.json) return out(JSON.stringify({ ...ck, history: o.checkHistory(id) }, null, 2));
+    const v = ck.verdict;
+    out(`${c.bold(ck.label)}  ${c.cyan(ck.kind)}  ${(v.tone === 'bad' ? c.red : v.tone === 'warn' ? c.yellow : c.green)((v.verdict ?? 'result').toUpperCase())}${v.risk !== null ? c.dim(`  risk ${v.risk}/100`) : ''}`);
+    out(c.dim(`  checked ${ck.createdAt.slice(0, 19).replace('T', ' ')} UTC · ${(ck.durationMs / 1000).toFixed(1)} s · ${ck.calls.length} source calls`));
+    for (const p of v.points.slice(0, 8)) out(`  - ${p}`);
+    if (ck.seenBefore) out(c.cyan(`  seen before ${ck.seenBefore.at.slice(0, 16).replace('T', ' ')} UTC${ck.seenBefore.changes.length ? `: ${ck.seenBefore.changes.join('; ')}` : ', nothing changed'}`));
+    out(c.bold('\n  Source calls'));
+    for (const k of ck.calls) {
+      const st = k.status === 'LIVE' ? c.green(k.status) : k.status === 'CACHED' ? c.cyan(k.status) : c.yellow(k.status);
+      out(`  ${k.at.slice(11, 19)}  ${k.source.padEnd(22)} ${st.padEnd(20)} ${String(k.ms).padStart(6)} ms  ${c.dim(k.host + (k.via ? ' (mirror)' : ''))}${k.note ? c.dim(`  ${trunc(k.note, 80)}`) : ''}`);
+    }
+    if (!ck.calls.length) out(c.dim('  none: this check ran on the input alone'));
+  },
+  async status(o, a) {
+    const hours = Math.min(48, Number(a.flags.hours ?? 24) || 24);
+    const list = o.sourceStatus(hours);
+    if (a.flags.json) return out(JSON.stringify({ hours, sources: list }, null, 2));
+    if (!list.length) return out(c.dim(`No live source calls in the last ${hours} hours on this install.`));
+    out(c.bold(`Sources, last ${hours} hours`));
+    for (const s of list) {
+      const st = s.state === 'up' ? c.green('UP') : s.state === 'down' ? c.red('DOWN') : c.yellow(s.state.toUpperCase());
+      out(`  ${s.source.padEnd(26)} ${st.padEnd(18)} ${String(s.okPct).padStart(3)}%  ${String(s.calls).padStart(4)} calls  ${s.medianMs === null ? '      -' : `${String(s.medianMs).padStart(6)} ms`}${s.skippedUntil ? c.yellow(`  skipped until ${s.skippedUntil.slice(11, 16)} UTC`) : ''}${s.lastError ? c.dim(`  last error ${s.lastError.at.slice(11, 16)} ${trunc(s.lastError.note, 50)}`) : ''}`);
+    }
   },
   async lookalike(o, a) {
     const q = String(a.pos[1] ?? '').trim();

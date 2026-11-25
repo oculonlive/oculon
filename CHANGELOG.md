@@ -2,6 +2,23 @@
 
 All notable changes are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## 0.1.7
+
+A document check, and every check is now kept: replay it, download it as a PDF, see what changed since last time. Results show up as cards inside Claude and ChatGPT.
+
+- `oculon doc <file>` (also an upload in the web app and `oculon_doc_check` over MCP): was this invoice, bank statement or payment screenshot edited? It reads the file itself: the programs that made and saved it (online PDF editors, image editors, word processors), creation vs modification date, how many times it was saved, the same font embedded twice, white boxes over text, annotations, digital signatures, and dangerous parts (JavaScript, launch actions, embedded files). Every IBAN in the text is checked. Screenshots and scanned PDFs are read with a free AI vision model (OpenRouter or Gemini) when a key is set, and the result says when an image was sent to one.
+- Replay log: every check gets an id. `/replay/<id>`, `oculon replay <id>` and `oculon_replay` list every source it called, in order, with status, time and notes. Checks are kept for 90 days.
+- PDF report: `/report/<id>.pdf` and `oculon replay <id> --pdf report.pdf` turn one check into a report to send on, with the verdict, reasons, what to do, history and every source called. Written by Oculon's own PDF writer, so still no runtime dependency.
+- Seen before: checking the same thing again says when it was last checked and what changed (verdict, risk, new and gone reasons). Shown in the web app, the API, MCP and the CLI.
+- Source status: `/status`, `/api/status`, `oculon status` and `oculon_status` show which sources are up, slow, degraded or down over the last day, measured from real calls.
+- Automatic fallback: a source that fails three times in a row is skipped for five minutes, and the cached answer or a mirror is used instead. DNS lookups fall back from Google to Cloudflare and Bitcoin lookups from mempool.space to Blockstream; the result says which host answered.
+- Verdict cards: check tools return `structuredContent` and a UI resource (`ui://oculon/verdict.html` for MCP Apps hosts, a Skybridge template for ChatGPT apps), so chat apps that render them show the verdict, risk, reasons, sources and links to the replay log and PDF.
+- Brief mode: every MCP tool takes `brief: true` for a short answer (verdict, risk, top reasons, sources, check id) with far fewer tokens.
+- `/llms.txt` and `/llms-full.txt`: every tool explained for AI agents, generated from the live tool list.
+- Web app: the Investigate tab now offers the document check, IBAN, email headers (with a text box for the raw headers), lookalike domains, crypto address and honeypot checks, and every check shows its replay log and PDF report.
+- Fixed: raw email headers over 10 KB were refused by the web app.
+- MCP: 91 tools locally (98 with on-chain on), 89 on the remote server.
+
 ## 0.1.6
 
 Five new checks that need no API key, OCULON utility, and Robinhood Chain back on the live site.

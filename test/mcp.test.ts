@@ -43,7 +43,7 @@ test('tools/list exposes valid schemas; tools/call works and reports errors as t
 
   const unknown = (await s.handle({ jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'nope' } })) as { error: { code: number } };
   assert.equal(unknown.error.code, -32602);
-  const nomethod = (await s.handle({ jsonrpc: '2.0', id: 5, method: 'resources/list' })) as { error: { code: number } };
+  const nomethod = (await s.handle({ jsonrpc: '2.0', id: 5, method: 'sampling/nope' })) as { error: { code: number } };
   assert.equal(nomethod.error.code, -32601);
   s.close();
 });

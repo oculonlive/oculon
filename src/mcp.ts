@@ -2,14 +2,19 @@
  * Oculon MCP server over stdio (JSON-RPC 2.0, one message per line). No dependencies.
  * Lets Claude and other MCP clients call every Oculon module as a tool.
  */
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { Oculon, summarizeProvenance } from './index.js';
 import type { ModuleResult } from './core/types.js';
 import { ONCHAIN_TOOLS, onchainEnabled } from './core/features.js';
 import { availableKinds } from './modules/monitor.js';
+import { CHECK_TOOLS } from './modules/checks.js';
+import { DOC_MAX_BYTES } from './modules/doc.js';
+import { briefOf, verdictOf } from './core/verdict.js';
+import { CARD_HTML, CARD_URI, CARD_URI_OPENAI, MCP_APP_MIME, SKYBRIDGE_MIME, type CardData } from './web/card.js';
 
-export const SERVER_INFO = { name: 'oculon', version: '0.1.6' };
+export const SERVER_INFO = { name: 'oculon', version: '0.1.7' };
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
 type Json = Record<string, unknown>;
@@ -62,6 +67,44 @@ export function checkArgs(inputSchema: Json, args: Json): string | null {
 function compact(r: ModuleResult<unknown>) {
   return { module: r.module, input: r.input, generatedAt: r.generatedAt, result: r.result, signals: r.signals, provenance: summarizeProvenance(r.provenance) };
 }
+
+/** File bytes for the document check: base64, or an https URL on a public host. */
+async function docBytes(o: Oculon, a: Json): Promise<Buffer> {
+  if (a.data) {
+    const b64 = String(a.data).replace(/^data:[^;]+;base64,/, '').replace(/\s+/g, '');
+    if (b64.length > Math.ceil(DOC_MAX_BYTES / 3) * 4 + 4) throw new Error('the file is larger than 10 MB');
+    return Buffer.from(b64, 'base64');
+  }
+  if (!a.url) throw new Error('give the file as data (base64) or url');
+  let u: URL;
+  try { u = new URL(String(a.url)); } catch { throw new Error('not a valid URL'); }
+  // Public https hosts only: no addresses, no internal names.
+  if (u.protocol !== 'https:' || /^(\d+\.){3}\d+$|^\[|^localhost$|\.(local|internal|localhost|lan|home|corp)$/i.test(u.hostname) || !u.hostname.includes('.')) throw new Error('only https links to public hosts are fetched');
+  const r = await o.ctx.http.getBytes(u.href, { source: 'doc-download', timeoutMs: 30_000, retries: 0 });
+  if (!r.data) throw new Error(`could not download the file (${r.prov.note ?? r.prov.status})`);
+  if (r.data.length > DOC_MAX_BYTES) throw new Error('the file is larger than 10 MB');
+  return r.data;
+}
+
+/** The verdict card data a chat app renders next to a check result. */
+function cardOf(kind: string, out: unknown, check: { id: string; seenBefore: { at: string; changes: string[] } | null; replay: string; report: string }, baseUrl: string | undefined): CardData {
+  const v = verdictOf(out);
+  return {
+    kind,
+    title: v.title,
+    verdict: v.verdict,
+    tone: v.tone,
+    risk: v.risk,
+    points: v.points.slice(0, 6),
+    sources: `${v.sources.live} live, ${v.sources.cached} cached, ${v.sources.failed} failed`,
+    seenBefore: check.seenBefore ? { at: check.seenBefore.at, changes: check.seenBefore.changes } : null,
+    links: { replay: baseUrl ? baseUrl + check.replay : null, report: baseUrl ? baseUrl + check.report : null },
+    checkId: check.id,
+  };
+}
+
+/** Tool definitions with UI templates for the chat apps that render them (MCP Apps, ChatGPT apps). */
+const UI_META = { ui: { resourceUri: CARD_URI }, 'ui/resourceUri': CARD_URI, 'openai/outputTemplate': CARD_URI_OPENAI, 'openai/toolInvocation/invoking': 'Checking sources', 'openai/toolInvocation/invoked': 'Checked', 'openai/widgetAccessible': false };
 
 export const TOOLS: Tool[] = [
   {
@@ -335,6 +378,31 @@ export const TOOLS: Tool[] = [
     description: 'Check a crypto address before sending funds, without API keys: chain from the address format (Bitcoin, EVM, Solana, Tron), US OFAC sanctions, and balance, transaction count and labels from free explorers (mempool.space, Blockscout, Solana RPC). Flags unused addresses and contracts posing as wallets.',
     inputSchema: schema({ address: str('Crypto address'), network: str('Optional for 0x addresses: "robinhood" for Robinhood Chain, default Ethereum') }, ['address']),
     run: async (o, a) => compact(await o.addressCheck(String(a.address), a.network ? { network: String(a.network) } : {})),
+  },
+  {
+    name: 'oculon_doc_check',
+    description: 'Was this invoice, bank statement or payment screenshot edited? Reads a PDF, JPEG or PNG: the programs that made and saved it (online PDF editors, image editors), creation vs modification date, how many times it was saved, fonts embedded twice, white boxes over text, annotations, dangerous parts (JavaScript, launch actions), and checks every IBAN in its text. Screenshots are read with a free AI vision model when a key is set. A clean result is not proof the document is genuine.',
+    inputSchema: schema({ data: str('The file as base64 (max 10 MB)'), url: str('Or an https URL of the file'), name: str('File name, for display') }),
+    run: async (o, a) => {
+      const file = await docBytes(o, a);
+      return compact(await o.docCheck(file, a.name ? String(a.name) : a.url ? String(a.url).split('/').pop()!.split('?')[0]! : 'document'));
+    },
+  },
+  {
+    name: 'oculon_replay',
+    description: 'Replay log of an earlier check by its check id: the verdict, what changed since the check before it, and every source called in order with status and time.',
+    inputSchema: schema({ id: str('Check id, as returned in check.id') }, ['id']),
+    run: (o, a) => {
+      const c = o.check(String(a.id));
+      if (!c) throw new Error('no such check (ids are kept for 90 days)');
+      return { id: c.id, kind: c.kind, target: c.label, checkedAt: c.createdAt, durationMs: c.durationMs, verdict: c.verdict, seenBefore: c.seenBefore, calls: c.calls, history: o.checkHistory(c.id) };
+    },
+  },
+  {
+    name: 'oculon_status',
+    description: 'Which Oculon sources are up, slow, degraded or down, from real calls in the last hours: success rate, median time, last error, and sources being skipped (a mirror or cached data answers instead).',
+    inputSchema: schema({ hours: num('Window in hours (default 24, max 48)') }),
+    run: (o, a) => ({ hours: Math.min(48, Number(a.hours ?? 24) || 24), sources: o.sourceStatus(Math.min(48, Number(a.hours ?? 24) || 24)) }),
   },
   {
     name: 'oculon_satellites',
@@ -692,7 +760,7 @@ export class McpServer {
    */
   constructor(
     private readonly makeOculon: () => Oculon = () => new Oculon(),
-    private readonly opts: { remote?: boolean } = {},
+    private readonly opts: { remote?: boolean; baseUrl?: string } = {},
   ) {}
 
   private get o(): Oculon {
@@ -730,28 +798,73 @@ export class McpServer {
         const asked = String(msg.params?.protocolVersion ?? '');
         return reply({
           protocolVersion: SUPPORTED.includes(asked) ? asked : SUPPORTED[0],
-          capabilities: { tools: { listChanged: false } },
+          capabilities: { tools: { listChanged: false }, resources: { listChanged: false } },
           serverInfo: SERVER_INFO,
           instructions:
-            'Oculon is an OSINT engine. Every result includes provenance (LIVE/CACHED/UNAVAILABLE/ERROR per source). Report data as given; do not present ERROR or UNAVAILABLE sources as findings.',
+            'Oculon is an OSINT engine. Every result includes provenance (LIVE/CACHED/UNAVAILABLE/ERROR per source). Report data as given; do not present ERROR or UNAVAILABLE sources as findings. Pass brief: true to any tool for a short answer. Check tools return check.id; oculon_replay shows every source call of a check.',
         });
       }
       case 'ping':
         return reply({});
       case 'tools/list':
-        return reply({ tools: (await this.allTools()).map(({ name, description, inputSchema }) => ({ name, description, inputSchema })) });
+        return reply({
+          tools: (await this.allTools()).map(({ name, description, inputSchema }) => ({
+            name,
+            description,
+            inputSchema: { ...inputSchema, properties: { ...((inputSchema.properties as Json) ?? {}), brief: { type: 'boolean', description: 'Short answer for agents: verdict, risk, top reasons, sources and check id (fewer tokens)' } } },
+            ...(CHECK_TOOLS[name] ? { _meta: UI_META } : {}),
+          })),
+        });
+      case 'resources/list':
+        return reply({ resources: [
+          { uri: CARD_URI, name: 'Oculon verdict card', mimeType: MCP_APP_MIME, description: 'Verdict, risk, reasons and sources of a check' },
+          { uri: CARD_URI_OPENAI, name: 'Oculon verdict card (ChatGPT)', mimeType: SKYBRIDGE_MIME, description: 'Verdict, risk, reasons and sources of a check' },
+        ] });
+      case 'resources/templates/list':
+        return reply({ resourceTemplates: [] });
+      case 'resources/read': {
+        const uri = String(msg.params?.uri ?? '');
+        if (uri !== CARD_URI && uri !== CARD_URI_OPENAI) return fail(-32002, `resource not found: ${uri}`);
+        const base = this.opts.baseUrl;
+        const domains = base && /^https:/.test(base) ? [base] : [];
+        return reply({ contents: [{ uri, mimeType: uri === CARD_URI ? MCP_APP_MIME : SKYBRIDGE_MIME, text: CARD_HTML, _meta: { ui: { csp: { connectDomains: [], resourceDomains: [] }, prefersBorder: false }, 'openai/widgetDescription': 'Oculon verdict for the check above, with its reasons and sources.', 'openai/widgetPrefersBorder': false, 'openai/widgetCSP': { connect_domains: [], resource_domains: [] }, ...(domains.length ? { 'openai/widgetDomain': domains[0] } : {}) } }] });
+      }
       case 'tools/call': {
         const name = String(msg.params?.name ?? '');
         const tool = (await this.allTools()).find((t) => t.name === name);
         if (!tool) return fail(-32602, `unknown tool: ${name}`);
         const raw = msg.params?.arguments ?? {};
         if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return reply({ content: [{ type: 'text', text: 'Error: arguments must be a JSON object' }], isError: true });
+        const brief = (raw as Json).brief === true;
+        delete (raw as Json).brief;
         const bad = checkArgs(tool.inputSchema, raw as Json);
         if (bad) return reply({ content: [{ type: 'text', text: `Error: ${bad}` }], isError: true });
         try {
           const args = raw as Json;
           if (this.opts.remote && name === 'oculon_monitor') args.dry_run = true;
-          const out = await tool.run(this.o, args);
+          const ck = CHECK_TOOLS[name];
+          let out: unknown;
+          let check: Awaited<ReturnType<Oculon['recordCheck']>>['check'] | null = null;
+          if (ck) {
+            // Checks are kept: a check id, a replay log, and what changed since the last check of the same thing.
+            const target = name === 'oculon_doc_check' ? String(args.url ?? '') || createHash('sha256').update(String(args.data ?? '')).digest('hex') : String(args[ck.arg] ?? '');
+            const label = name === 'oculon_doc_check' ? String(args.name ?? args.url ?? 'document').slice(0, 90) : undefined;
+            const r = await this.o.recordCheck(ck.kind, target, async () => tool.run(this.o, args), label ? { label } : {});
+            out = r.value;
+            check = r.check;
+            const base = this.opts.baseUrl;
+            const meta = { id: check.id, seenBefore: check.seenBefore, replay: base ? base + check.replay : `oculon replay ${check.id}`, report: base ? base + check.report : `oculon replay ${check.id} --pdf report.pdf` };
+            if (out && typeof out === 'object') out = { ...(out as Json), check: meta };
+          } else {
+            out = await tool.run(this.o, args);
+          }
+          if (brief && !(out && typeof out === 'object' && '__image' in out)) {
+            const c = (out as Json | null)?.check as Json | undefined;
+            out = briefOf(out, c ? { check: { id: c.id, replay: c.replay, ...(c.seenBefore ? { changedSinceLast: (c.seenBefore as Json).changes } : {}) } } : {});
+          }
+          if (check) {
+            return reply({ content: [{ type: 'text', text: JSON.stringify(out) }], structuredContent: cardOf(ck!.kind, out, check, this.opts.baseUrl), _meta: { 'openai/outputTemplate': CARD_URI_OPENAI } });
+          }
           if (out && typeof out === 'object' && '__image' in out) {
             const { __image, meta } = out as { __image: string | null; meta: unknown };
             const content: Json[] = [{ type: 'text', text: JSON.stringify(meta) }];

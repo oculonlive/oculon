@@ -12,6 +12,8 @@ import type { IncomingMessage } from 'node:http';
 /** Read-only endpoints the public pages call. Everything else needs the admin cookie. */
 export const PUBLIC_API = new Set([
   '/api/meta',
+  '/api/status',
+  '/api/check',
   '/api/readme',
   '/api/console',
   '/api/signals',

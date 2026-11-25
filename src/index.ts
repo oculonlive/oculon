@@ -73,6 +73,10 @@ import { breaches, passwordCheck, pwnedRange } from './modules/breach.js';
 import { phoneCheck } from './modules/phone.js';
 import { ibanCheck } from './modules/iban.js';
 import { headerCheck } from './modules/headers.js';
+import { docCheck } from './modules/doc.js';
+import { checkHistory, getCheck, recordCheck } from './modules/checks.js';
+import { sourceStatus } from './core/calls.js';
+import { reportPdf } from './report-pdf.js';
 import { lookalikes } from './modules/lookalike.js';
 import { honeypotCheck } from './modules/honeypot.js';
 import { addressCheck } from './modules/address.js';
@@ -411,6 +415,31 @@ export class Oculon {
   /** Raw email headers: SPF, DKIM and DMARC results, the delivery path, the origin IP and spoofing signs. */
   headerCheck(rawHeaders: string) {
     return headerCheck(this.ctx, rawHeaders);
+  }
+  /** Was this invoice, bank statement or screenshot edited? PDF, JPEG or PNG bytes; IBANs in the text are checked. */
+  docCheck(file: Buffer, name?: string) {
+    return docCheck(this.ctx, file, name);
+  }
+  /** Run a check and keep it: returns the value plus a check id, a replay link and what changed since the last check of the same target. */
+  recordCheck<T>(kind: string, target: string, run: () => Promise<T>, opts: { label?: string } = {}) {
+    return recordCheck(this.ctx, kind, target, run, opts);
+  }
+  /** A stored check: verdict, every source call it made (the replay log) and the full result. */
+  check(id: string) {
+    return getCheck(this.ctx, id);
+  }
+  /** Earlier checks of the same target as check `id`, newest first. */
+  checkHistory(id: string, limit = 10) {
+    return checkHistory(this.ctx, id, limit);
+  }
+  /** One stored check as a PDF report. */
+  checkPdf(id: string, baseUrl?: string) {
+    const c = getCheck(this.ctx, id);
+    return c ? reportPdf(c, checkHistory(this.ctx, id), baseUrl) : null;
+  }
+  /** Which sources are up, slow or down: live calls of the last `hours`. */
+  sourceStatus(hours = 24) {
+    return sourceStatus(this.ctx.store, hours);
   }
   /** Lookalike domains of a brand that exist in DNS, and new certificates naming the brand (crt.sh). */
   lookalikes(domain: string) {

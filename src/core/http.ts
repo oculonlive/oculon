@@ -1,3 +1,4 @@
+import { breakerOpenUntil, breakerResult, logCall, MIRRORS, recordSourceCall } from './calls.js';
 import { scrubSecrets } from './keys.js';
 import { takeQuota } from './quota.js';
 import type { Store } from './store.js';
@@ -111,6 +112,8 @@ export interface HttpConfig {
   fetch?: typeof fetch;
   throttle?: boolean;
   retryDelayMs?: number;
+  /** Skip a host for a few minutes after it fails several times in a row (default on). */
+  breaker?: boolean;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -156,6 +159,13 @@ export class Http {
 
   /** Uncached binary POST (used for timestamp calendars). Returns the raw response bytes. */
   async postBytes(url: string, body: Uint8Array, o: { source: string; headers?: Record<string, string>; timeoutMs?: number; retries?: number }): Promise<Sourced<Buffer>> {
+    const t0 = Date.now();
+    const r = await this.postBytesRaw(url, body, o);
+    this.note(o.source, url, r.prov.status, Date.now() - t0, r.prov.note, undefined, r.prov.note !== 'daily quota reached');
+    return r;
+  }
+
+  private async postBytesRaw(url: string, body: Uint8Array, o: { source: string; headers?: Record<string, string>; timeoutMs?: number; retries?: number }): Promise<Sourced<Buffer>> {
     if (!takeQuota(this.store, o.source)) return { data: null, prov: prov(o.source, url, 'UNAVAILABLE', Date.now(), 'daily quota reached') };
     const doFetch = this.cfg.fetch ?? fetch;
     const retries = o.retries ?? 1;
@@ -184,6 +194,13 @@ export class Http {
 
   /** Uncached binary GET; 404 is reported as UNAVAILABLE. Network errors and 5xx are retried once. */
   async getBytes(url: string, o: { source: string; headers?: Record<string, string>; timeoutMs?: number; retries?: number }): Promise<Sourced<Buffer>> {
+    const t0 = Date.now();
+    const r = await this.getBytesRaw(url, o);
+    this.note(o.source, url, r.prov.status, Date.now() - t0, r.prov.note);
+    return r;
+  }
+
+  private async getBytesRaw(url: string, o: { source: string; headers?: Record<string, string>; timeoutMs?: number; retries?: number }): Promise<Sourced<Buffer>> {
     const doFetch = this.cfg.fetch ?? fetch;
     const retries = o.retries ?? 1;
     let lastErr = 'unknown error';
@@ -203,43 +220,35 @@ export class Http {
     return { data: null, prov: prov(o.source, url, 'ERROR', Date.now(), lastErr) };
   }
 
-  async get<T = unknown>(url: string, o: GetOptions): Promise<Sourced<T>> {
-    const as = o.as ?? 'json';
-    const ttl = (o.ttlSec ?? 900) * 1000;
-    const retries = o.retries ?? 2;
-    const cached = this.store.cacheGet(url);
-    const now = Date.now();
+  /** Record a finished call: the running check's replay log, and (for live calls) the /status stats. */
+  private note(source: string, url: string, status: Status, ms: number, note?: string, via?: string, live = true): void {
+    let host = '';
+    try { host = new URL(url).host; } catch {}
+    logCall({ source, host, status, ms: Math.round(ms), at: new Date().toISOString(), ...(note ? { note: scrubSecrets(note).slice(0, 200) } : {}), ...(via ? { via } : {}) });
+    if (live) recordSourceCall(this.store, source, via ?? host, status === 'LIVE' || (status === 'UNAVAILABLE' && note === 'HTTP 404'), ms, note ? scrubSecrets(note) : undefined);
+  }
 
-    if (cached && now - cached.fetchedAt < ttl) {
-      return { data: this.parse<T>(cached.body, as), prov: prov(o.source, url, 'CACHED', cached.fetchedAt) };
-    }
-
-    if (!takeQuota(this.store, o.source)) {
-      if (cached) return { data: this.parse<T>(cached.body, as), prov: prov(o.source, url, 'CACHED', cached.fetchedAt, 'daily quota reached; showing last cached result') };
-      return { data: null, prov: prov(o.source, url, 'UNAVAILABLE', Date.now(), 'daily quota reached') };
-    }
-
+  /**
+   * One live request with retries. `hostDown` is true when the failure says the host is unhealthy (network error,
+   * timeout, 5xx, 429), which feeds the breaker; a 4xx answer means the host is up.
+   */
+  private async live(url: string, o: GetOptions, as: 'json' | 'text', retries: number, extraHeaders: Record<string, string> = {}): Promise<{ ok: true; body: string } | { ok: false; notFound: boolean; err: string; hostDown: boolean }> {
     const doFetch = this.cfg.fetch ?? fetch;
     const host = new URL(url).host;
     const baseDelay = this.cfg.retryDelayMs ?? 1500;
     let lastErr = 'unknown error';
-
+    let hostDown = false;
     for (let attempt = 0; attempt <= retries; attempt++) {
       if (this.cfg.throttle !== false) await throttle(host);
       try {
         const res = await doFetch(url, {
-          headers: {
-            'user-agent': userAgent(url),
-            accept: as === 'json' ? 'application/json' : '*/*',
-            ...o.headers,
-          },
+          headers: { 'user-agent': userAgent(url), accept: as === 'json' ? 'application/json' : '*/*', ...o.headers, ...extraHeaders },
           signal: AbortSignal.timeout(o.timeoutMs ?? 20_000),
         });
-        if (res.status === 404) {
-          return { data: null, prov: prov(o.source, url, 'UNAVAILABLE', Date.now(), 'HTTP 404') };
-        }
+        if (res.status === 404) return { ok: false, notFound: true, err: 'HTTP 404', hostDown: false };
         if (res.status === 429 || res.status >= 500) {
           lastErr = `HTTP ${res.status}`;
+          hostDown = true;
           const retryAfter = Number(res.headers.get('retry-after'));
           const wait = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.min(retryAfter * 1000, 30_000) : baseDelay * 2 ** attempt;
           if (attempt < retries) await sleep(this.cfg.retryDelayMs !== undefined ? baseDelay : wait);
@@ -248,6 +257,7 @@ export class Http {
         if (!res.ok) {
           const text = await res.text().catch(() => '');
           lastErr = `HTTP ${res.status}${errorReason(text)}`;
+          hostDown = false;
           // GitHub signals (secondary) rate limits with 403.
           if (res.status === 403 && (res.headers.get('x-ratelimit-remaining') === '0' || /rate limit/i.test(text))) {
             lastErr = 'HTTP 403 rate limited';
@@ -259,22 +269,89 @@ export class Http {
         const body = await res.text();
         if (o.rateLimitText?.test(body.slice(0, 300))) {
           lastErr = 'rate limited';
+          hostDown = false;
           if (attempt < retries) await sleep(Math.max(baseDelay, 6000) * 2 ** attempt);
           continue;
         }
-        let data = this.parse<T>(body, as);
-        let stored = body;
-        if (o.keep && as === 'json' && data != null) {
-          data = o.keep(data) as T;
-          stored = JSON.stringify(data);
-        }
-        this.store.cachePut(url, stored);
-        return { data, prov: prov(o.source, url, 'LIVE', Date.now()) };
+        this.parse(body, as); // throws ParseError on a broken body
+        return { ok: true, body };
       } catch (e) {
         lastErr = errMsg(e);
-        if (e instanceof ParseError) break;
+        if (e instanceof ParseError) { hostDown = false; break; }
+        hostDown = true;
         if (attempt < retries) await sleep(baseDelay * 2 ** attempt);
       }
+    }
+    return { ok: false, notFound: false, err: lastErr, hostDown };
+  }
+
+  async get<T = unknown>(url: string, o: GetOptions): Promise<Sourced<T>> {
+    const as = o.as ?? 'json';
+    const ttl = (o.ttlSec ?? 900) * 1000;
+    const retries = o.retries ?? 2;
+    const cached = this.store.cacheGet(url);
+    const now = Date.now();
+
+    if (cached && now - cached.fetchedAt < ttl) {
+      this.note(o.source, url, 'CACHED', 0, undefined, undefined, false);
+      return { data: this.parse<T>(cached.body, as), prov: prov(o.source, url, 'CACHED', cached.fetchedAt) };
+    }
+
+    if (!takeQuota(this.store, o.source)) {
+      this.note(o.source, url, cached ? 'CACHED' : 'UNAVAILABLE', 0, 'daily quota reached', undefined, false);
+      if (cached) return { data: this.parse<T>(cached.body, as), prov: prov(o.source, url, 'CACHED', cached.fetchedAt, 'daily quota reached; showing last cached result') };
+      return { data: null, prov: prov(o.source, url, 'UNAVAILABLE', Date.now(), 'daily quota reached') };
+    }
+
+    const host = new URL(url).host;
+    const useBreaker = this.cfg.breaker !== false;
+    const keep = (body: string): { data: T; stored: string } => {
+      let data = this.parse<T>(body, as);
+      let stored = body;
+      if (o.keep && as === 'json' && data != null) {
+        data = o.keep(data) as T;
+        stored = JSON.stringify(data);
+      }
+      return { data, stored };
+    };
+
+    let lastErr: string;
+    const skipped = useBreaker ? breakerOpenUntil(host) : null;
+    if (skipped) {
+      lastErr = `skipped: ${host} kept failing, retrying it after ${new Date(skipped).toISOString().slice(11, 16)} UTC`;
+    } else {
+      const t0 = Date.now();
+      const r = await this.live(url, o, as, retries);
+      if (useBreaker) breakerResult(host, r.ok || !r.hostDown);
+      if (r.ok) {
+        const { data, stored } = keep(r.body);
+        this.store.cachePut(url, stored);
+        this.note(o.source, url, 'LIVE', Date.now() - t0);
+        return { data, prov: prov(o.source, url, 'LIVE', Date.now()) };
+      }
+      if (r.notFound) {
+        this.note(o.source, url, 'UNAVAILABLE', Date.now() - t0, 'HTTP 404');
+        return { data: null, prov: prov(o.source, url, 'UNAVAILABLE', Date.now(), 'HTTP 404') };
+      }
+      lastErr = r.err;
+      this.note(o.source, url, 'ERROR', Date.now() - t0, r.err);
+    }
+
+    // Auto fallback: the same request on a mirror host, when there is one.
+    const mirror = MIRRORS[host];
+    const alt = mirror?.rewrite(new URL(url));
+    if (mirror && alt && !(useBreaker && breakerOpenUntil(mirror.host))) {
+      const t0 = Date.now();
+      const r = await this.live(alt.url, o, as, 1, alt.headers);
+      if (useBreaker) breakerResult(mirror.host, r.ok || !r.hostDown);
+      if (r.ok) {
+        const { data, stored } = keep(r.body);
+        this.store.cachePut(url, stored);
+        const why = `${host} failed (${lastErr}); answered by ${mirror.host}`;
+        this.note(o.source, alt.url, 'LIVE', Date.now() - t0, why, mirror.host);
+        return { data, prov: prov(o.source, url, 'LIVE', Date.now(), why) };
+      }
+      this.note(o.source, alt.url, 'ERROR', Date.now() - t0, r.err, mirror.host);
     }
 
     if (cached) {
