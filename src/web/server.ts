@@ -528,7 +528,7 @@ export function renderPage(html: string, domain: string | null): string {
   return out;
 }
 
-export interface TokenInfo { ca: string; chain: string; ticker: string; explorer: string; launchpad: string; txBase: string; deployBlock: number }
+export interface TokenInfo { ca: string; chain: string; ticker: string; explorer: string; launchpad: string; txBase: string; deployBlock: number; uniswap?: string; dexscreener?: string; pool?: { dex: string; pair: string; id: string; url?: string }; supply?: string; launched?: string; migrated?: string }
 
 /** The burn section on /thetoken: total, share of supply and every burn with its time and transaction. */
 export function burnBlock(b: BurnInfo | null, t: Partial<TokenInfo>): string {
@@ -555,7 +555,31 @@ export function tokenBlock(t: Partial<TokenInfo>): string {
   const cell = (k: string, v: string) => `<div><b>${k}</b><span>${v ? esc(v) : '-'}</span></div>`;
   const badge = /^0x[0-9a-fA-F]{40}$/.test(ca) ? `<a class="sbadge" href="/safety/${esc(ca.toLowerCase())}" title="Live safety check of this token"><img src="/badge/${esc(ca.toLowerCase())}.svg" alt="Oculon safety badge" height="22"></a>` : '';
   return `<div class="ca"><div class="lbl">Contract address</div><div class="addr"><code id="ca-value">${esc(ca)}</code><button id="copy-ca" type="button">COPY</button></div>${badge}`
-    + `<div class="meta">${cell('Chain', (t.chain ?? '').trim())}${cell('Ticker', (t.ticker ?? '').trim() ? `$${(t.ticker ?? '').trim().replace(/^\$/, '')}` : '')}<div><b>${link ? link.k : 'Explorer'}</b><span>${link ? `<a href="${esc(link.u)}" target="_blank" rel="noopener">${esc(link.label)}</a>` : '-'}</span></div></div></div>`;
+    + `<div class="meta">${cell('Chain', (t.chain ?? '').trim())}${cell('Ticker', (t.ticker ?? '').trim() ? `$${(t.ticker ?? '').trim().replace(/^\$/, '')}` : '')}${t.pool ? cell('DEX', t.pool.dex) : `<div><b>${link ? link.k : 'Explorer'}</b><span>${link ? `<a href="${esc(link.u)}" target="_blank" rel="noopener">${esc(link.label)}</a>` : '-'}</span></div>`}</div>${tokenLinks(t)}</div>`;
+}
+
+/** Where to trade and track the token: one button per configured https link. */
+function tokenLinks(t: Partial<TokenInfo>): string {
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  const safe = (u: string | undefined) => (/^https:\/\/[^\s"'<>]+$/.test(u ?? '') ? u! : '');
+  const links = [['Uniswap', t.uniswap, 'Trade'], ['DexScreener', t.dexscreener, 'Chart'], ['Pons', t.launchpad, 'Launchpad'], ['Etherscan', t.explorer, 'Explorer']] as const;
+  const items = links.filter(([, u]) => safe(u)).map(([name, u, kind]) => `<a href="${esc(safe(u))}" target="_blank" rel="noopener"><b>${kind}</b><span>${name}</span></a>`);
+  return items.length ? `<div class="golinks">${items.join('')}</div>` : '';
+}
+
+/** The details table on /thetoken: supply, pool, launch and migration, all from token.json (read from the chain). */
+export function tokenDetails(t: Partial<TokenInfo>): string {
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  if (!(t.ca ?? '').trim()) return '';
+  const when = (iso?: string) => (iso && !Number.isNaN(Date.parse(iso)) ? `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC` : '');
+  const safe = (u: string | undefined) => (/^https:\/\/[^\s"'<>]+$/.test(u ?? '') ? u! : '');
+  const rows: [string, string][] = [];
+  if (t.chain) rows.push(['Chain', esc(t.chain)]);
+  if (t.supply) rows.push(['Total supply', `${esc(t.supply)} ${esc((t.ticker ?? '').replace(/^\$/, ''))}`]);
+  if (t.pool) rows.push(['Pool', `${esc(t.pool.pair)} on ${esc(t.pool.dex)}${safe(t.pool.url) ? ` &middot; <a href="${esc(safe(t.pool.url))}" target="_blank" rel="noopener">${esc(t.pool.id.slice(0, 10))}&hellip;${esc(t.pool.id.slice(-6))}</a>` : ''}`]);
+  if (t.launched) rows.push(['Launched', `${esc(when(t.launched))}${t.launchpad ? ' on the Pons launchpad' : ''}${t.deployBlock ? `, block ${t.deployBlock.toLocaleString('en-US')}` : ''}`]);
+  if (t.migrated) rows.push(['Migrated', `${esc(when(t.migrated))}: the bonding curve completed and trading moved to ${esc(t.pool?.dex ?? 'a DEX pool')}. Same contract address, nothing to swap or claim.`]);
+  return rows.length ? `<h2>Details</h2><div class="dtable">${rows.map(([k, v]) => `<div><b>${k}</b><span>${v}</span></div>`).join('')}</div>` : '';
 }
 
 function send(res: ServerResponse, status: number, body: string | Buffer, type: string, cache = 'no-store') {
@@ -923,7 +947,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     if (/^\/thetoken\/?$/.test(url.pathname) && sub !== 'docs') {
       let info: Partial<TokenInfo> = {};
       try { info = JSON.parse(readFileSync(join(HERE, 'token.json'), 'utf8')) as Partial<TokenInfo>; } catch { /* no file: nothing official */ }
-      const html = readFileSync(join(HERE, 'token.html'), 'utf8').replace('{{TOKEN_BLOCK}}', tokenBlock(info) + burnBlock(await tokenBurns(info), info));
+      const html = readFileSync(join(HERE, 'token.html'), 'utf8').replace('{{TOKEN_BLOCK}}', tokenBlock(info) + burnBlock(await tokenBurns(info), info)).replace('{{TOKEN_DETAILS}}', tokenDetails(info));
       return send(res, 200, renderPage(html, siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
     }
     if (url.pathname === '/manifest.webmanifest') return send(res, 200, readFileSync(join(HERE, 'manifest.webmanifest'), 'utf8'), 'application/manifest+json; charset=utf-8', 'no-cache');

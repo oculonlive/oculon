@@ -16,3 +16,5 @@ Thumbs.db
 mcp-publisher*
 bug-rec/
 launch/
+
+.claude/settings.local.json

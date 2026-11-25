@@ -72,3 +72,18 @@ test('/thetoken is served, in public mode too', async () => {
     await stop();
   }
 });
+
+test('token page: trade and chart links, DEX cell after migration, details from token.json', async () => {
+  const { tokenDetails } = await import('../src/web/server.js');
+  const t = { ca: '0xabc', chain: 'Robinhood Chain', ticker: 'OCULON', launchpad: 'https://ponsfamily.com/launchpad/0xabc', uniswap: 'https://app.uniswap.org/explore/tokens/robinhood/0xabc', dexscreener: 'javascript:alert(1)', pool: { dex: 'Uniswap v4', pair: 'OCULON / ETH', id: '0x' + 'a'.repeat(64), url: 'https://app.uniswap.org/explore/pools/robinhood/0xaa' }, supply: '1,000,000,000', launched: '2026-11-25T14:38:27Z', migrated: '2026-11-25T21:22:31Z', deployBlock: 123115234 };
+  const b = tokenBlock(t);
+  assert.match(b, /<b>DEX<\/b><span>Uniswap v4<\/span>/);
+  assert.match(b, /<a href="https:\/\/app\.uniswap\.org\/explore\/tokens\/robinhood\/0xabc"[^>]*><b>Trade<\/b><span>Uniswap<\/span>/);
+  assert.match(b, /<b>Launchpad<\/b><span>Pons<\/span>/);
+  assert.doesNotMatch(b, /javascript:/, 'non-https links are dropped');
+  const d = tokenDetails(t);
+  assert.match(d, /1,000,000,000 OCULON/);
+  assert.match(d, /2026-11-25 21:22 UTC: the bonding curve completed and trading moved to Uniswap v4/);
+  assert.match(d, /block 123,115,234/);
+  assert.equal(tokenDetails({}), '');
+});
