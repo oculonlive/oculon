@@ -24,6 +24,7 @@ import { addPersonal, confirmEmail, emailStatus, listPersonal, personalAlerts, r
 import { mailEnabled } from '../sources/resend.js';
 import { analyst, crossExamine, isAnalystModel } from '../analyst.js';
 import { scrubSecrets } from '../core/keys.js';
+import { readBurns, rpcClient, type BurnInfo } from './burns.js';
 
 /** Analyst questions and cross-examinations per visitor address per hour on a public install. */
 const ANALYST_PER_HOUR = Number(process.env.OCULON_ANALYST_PER_HOUR ?? 40);
@@ -40,6 +41,9 @@ function analystLimit(ip: string, now = Date.now()): boolean {
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 export interface WebOptions {
+  /** RPC for the burn list on /thetoken (default ROBINHOOD_PUBLIC_RPC_URL) and a fetch for tests. */
+  burnRpcUrl?: string;
+  burnFetch?: typeof fetch;
   port?: number;
   host?: string;
   /** Open to the internet: read-only overview and docs for visitors, full app only with the admin cookie. */
@@ -510,7 +514,20 @@ export function renderPage(html: string, domain: string | null): string {
   return out;
 }
 
-export interface TokenInfo { ca: string; chain: string; ticker: string; explorer: string; launchpad: string }
+export interface TokenInfo { ca: string; chain: string; ticker: string; explorer: string; launchpad: string; txBase: string; deployBlock: number }
+
+/** The burn section on /thetoken: total, share of supply and every burn with its time and transaction. */
+export function burnBlock(b: BurnInfo | null, t: Partial<TokenInfo>): string {
+  if (!b) return '';
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  const base = /^https:\/\/[^\s"'<>]+$/.test(t.txBase ?? '') ? t.txBase!.replace(/\/$/, '') : '';
+  const when = (iso: string) => `${iso.slice(0, 10)} ${iso.slice(11, 16)} UTC`;
+  const short = (tx: string) => `${tx.slice(0, 10)}…${tx.slice(-6)}`;
+  const rows = b.burns.map((x) => `<tr><td>${esc(when(x.time))}<br>${base ? `<a href="${esc(base)}/tx/${esc(x.tx)}" target="_blank" rel="noopener">${esc(short(x.tx))}</a>` : `<span>${esc(short(x.tx))}</span>`}</td><td class="n">${esc(x.amount)}</td></tr>`).join('');
+  return `<div class="burn"><div class="lbl">Burned</div><div class="btot"><span>${esc(b.total)}</span>${b.percent ? `<em>${esc(b.percent)} of supply</em>` : ''}</div>`
+    + (rows ? `<div class="btable"><table><thead><tr><th>Time · transaction</th><th class="n">Amount</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<p>No burns yet.</p>')
+    + `<p class="bnote">Read live from the chain: transfers to the dead and zero addresses. Updated ${esc(when(b.checkedAt))}.</p></div>`;
+}
 
 /** The address block on /thetoken, from src/web/token.json. An empty address says no token is official yet. */
 export function tokenBlock(t: Partial<TokenInfo>): string {
@@ -561,6 +578,23 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
   // A Cloudflare Worker serves app.<domain> and docs.<domain> by forwarding to this server with the site name
   // and the client address in headers. Those headers count only when they carry the shared edge secret.
   const edgeSecret = (opts.edgeSecret ?? process.env.OCULON_EDGE_SECRET ?? '').trim() || null;
+
+  // Burns on /thetoken come from the chain RPC, cached for five minutes; a failed read keeps the last good one.
+  let burnCache: { at: number; key: string; info: BurnInfo | null } | null = null;
+  const tokenBurns = async (t: Partial<TokenInfo>): Promise<BurnInfo | null> => {
+    const url = opts.burnRpcUrl ?? process.env.ROBINHOOD_PUBLIC_RPC_URL?.trim();
+    if (!url || !/^0x[0-9a-fA-F]{40}$/.test(t.ca ?? '') || !t.deployBlock) return null;
+    const key = `${t.ca}:${t.deployBlock}`;
+    if (burnCache && burnCache.key === key && Date.now() - burnCache.at < 300_000) return burnCache.info;
+    try {
+      const info = await readBurns(rpcClient(url, opts.burnFetch), t.ca!, t.deployBlock);
+      burnCache = { at: Date.now(), key, info };
+      return info;
+    } catch (e) {
+      log(`token burns: ${(e as Error).message}`);
+      return burnCache?.key === key ? burnCache.info : null;
+    }
+  };
 
   /** The page a browser sees on the MCP endpoint: the URL to add, client snippets and the tools this endpoint lists. */
   const mcpPage = async (onPath: boolean): Promise<string> => {
@@ -776,7 +810,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     if (/^\/thetoken\/?$/.test(url.pathname) && sub !== 'docs') {
       let info: Partial<TokenInfo> = {};
       try { info = JSON.parse(readFileSync(join(HERE, 'token.json'), 'utf8')) as Partial<TokenInfo>; } catch { /* no file: nothing official */ }
-      const html = readFileSync(join(HERE, 'token.html'), 'utf8').replace('{{TOKEN_BLOCK}}', tokenBlock(info));
+      const html = readFileSync(join(HERE, 'token.html'), 'utf8').replace('{{TOKEN_BLOCK}}', tokenBlock(info) + burnBlock(await tokenBurns(info), info));
       return send(res, 200, renderPage(html, siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
     }
     if (url.pathname === '/manifest.webmanifest') return send(res, 200, readFileSync(join(HERE, 'manifest.webmanifest'), 'utf8'), 'application/manifest+json; charset=utf-8', 'no-cache');

@@ -3,7 +3,8 @@ import { readFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { test } from 'node:test';
 import { Oculon } from '../src/index.js';
-import { createWebServer, tokenBlock } from '../src/web/server.js';
+import { burnBlock, createWebServer, tokenBlock } from '../src/web/server.js';
+import { readBurns } from '../src/web/burns.js';
 import { mockFetch, NOW } from './helpers.js';
 
 test('token block: nothing official without an address, escaped values with one', () => {
@@ -25,8 +26,37 @@ test('README and token.json name the same address', () => {
   assert.ok(readFileSync(new URL('../README.md', import.meta.url), 'utf8').includes(official.ca));
 });
 
+test('burns: read from transfer logs, newest first, total from the dead balance plus zero-address burns', async () => {
+  const E18 = 10n ** 18n;
+  const hex = (n: bigint) => `0x${n.toString(16)}`;
+  const rpc = async <T>(method: string, params: unknown[]): Promise<T> => {
+    const p = params as [{ data?: string; topics?: string[] }, ...unknown[]];
+    if (method === 'eth_call') {
+      const d = p[0].data!;
+      return (d === '0x313ce567' ? hex(18n) : d === '0x18160ddd' ? hex(999_000_000n * E18) : hex(10_000_000n * E18)) as T;
+    }
+    if (method === 'eth_getLogs') {
+      const toZero = p[0].topics![2]!.endsWith('0'.repeat(40));
+      return (toZero
+        ? [{ transactionHash: '0xzz', blockNumber: '0x10', data: hex(1_000_000n * E18), logIndex: '0x0' }]
+        : [{ transactionHash: '0xaa', blockNumber: '0x5', data: hex(4_000_000n * E18), logIndex: '0x0' }, { transactionHash: '0xbb', blockNumber: '0x20', data: hex(6_000_000n * E18 + 5n * 10n ** 16n), logIndex: '0x1' }]) as T;
+    }
+    if (method === 'eth_getBlockByNumber') return { timestamp: hex(1_800_000_000n + BigInt(params[0] as string)) } as T;
+    throw new Error(method);
+  };
+  const b = await readBurns(rpc, '0x12a3f1a05d827007f17a43a250cce44868c4a263', 1);
+  assert.deepEqual(b.burns.map((x) => x.tx), ['0xbb', '0xzz', '0xaa']);
+  assert.equal(b.burns[0]!.amount, '6,000,000.05');
+  assert.equal(b.total, '11,000,000');
+  assert.equal(b.percent, '1.10%');
+  const html = burnBlock(b, { txBase: 'https://robin.etherscan.io' });
+  assert.match(html, /href="https:\/\/robin\.etherscan\.io\/tx\/0xbb"/);
+  assert.match(html, /11,000,000<\/span><em>1\.10% of supply/);
+  assert.equal(burnBlock(null, {}), '');
+});
+
 test('/thetoken is served, in public mode too', async () => {
-  const { server, stop } = createWebServer({ port: 0, publicMode: true, oculon: new Oculon({ dbPath: ':memory:', fetch: mockFetch([]).fetch, throttle: false, now: () => NOW }) });
+  const { server, stop } = createWebServer({ port: 0, publicMode: true, burnRpcUrl: '', oculon: new Oculon({ dbPath: ':memory:', fetch: mockFetch([]).fetch, throttle: false, now: () => NOW }) });
   await new Promise((r) => server.once('listening', r));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   try {
