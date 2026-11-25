@@ -103,6 +103,7 @@ footer{background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
   <h2>What Oculon stores</h2>
   <ul>
     <li>A local SQLite database with signals, entities, links, cached API responses, watchlist items, geofences, case files and feedback votes, in <code>~/.oculon</code> or the folder set by <code>OCULON_HOME</code>.</li>
+    <li>Check history: each check (a link, a message, an IBAN, a document and so on) is kept for 90 days with its verdict, the result and the list of sources it called, so it can be replayed, downloaded as a PDF and compared when the same thing is checked again. Anyone with a check's link (<code>/replay/&lt;id&gt;</code>) can open it; the id is random and not listed anywhere. Uploaded documents themselves are not kept, only what the check found in them.</li>
     <li>API keys you add to your <code>.env</code> file. They are read locally and sent only to the service each key belongs to.</li>
     <li>Nothing is sent to the Oculon authors. There is no usage reporting, crash reporting or tracking.</li>
   </ul>
@@ -110,6 +111,7 @@ footer{background:rgba(0,0,0,.6);backdrop-filter:blur(6px)}
   <ul>
     <li><strong>Queries to public data sources.</strong> When a module runs, it calls the sources it needs <!--onchain-->(for example USGS, Cloudflare Radar, Blockscout or GeckoTerminal)<!--/onchain--><!--offchain-->(for example USGS, Cloudflare Radar, NVD or NASA)<!--/offchain--> with the inputs you gave it, <!--onchain-->such as an address, a domain or a place name.<!--/onchain--><!--offchain-->such as a domain, a company or a place name.<!--/offchain--> Each source handles those requests under its own policy.</li>
     <li><strong>Questions to language models.</strong> Commands such as <code>ask</code>, <code>case</code> and the daily brief send your question and the collected evidence to the LLM providers you configured keys for (Groq, Google Gemini, Mistral, OpenRouter, NVIDIA or Anthropic). Without a key, nothing is sent.</li>
+    <li><strong>Screenshots in the document check.</strong> To read the text in an image or a scanned PDF, the image is sent to OpenRouter or Google Gemini when a key for them is set. PDFs with a text layer are read on the server only. The result says when an image was sent.</li>
     <li><strong>Telegram.</strong> If you run the bot, alerts and answers go to the chats you allow-listed, through Telegram's servers.</li>
     <li><strong>This web page.</strong> The landing page, app and docs load fonts from Google Fonts, map libraries from cdnjs and map outlines from jsDelivr, so your browser contacts those services when it opens them.</li>
   </ul>
