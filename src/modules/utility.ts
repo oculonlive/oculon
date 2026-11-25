@@ -19,7 +19,7 @@ import { formatUnits, rpcClient, type Rpc } from '../web/burns.js';
 
 export const UTILITY = { investigate: 1_500_000n, safety: 2_000_000n, holder: 3_500_000n, safetyDays: 30, holderMonitors: 30, sessionDays: 7 } as const;
 /** Burns before the utility went live (buyback burns, for example) do not count. */
-export const UTILITY_START = Date.parse('2026-11-26T00:00:00Z');
+export const UTILITY_START = Date.parse('2026-11-25T19:45:00Z');
 
 /** What the burning wallet signs, so only the wallet that burned can spend its burn. */
 export function utilityMessage(kind: 'investigate' | 'safety', target: string, tx: string): string {
