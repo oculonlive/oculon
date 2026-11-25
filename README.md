@@ -21,7 +21,8 @@ npx oculon ask "why is Nvidia in the news this week?"
 - **Sourced by design.** Every answer names the sources it used and whether each one was live, cached or unavailable. Nothing is presented without provenance.
 - **Cross-source signals.** When independent sources move on the same subject, Oculon fuses them into one scored signal with the evidence behind it, and storylines are tracked across days.
 - **Measured, not claimed.** A time machine replays past days to calibrate the radar, a first-to-know check compares Oculon against media coverage, and forecasts are timestamped on Bitcoin so they cannot be edited later.
-- **Built for agents.** 83 MCP tools locally over stdio, and 74 of them remotely at `https://mcp.oculon.live`; the SDK and CLI return the same objects, and `--json` works on every command.
+- **Robinhood Chain, read block by block.** Oculon watches pools the minute they open, follows each token back to the wallet that deployed it (directly or through a launchpad) and counts how many of that wallet's launches are already dead. See [On-chain](#on-chain-robinhood-chain).
+- **Built for agents.** 83 MCP tools locally over stdio (90 with the on-chain tools on), and 81 remotely at `https://mcp.oculon.live`; the SDK and CLI return the same objects, and `--json` works on every command.
 - **Everyday checks.** Is this message a scam? Is this link dangerous? Is this claim true? Is my car recalled? Can someone spoof my email domain? Are my dependencies safe? What should I know before I travel? Who is calling me? Has my password leaked? Is this supplier real? Each answer names its sources, and any result can be shared as a link with a preview card.
 - **Monitors in plain words.** "Tell me when there is an internet outage in Iran" becomes a rule that is re-checked on a schedule and reports only what changed, by email, in Telegram or in the app. Every visitor keeps their own monitors, with no account.
 - **Everywhere people are.** A public Telegram bot ([@oculon_radar_bot](https://t.me/oculon_radar_bot)): forward it a suspicious message and it checks it. An OpenAPI spec at `/openapi.json` for ChatGPT Actions, n8n and Zapier.
@@ -29,7 +30,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 
 ## Contents
 
-[What it does](#what-it-does) · [Install](#install) · [CLI](#cli) · [MCP server](#mcp-server) · [Remote MCP](#remote-mcp) · [Analyst](#oculon-analyst) · [SDK](#sdk) · [Web app](#dashboard-and-schedule) · [Telegram bot](#telegram-bot) · [Configuration](#configuration) · [Deploy](#deploy) · [How it works](#how-it-works) · [Limits](#limits) · [Development](#development) · [Official token](#official-token)
+[What it does](#what-it-does) · [Install](#install) · [CLI](#cli) · [MCP server](#mcp-server) · [Remote MCP](#remote-mcp) · [Analyst](#oculon-analyst) · [SDK](#sdk) · [Web app](#dashboard-and-schedule) · [Telegram bot](#telegram-bot) · [Configuration](#configuration) · [Deploy](#deploy) · [How it works](#how-it-works) · [Limits](#limits) · [Development](#development) · [On-chain](#on-chain-robinhood-chain) · [Official token](#official-token)
 
 ## What it does
 
@@ -370,6 +371,25 @@ npm run build
 ## Contributing and security
 
 Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
+## On-chain: Robinhood Chain
+
+Robinhood Chain pools, token and deployer checks, wallet checks and DeFi are live on [oculon.live](https://oculon.live) and on the remote MCP server. In your own install they are off by default; set `OCULON_ONCHAIN=1` to turn on the commands, MCP and agent tools, the schedule task, watch kinds and web sections.
+
+| Check | Command | What it does | Sources |
+|---|---|---|---|
+| Robinhood Chain pools | `oculon rh` | Activity, trending and newly created pools with risk flags: thin liquidity, buys without sells, sudden dumps | GeckoTerminal, Blockscout |
+| Deployer reputation | `oculon deployer <address>` | Every token a wallet launched, directly or through a launchpad, and how many are already dead | Blockscout, Robinhood Chain RPC |
+| Token risk | `oculon token <address> --chain robinhood` (also eth, base, arbitrum, bsc, polygon) | Honeypot, tax and owner flags, contract verification, holder concentration, DEX liquidity and price, with a DANGER, CAUTION or OK verdict | GoPlus, Webacy, DexScreener, Blockscout |
+| Wallet | `oculon wallet <address>` | Portfolio, age, transactions, known entities it trades with and risk labels (EVM, Solana, Robinhood Chain) | Zerion, Etherscan, Helius, Robinhood Chain RPC |
+| DeFi | `oculon defi` | TVL crashes, stablecoin depegs, hacks, fear and greed | DefiLlama |
+
+```sh
+OCULON_ONCHAIN=1 npx oculon rh
+OCULON_ONCHAIN=1 npx oculon deployer 0x...
+```
+
+Token and deployer verdicts are heuristics over pool and explorer data, not contract audits, and a verdict can be wrong.
 
 ## Official token
 
