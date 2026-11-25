@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Oculon Token</title>
+<meta name="description" content="The one official Oculon token address, and how to check it.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Oculon Token"><meta property="og:description" content="The one official Oculon token address, and how to check it."><meta property="og:url" content="https://oculon.live/thetoken"><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:image" content="https://oculon.live/assets/og.png?v=2">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(20px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}header nav a:hover{color:#fff}
+main{max-width:860px;margin:0 auto;padding:80px clamp(20px,5vw,40px) 120px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.36}
+header,footer{position:relative;z-index:1}header{position:sticky;z-index:5}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+h1{margin:14px 0 10px;font-size:clamp(44px,6vw,72px);font-weight:300;letter-spacing:-.04em;line-height:1.02}
+h1 span{color:var(--y)}
+h2{margin:56px 0 12px;font-size:26px;font-weight:400;padding-top:24px;border-top:1px solid var(--line)}
+p,li{font-size:17px;line-height:1.75;color:var(--soft);font-weight:300}
+ul{padding-left:20px}
+code{font:.86em var(--mono);background:rgba(0,20,24,.8);border:1px solid rgba(0,240,255,.2);padding:1px 6px;color:#fff}
+.ca{margin-top:30px;border:1px solid rgba(0,240,255,.45);background:rgba(0,14,18,.8);backdrop-filter:blur(8px);padding:24px;box-shadow:0 0 40px rgba(0,240,255,.08)}
+.ca .addr{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.ca .addr code{font-size:clamp(13px,2.4vw,18px);padding:10px 12px;overflow-wrap:anywhere;word-break:break-all;flex:1 1 280px;color:var(--y)}
+.ca button{font:700 13px var(--mono);letter-spacing:.08em;background:var(--y);color:#000;border:0;padding:12px 16px;cursor:pointer}
+.ca .meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.ca .meta div{border:1px solid #1f2a2d;padding:12px 14px}.ca .meta b{display:block;font:400 11px var(--mono);letter-spacing:.14em;color:var(--mut);text-transform:uppercase}.ca .meta span{display:block;margin-top:6px;font:700 16px var(--mono);overflow-wrap:anywhere}
+.ca.none p{margin:0}
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px}
+.three a{display:block;border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:16px;text-decoration:none;transition:border-color .3s}.three a:hover{border-color:rgba(0,240,255,.5)}
+.three b{display:block;font:400 11px var(--mono);letter-spacing:.14em;color:var(--mut)}.three span{display:block;margin-top:6px;font:700 15px var(--mono);color:var(--y);overflow-wrap:anywhere}
+footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:860px;margin:0 auto;padding:26px clamp(20px,5vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
+@media (max-width:760px){.ca .meta,.three{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/app">App</a><a href="/docs">Docs</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+  <div class="lbl">Official token</div>
+  <h1>One address.<br><span>Three places.</span></h1>
+  {{TOKEN_BLOCK}}
+
+  <h2>How to check an address</h2>
+  <p>The official address is posted in three places at the same time. Before you use any address, make sure it matches all three exactly, character by character.</p>
+  <div class="three">
+    <a href="https://x.com/oculonlive" target="_blank" rel="noopener"><b>X</b><span>@oculonlive</span></a>
+    <a href="https://github.com/oculonlive/oculon#official-token" target="_blank" rel="noopener"><b>GITHUB</b><span>oculonlive/oculon</span></a>
+    <a href="/thetoken"><b>WEB</b><span>oculon.live/thetoken</span></a>
+  </div>
+  <p>If an address is missing from any of the three, it is not Oculon. Oculon will never message you first, ask for your recovery phrase, or ask you to send funds to an address.</p>
+
+  <h2>What Oculon is</h2>
+  <p>Oculon is a free, open-source OSINT engine under the MIT licence. It checks things before you trust them: a suspicious message, a link, a phone number, a leaked password, a supplier, an IP address, a vulnerability or a news claim. Every answer lists the sources it used and whether each was live, cached or unavailable.</p>
+  <p>It runs as a CLI (<code>npx oculon</code>), a TypeScript SDK, an MCP server for AI agents, the web app at <a href="/app">oculon.live</a> and a Telegram bot.</p>
+
+  <h2>Not advice</h2>
+  <p>Nothing on this page is financial or investment advice. Crypto tokens are volatile and you can lose everything you put in. Only use what you can afford to lose.</p>
+</main>
+<footer><div class="in"><span>© <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/docs">Docs</a> · <a href="/app">App</a> · <a href="/terms">Terms</a> · <a href="/thetoken">Token</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#001a26', hi: '#00c8e0', intensity: 0.8, scale: 0.3 }); }
+document.getElementById('year').textContent = new Date().getFullYear();
+const cp = document.getElementById('copy-ca');
+if (cp) cp.addEventListener('click', () => {
+  const v = document.getElementById('ca-value').textContent.trim();
+  const done = () => { cp.textContent = 'COPIED'; setTimeout(() => { cp.textContent = 'COPY'; }, 1600); };
+  if (navigator.clipboard) navigator.clipboard.writeText(v).then(done).catch(() => {});
+});
+</script>
+</body>
+</html>

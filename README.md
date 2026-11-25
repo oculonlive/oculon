@@ -2,7 +2,7 @@
 
 **Open-source intelligence engine for the physical and digital world.** Oculon watches more than 50 public data sources (routing tables, exploit catalogs, transponders, satellites, ship trackers, registries and prediction markets), finds what is unusual, fuses observations about the same subject from independent sources into scored signals, and labels every result with where it came from and how fresh it is. An AI agent on top answers plain-language questions with sources.
 
-[oculon.live](https://oculon.live) · [Documentation](https://oculon.live/docs) · [Privacy](https://oculon.live/privacy) · [Terms](https://oculon.live/terms)
+[oculon.live](https://oculon.live) · [Documentation](https://oculon.live/docs) · [Privacy](https://oculon.live/privacy) · [Terms](https://oculon.live/terms) · [Token](#official-token)
 
 [![CI](https://github.com/oculonlive/oculon/actions/workflows/ci.yml/badge.svg)](https://github.com/oculonlive/oculon/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-00f0ff.svg)](LICENSE)
@@ -29,7 +29,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 
 ## Contents
 
-[What it does](#what-it-does) · [Install](#install) · [CLI](#cli) · [MCP server](#mcp-server) · [Remote MCP](#remote-mcp) · [Analyst](#oculon-analyst) · [SDK](#sdk) · [Web app](#dashboard-and-schedule) · [Telegram bot](#telegram-bot) · [Configuration](#configuration) · [Deploy](#deploy) · [How it works](#how-it-works) · [Limits](#limits) · [Development](#development)
+[What it does](#what-it-does) · [Install](#install) · [CLI](#cli) · [MCP server](#mcp-server) · [Remote MCP](#remote-mcp) · [Analyst](#oculon-analyst) · [SDK](#sdk) · [Web app](#dashboard-and-schedule) · [Telegram bot](#telegram-bot) · [Configuration](#configuration) · [Deploy](#deploy) · [How it works](#how-it-works) · [Limits](#limits) · [Development](#development) · [Official token](#official-token)
 
 ## What it does
 
@@ -370,6 +370,16 @@ npm run build
 ## Contributing and security
 
 Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
+
+## Official token
+
+The only official Oculon token is `$OCULON` on Robinhood Chain:
+
+```
+0x12a3f1a05d827007f17a43a250cce44868c4a263
+```
+
+The same address is posted on [x.com/oculonlive](https://x.com/oculonlive) and at [oculon.live/thetoken](https://oculon.live/thetoken). If an address does not match all three exactly, it is not Oculon. Launchpad page: [ponsfamily.com](https://ponsfamily.com/launchpad/0x12a3f1a05d827007f17a43a250cce44868c4a263). Nothing here is financial advice.
 
 ## License
 

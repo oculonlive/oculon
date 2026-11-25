@@ -502,11 +502,28 @@ export function renderPage(html: string, domain: string | null): string {
       .replace(/href="\/app(#[^"]*)?"/g, (_m, h: string | undefined) => `href="https://app.${domain}/${h ?? ''}"`)
       .replace(/href="\/report"/g, `href="https://app.${domain}/report"`)
       .replace(/href="\/ask"/g, `href="https://${domain}/ask"`)
+      .replace(/href="\/thetoken"/g, `href="https://${domain}/thetoken"`)
       .replace(/href="\/docs(?:#([^"]*))?"/g, (_m, h: string | undefined) => `href="https://docs.${domain}/${h ?? ''}"`)
       .replace(/href="\/(privacy|terms)(#[^"]*)?"/g, (_m, p: string, h: string | undefined) => `href="${main}/${p}${h ?? ''}"`)
       .replace(/href="\/"/g, `href="${main}/"`);
   }
   return out;
+}
+
+export interface TokenInfo { ca: string; chain: string; ticker: string; explorer: string; launchpad: string }
+
+/** The address block on /thetoken, from src/web/token.json. An empty address says no token is official yet. */
+export function tokenBlock(t: Partial<TokenInfo>): string {
+  const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
+  const ca = (t.ca ?? '').trim();
+  if (!ca) return '<div class="ca none"><p>No official token address has been posted yet. Until it appears here, on X and on GitHub at the same time, any address claimed to be Oculon is not ours.</p></div>';
+  const safe = (u: string | undefined) => (/^https:\/\/[^\s"'<>]+$/.test(u ?? '') ? u! : '');
+  const launchpad = safe(t.launchpad), explorer = safe(t.explorer);
+  // The third cell links to the launchpad page when there is one, otherwise to a block explorer.
+  const link = launchpad ? { k: 'Launchpad', u: launchpad, label: new URL(launchpad).hostname.replace(/^www\./, '') } : explorer ? { k: 'Explorer', u: explorer, label: 'view' } : null;
+  const cell = (k: string, v: string) => `<div><b>${k}</b><span>${v ? esc(v) : '-'}</span></div>`;
+  return `<div class="ca"><div class="lbl">Contract address</div><div class="addr"><code id="ca-value">${esc(ca)}</code><button id="copy-ca" type="button">COPY</button></div>`
+    + `<div class="meta">${cell('Chain', (t.chain ?? '').trim())}${cell('Ticker', (t.ticker ?? '').trim() ? `$${(t.ticker ?? '').trim().replace(/^\$/, '')}` : '')}<div><b>${link ? link.k : 'Explorer'}</b><span>${link ? `<a href="${esc(link.u)}" target="_blank" rel="noopener">${esc(link.label)}</a>` : '-'}</span></div></div></div>`;
 }
 
 function send(res: ServerResponse, status: number, body: string | Buffer, type: string, cache = 'no-store') {
@@ -740,7 +757,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     const sub = hostName.split('.')[0];
     // Docs sections have their own addresses: docs.<domain>/install, or /docs/install on a single host.
     const docsSection = (sub === 'docs' ? /^\/([a-z0-9][a-z0-9-]{0,60})\/?$/ : /^\/docs\/([a-z0-9][a-z0-9-]{0,60})\/?$/).exec(url.pathname)?.[1];
-    if (docsSection && !['api', 'assets', 'app', 'report', 'r', 'proof', 'ask'].includes(docsSection)) {
+    if (docsSection && !['api', 'assets', 'app', 'report', 'r', 'proof', 'ask', 'thetoken'].includes(docsSection)) {
       if (siteDomain && sub !== 'docs') {
         res.writeHead(301, { location: `https://docs.${siteDomain}/${docsSection}${url.search}`, 'cache-control': 'no-store' });
         return res.end();
@@ -755,6 +772,12 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
         return res.end();
       }
       return send(res, 200, renderPage(readFileSync(join(HERE, PAGE_FILES[page]), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
+    }
+    if (/^\/thetoken\/?$/.test(url.pathname) && sub !== 'docs') {
+      let info: Partial<TokenInfo> = {};
+      try { info = JSON.parse(readFileSync(join(HERE, 'token.json'), 'utf8')) as Partial<TokenInfo>; } catch { /* no file: nothing official */ }
+      const html = readFileSync(join(HERE, 'token.html'), 'utf8').replace('{{TOKEN_BLOCK}}', tokenBlock(info));
+      return send(res, 200, renderPage(html, siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
     }
     if (url.pathname === '/manifest.webmanifest') return send(res, 200, readFileSync(join(HERE, 'manifest.webmanifest'), 'utf8'), 'application/manifest+json; charset=utf-8', 'no-cache');
     if (url.pathname === '/sw.js') return send(res, 200, readFileSync(join(HERE, 'sw.js'), 'utf8'), 'text/javascript; charset=utf-8', 'no-cache');
