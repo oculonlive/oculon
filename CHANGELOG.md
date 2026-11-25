@@ -2,6 +2,19 @@
 
 All notable changes are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## 0.1.6
+
+Five new checks that need no API key, OCULON utility, and Robinhood Chain back on the live site.
+
+- `oculon iban <IBAN> [--country NL]`: is this IBAN valid before you pay? Country, length, ISO 13616 check digits and bank code, fully offline, with a warning when the account is in another country than the supplier.
+- `oculon headers < headers.txt`: paste the raw headers of a suspicious email and get the SPF, DKIM and DMARC results, the delivery path, the origin IP and country, and spoofing signs (a Reply-To elsewhere, a display name posing as an address, an envelope sender from another domain).
+- `oculon lookalike <domain>`: lookalike domains of a brand that exist in DNS (typos, swapped letters, homoglyphs, extra words, other endings), with mail servers, plus certificates issued in the last 90 days for names containing the brand.
+- `oculon honeypot <token> [--chain eth|bsc|base]`: can this token be sold? A buy and sell simulation and recent holders' sells (honeypot.is): taxes, holders who could not sell, unpublished or upgradeable contracts.
+- `oculon address <address>`: a crypto address before you send funds: chain from the format, US OFAC sanctions, balance, transactions and labels (mempool.space, Blockscout, Solana RPC). Wallets with an EIP-7702 delegation are not mistaken for contracts.
+- OCULON utility at `/utility`, read straight from Robinhood Chain: burn 1,500,000 for a deep investigation published as a public page, burn 2,000,000 for a 30-day live safety badge on a token (`/badge/<token>.svg`), or sign in with a wallet holding 3,500,000 for up to 30 personal monitors checked every 15 minutes. Each burn counts once and only the burning wallet can use it. Wallet signatures are checked with keccak256 and secp256k1 written in `src/core/evm.ts`, so there is still no runtime dependency.
+- `/thetoken` shows every burn with its time, amount and transaction, read live from the chain.
+- Robinhood Chain, wallet and token checks and DeFi are on again at oculon.live (`OCULON_ONCHAIN=1`); the docs describe them. MCP: 88 tools locally (95 with on-chain on), 86 on the remote server.
+
 ## 0.1.5
 
 Seven new checks over 19 new sources, in the CLI, SDK, MCP server, web app, Telegram bot and API.
