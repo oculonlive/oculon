@@ -6,6 +6,9 @@ import type { Provenance, Sourced, Status } from './types.js';
 /** Minimum gap between requests per host, following each provider's published guidance. */
 const HOST_GAP_MS: Record<string, number> = {
   'crt.sh': 2000,
+  'api.honeypot.is': 600,
+  'mempool.space': 300,
+  'api.mainnet-beta.solana.com': 300,
   'api.gdeltproject.org': 5500,
   'export.arxiv.org': 3100,
   'api.github.com': 1500,

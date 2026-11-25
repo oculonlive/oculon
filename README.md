@@ -47,6 +47,11 @@ npx oculon ask "why is Nvidia in the news this week?"
 | Country | `oculon country <name>` | One-page country brief: GDP, growth, GDP per person, inflation, unemployment and population, the IMF outlook for this year and next, head of state and government, capital, currency and its rate to the dollar, US and UK travel advice, internet outages, disaster alerts and the latest headlines | World Bank, IMF, Wikidata, open.er-api.com, US State Department, UK FCDO, Cloudflare Radar, GDACS, Guardian |
 | Airport | `oculon airport <JFK\|EGLL\|name>` | Is an airport running normally? Current METAR and TAF (flight category, wind, visibility, ceiling), FAA ground stops, ground delay programs, delays and closures at US airports, and aircraft squawking an emergency within 150 km | aviationweather.gov (NOAA), FAA NAS status, adsb.lol, OurAirports |
 | Phone | `oculon phone <+number> [--country US]` | Who is behind a number in a suspicious SMS or a missed call: country from the calling code, line type (mobile, landline, VoIP, premium rate), carrier and location, and warnings for premium-rate numbers, UK 070 personal numbers and the Caribbean area codes the FCC names in "one ring" callback scams. Never looks up the owner | ITU calling codes (offline), Numverify (free key, 100 a month) |
+| IBAN | `oculon iban <IBAN> [--country NL]` | Checks an IBAN before you pay: country, length, ISO 13616 check digits and bank code, and a warning when the account is in a different country than the supplier. A valid IBAN does not prove who owns the account | Offline |
+| Email headers | `oculon headers < headers.txt` | Paste the raw headers of a suspicious email: SPF, DKIM and DMARC results, the delivery path, the origin IP and country, and spoofing signs such as a Reply-To elsewhere or a display name posing as an address | Offline, ip-api.com |
+| Lookalike domains | `oculon lookalike <domain>` | Typos, swapped letters, homoglyphs, extra words and other endings of a brand that exist in DNS, with mail servers, plus certificates issued in the last 90 days for names containing the brand | Google DNS, crt.sh, CertSpotter |
+| Honeypot | `oculon honeypot <token> [--chain eth\|bsc\|base]` | Can this token be sold? A buy and sell simulation on its main pool plus recent holders' sells: honeypot verdict, buy and sell tax, holders who could not sell | honeypot.is |
+| Crypto address | `oculon address <address>` | Before you send funds: chain from the format (Bitcoin, EVM, Solana, Tron), US OFAC sanctions, balance, transactions and labels, contracts posing as wallets, unused addresses | mempool.space, Blockscout, Solana RPC, OFAC |
 | Password | `oculon password` · web app | Has a password appeared in a data breach? Only the first 5 characters of its SHA-1 hash are sent and the match happens locally (in the web app, in the browser); the password is never stored, logged or shown | Have I Been Pwned (Pwned Passwords) |
 | Breaches | `oculon breaches [domain]` | The newest breaches added to Have I Been Pwned, or every breach of one domain or company: date, accounts affected and the kinds of data exposed. Sensitive breaches are left out | Have I Been Pwned (CC BY 4.0) |
 | Company | `oculon company <name\|LEI\|EU VAT>` | Is a supplier real before you pay its invoice? An EU VAT number is checked live (valid or not, registered name and address); a name or LEI returns the legal entity, registered address, status, registration number and ultimate parent, with warnings for invalid numbers, inactive companies and lapsed records | EU VIES, GLEIF (Global LEI Index) |
@@ -139,6 +144,11 @@ oculon watch run                              # report only what changed since l
 oculon brief                                  # today's brief
 oculon quota                                  # today's API usage vs daily budgets
 oculon phone "+1 876 555 0100"                # who is calling? one-ring scam area code
+oculon iban "DE89 3704 0044 0532 0130 00" --country NL   # IBAN valid? account in another country?
+oculon headers < headers.txt                  # was this email spoofed?
+oculon lookalike example.com                  # lookalike domains and new certificates
+oculon honeypot 0x6982508145454Ce325dDbE47a25d4ec3d2311933   # can this token be sold?
+oculon address bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh    # sanctions, balance, activity
 oculon password                               # has my password leaked? (asked without echo)
 oculon breaches adobe.com                     # breaches of a domain
 oculon company NL004495445B01                 # EU VAT number, LEI or company name
@@ -400,6 +410,18 @@ The only official Oculon token is `$OCULON` on Robinhood Chain:
 ```
 
 The same address is posted on [x.com/oculonlive](https://x.com/oculonlive) and at [oculon.live/thetoken](https://oculon.live/thetoken). If an address does not match all three exactly, it is not Oculon. Launchpad page: [ponsfamily.com](https://ponsfamily.com/launchpad/0x12a3f1a05d827007f17a43a250cce44868c4a263). Nothing here is financial advice.
+
+### Utility
+
+Everything is read from Robinhood Chain: nothing is custodied and nothing is paid to anyone. Burns go to the dead address, each burn counts once, and only the wallet that burned can use it (it signs the request). Oculon itself stays free.
+
+| Use | How | What you get |
+|---|---|---|
+| Deep investigation | Burn 1,500,000 OCULON | One domain, wallet, token or company checked against every relevant source, published as a public page that links the burn |
+| Live safety badge | Burn 2,000,000 OCULON | 30 days of live monitoring of one Robinhood Chain token, with an embeddable badge (`/badge/<token>.svg`) that turns red on danger. Burning never changes the verdict |
+| Holder tier | Hold 3,500,000 OCULON, sign once | Up to 30 personal monitors, checked every 15 minutes instead of every hour |
+
+Start at [oculon.live/utility](https://oculon.live/utility). Wallet sign-in is checked with keccak256 and secp256k1 written in this repo (`src/core/evm.ts`), so it adds no dependency.
 
 ## License
 

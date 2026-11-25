@@ -194,10 +194,15 @@ ${c.bold('Everyday checks')}
   oculon password                      has this password leaked? (asked without echo; k-anonymity)
   oculon breaches [domain]             newest data breaches, or every breach of one domain (HIBP)
   oculon company <name|LEI|EU VAT>     is this supplier real? VAT check (VIES), LEI register (GLEIF)
+  oculon iban <IBAN> [--country NL]    is this IBAN valid, and is the account in the supplier's country?
+  oculon headers < headers.txt         raw email headers: SPF, DKIM, DMARC, path, origin, spoofing signs
+  oculon address <crypto address>      chain, OFAC sanctions, balance and activity, no keys needed
 
 ${c.bold('Threat intel')}
   oculon ip <IP|domain>                abuse reports, scanners, threat reports, Tor, Spamhaus DROP, open ports
   oculon hash <md5|sha1|sha256>        is this file known malware or a known good file?
+  oculon lookalike <domain>            lookalike domains that exist, new certificates naming the brand
+  oculon honeypot <token> [--chain eth|bsc|base]   can this token be sold? buy/sell simulation, taxes
   oculon ransomware [CC|sector|name]   ransomware leak-site claims, newest first
   oculon satellite [name|NORAD id]     launches of the last 30 days, or one object's orbit (CelesTrak)
 
@@ -762,6 +767,78 @@ export const COMMANDS: Record<string, Cmd> = {
       const tone = d.risk === 'high' ? c.red : d.risk === 'medium' ? c.yellow : c.green;
       out(`${c.bold(d.e164)}  ${tone(`${d.risk.toUpperCase()} RISK`)}${d.valid === false ? c.red('  not valid') : ''}`);
       out(`  ${[d.country, d.location, d.lineType, d.carrier].filter(Boolean).join(' · ')}`);
+      for (const w of d.warnings) out(c.yellow(`  ! ${w}`));
+      for (const x of d.advice) out(`  → ${x}`);
+      printSources(r);
+    });
+  },
+  async iban(o, a) {
+    const q = a.pos.slice(1).join(' ').trim();
+    if (!q) throw new UsageError('usage: oculon iban <IBAN> [--country NL]');
+    const r = await o.ibanCheck(q, typeof a.flags.country === 'string' ? { country: a.flags.country } : {});
+    emit(a, r, () => {
+      const d = r.result;
+      out(`${c.bold(d.formatted ?? d.input)}  ${d.valid ? c.green('VALID FORMAT') : c.red('NOT VALID')}`);
+      if (d.countryName) out(`  ${[d.countryName, d.bank ? `${d.bank.kind} ${d.bank.code}` : null, d.sortCode ? `sort code ${d.sortCode}` : null].filter(Boolean).join(' · ')}`);
+      for (const p of d.problems) out(c.red(`  x ${p}`));
+      for (const w of d.warnings) out(c.yellow(`  ! ${w}`));
+      for (const x of d.advice) out(`  → ${x}`);
+    });
+  },
+  async headers(o, a) {
+    let raw = a.pos.slice(1).join(' ').trim();
+    if (raw && existsSync(raw)) raw = readFileSync(raw, 'utf8');
+    if (!raw && !process.stdin.isTTY) raw = readFileSync(0, 'utf8');
+    if (!raw) throw new UsageError('usage: oculon headers <file>   (or pipe the raw headers in: oculon headers < headers.txt)');
+    const r = await o.headerCheck(raw);
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.verdict === 'likely spoofed' ? c.red : d.verdict === 'suspicious' ? c.yellow : c.green;
+      out(`${c.bold(d.from.address ?? 'unknown sender')}  ${tone(d.verdict.toUpperCase())}  ${c.dim(`risk ${d.risk}/100`)}`);
+      out(`  SPF ${d.auth.spf ?? '?'} · DKIM ${d.auth.dkim ?? '?'} · DMARC ${d.auth.dmarc ?? '?'}`);
+      if (d.origin.ip) out(`  sent from ${d.origin.ip}${d.origin.country ? ` · ${d.origin.country}` : ''}${d.origin.isp ? ` · ${d.origin.isp}` : ''}`);
+      for (const f of d.flags) out(c.yellow(`  ! ${f}`));
+      for (const x of d.advice) out(`  → ${x}`);
+      printSources(r);
+    });
+  },
+  async lookalike(o, a) {
+    const q = String(a.pos[1] ?? '').trim();
+    if (!q) throw new UsageError('usage: oculon lookalike <domain>');
+    const r = await o.lookalikes(q);
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.risk === 'high' ? c.red : d.risk === 'medium' ? c.yellow : c.green;
+      out(`${c.bold(d.domain)}  ${tone(`${d.risk.toUpperCase()} RISK`)}  ${c.dim(`${d.live.length} of ${d.checked} lookalikes exist`)}`);
+      for (const l of d.live.slice(0, 25)) out(`  ${l.domain.padEnd(34)} ${c.dim(l.kind)}${l.mx ? c.yellow('  mail') : ''}${l.certSeen ? c.red(`  cert ${l.certSeen.slice(0, 10)}`) : ''}`);
+      if (d.certs.length) { out(c.bold('  Certificates naming the brand, last 90 days')); for (const x of d.certs.slice(0, 12)) out(`  ${x.firstSeen.slice(0, 10)}  ${x.name}  ${c.dim(x.issuer)}`); }
+      out(c.dim(`  ${d.note}`));
+      printSources(r);
+    });
+  },
+  async honeypot(o, a) {
+    const q = String(a.pos[1] ?? '').trim();
+    if (!q) throw new UsageError('usage: oculon honeypot <token address> [--chain eth|bsc|base]');
+    const r = await o.honeypotCheck(q, typeof a.flags.chain === 'string' ? { chain: a.flags.chain } : {});
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.verdict === 'honeypot' || d.verdict === 'high risk' ? c.red : d.verdict === 'caution' ? c.yellow : c.green;
+      out(`${c.bold(d.symbol ?? d.address)} on ${d.chain}  ${tone(d.verdict.toUpperCase())}`);
+      out(`  buy tax ${d.buyTax ?? '?'}% · sell tax ${d.sellTax ?? '?'}%${d.holders ? ` · ${d.holders.failed} of ${d.holders.checked} recent holders could not sell` : ''}`);
+      for (const x of d.reasons) out(c.yellow(`  ! ${x}`));
+      for (const x of d.advice) out(`  → ${x}`);
+      printSources(r);
+    });
+  },
+  async address(o, a) {
+    const q = String(a.pos[1] ?? '').trim();
+    if (!q) throw new UsageError('usage: oculon address <crypto address> [--network robinhood]');
+    const r = await o.addressCheck(q, typeof a.flags.network === 'string' ? { network: a.flags.network } : {});
+    emit(a, r, () => {
+      const d = r.result;
+      out(`${c.bold(d.address)}  ${d.sanctioned ? c.red('SANCTIONED') : d.warnings.length ? c.yellow('CHECK FIRST') : c.green('NO RED FLAGS')}`);
+      out(`  ${d.format}${d.network ? ` · ${d.network}` : ''}`);
+      if (d.activity) out(`  ${[d.activity.label, d.activity.balance, d.activity.txCount !== null ? `${d.activity.txCount} transactions` : null, d.activity.isContract ? 'smart contract' : null].filter(Boolean).join(' · ')}`);
       for (const w of d.warnings) out(c.yellow(`  ! ${w}`));
       for (const x of d.advice) out(`  → ${x}`);
       printSources(r);

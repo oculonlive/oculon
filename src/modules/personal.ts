@@ -41,11 +41,11 @@ export function listPersonal(ctx: Ctx, owner: string): PersonalMonitor[] {
 }
 
 /** Reads the request into a rule and saves it for this owner (at most MAX_PER_OWNER). */
-export async function addPersonal(ctx: Ctx, owner: string, text: string): Promise<{ monitor: PersonalMonitor; rule: MonitorRule; method: string }> {
+export async function addPersonal(ctx: Ctx, owner: string, text: string, max = MAX_PER_OWNER): Promise<{ monitor: PersonalMonitor; rule: MonitorRule; method: string }> {
   if (!isOwner(owner)) throw new Error('invalid owner');
   const d = db(ctx);
   const n = (d.prepare('SELECT COUNT(*) n FROM personal_monitors WHERE owner = ?').get(owner) as { n: number }).n;
-  if (n >= MAX_PER_OWNER) throw new Error(`you can keep up to ${MAX_PER_OWNER} monitors; remove one first`);
+  if (n >= max) throw new Error(`you can keep up to ${max} monitors; remove one first${max === MAX_PER_OWNER ? ' (OCULON holders can keep more)' : ''}`);
   const r = await parseMonitor(text);
   d.prepare('INSERT INTO personal_monitors (owner, kind, target, description, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(owner, kind, target) DO NOTHING').run(owner, r.kind, r.target, r.description, ctx.now().getTime());
   const row = d.prepare('SELECT * FROM personal_monitors WHERE owner = ? AND kind = ? AND target = ?').get(owner, r.kind, r.target) as unknown as Row;
@@ -67,7 +67,12 @@ export function personalAlerts(ctx: Ctx, owner: string, limit = 50): PersonalAle
 export async function runPersonal(ctx: Ctx, opts: { max?: number; everyMs?: number } = {}): Promise<Delivery[]> {
   const d = db(ctx);
   const now = ctx.now().getTime();
-  const rows = d.prepare('SELECT * FROM personal_monitors WHERE last_run IS NULL OR last_run <= ? ORDER BY COALESCE(last_run, 0) LIMIT ?').all(now - (opts.everyMs ?? 55 * 60_000), opts.max ?? 60) as unknown as Row[];
+  // Monitors of OCULON holders (a signed-in wallet with enough tokens) are checked every ~15 minutes instead of hourly.
+  let holderSql = '';
+  try { d.prepare('SELECT 1 FROM holder_sessions LIMIT 1').get(); holderSql = ' OR (last_run <= ? AND owner IN (SELECT owner FROM holder_sessions WHERE expires_at > ?))'; } catch { /* no holder table yet */ }
+  const args: number[] = [now - (opts.everyMs ?? 55 * 60_000)];
+  if (holderSql) args.push(now - 14 * 60_000, now);
+  const rows = d.prepare(`SELECT * FROM personal_monitors WHERE last_run IS NULL OR last_run <= ?${holderSql} ORDER BY COALESCE(last_run, 0) LIMIT ?`).all(...args, opts.max ?? 60) as unknown as Row[];
   const out: Delivery[] = [];
   for (const r of rows) {
     const item: WatchItem = { id: r.id, kind: r.kind, target: r.target, label: r.description, createdAt: new Date(r.created_at).toISOString(), lastRun: r.last_run ? new Date(r.last_run).toISOString() : null };

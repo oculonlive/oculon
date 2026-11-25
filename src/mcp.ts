@@ -307,6 +307,36 @@ export const TOOLS: Tool[] = [
     run: async (o, a) => compact(await o.phoneCheck(String(a.number), a.country ? { country: String(a.country) } : {})),
   },
   {
+    name: 'oculon_iban_check',
+    description: 'Check an IBAN before paying an invoice, fully offline: country, length, ISO 13616 mod-97 check digits and the bank code. Pass the supplier country to flag an account held in another country, a common sign of invoice fraud. A valid IBAN does not prove who owns the account.',
+    inputSchema: schema({ iban: str('The IBAN, spaces allowed'), country: str('Optional: the supplier\'s ISO country code, e.g. "NL"') }, ['iban']),
+    run: async (o, a) => compact(await o.ibanCheck(String(a.iban), a.country ? { country: String(a.country) } : {})),
+  },
+  {
+    name: 'oculon_email_headers',
+    description: 'Analyze the raw headers of a suspicious email: SPF, DKIM and DMARC results recorded by the receiving server, the Received path, the origin IP and its country, and spoofing signs (From differs from the envelope sender, Reply-To elsewhere, a display name posing as an address). Returns a verdict and risk.',
+    inputSchema: schema({ headers: str('The raw message headers, as shown by "Show original"') }, ['headers']),
+    run: async (o, a) => compact(await o.headerCheck(String(a.headers))),
+  },
+  {
+    name: 'oculon_lookalike_domains',
+    description: 'Find lookalike domains of a brand that a phisher could use: typos, swapped letters, homoglyphs, extra words and other endings that exist in DNS (with mail servers), plus certificates issued in the last 90 days for any name containing the brand (Certificate Transparency).',
+    inputSchema: schema({ domain: str('The real domain, e.g. "example.com"') }, ['domain']),
+    run: async (o, a) => compact(await o.lookalikes(String(a.domain))),
+  },
+  {
+    name: 'oculon_honeypot_check',
+    description: 'Can this token be sold? Simulates a buy and a sell on the token\'s main pool and replays recent holders\' sells (honeypot.is): honeypot verdict, buy and sell tax, holders who could not sell, unpublished or upgradeable contracts. Chains: eth, bsc, base.',
+    inputSchema: schema({ address: str('Token contract address (0x...)'), chain: str('eth, bsc or base (default eth)') }, ['address']),
+    run: async (o, a) => compact(await o.honeypotCheck(String(a.address), a.chain ? { chain: String(a.chain) } : {})),
+  },
+  {
+    name: 'oculon_address_check',
+    description: 'Check a crypto address before sending funds, without API keys: chain from the address format (Bitcoin, EVM, Solana, Tron), US OFAC sanctions, and balance, transaction count and labels from free explorers (mempool.space, Blockscout, Solana RPC). Flags unused addresses and contracts posing as wallets.',
+    inputSchema: schema({ address: str('Crypto address'), network: str('Optional for 0x addresses: "robinhood" for Robinhood Chain, default Ethereum') }, ['address']),
+    run: async (o, a) => compact(await o.addressCheck(String(a.address), a.network ? { network: String(a.network) } : {})),
+  },
+  {
     name: 'oculon_satellites',
     description: 'Satellites from CelesTrak. Leave query empty for everything launched in the last 30 days, grouped by launch. Or pass a satellite name ("ISS", "starlink-1007") or NORAD catalog number for its orbit (perigee, apogee, period, inclination, regime), owner, launch date and status.',
     inputSchema: schema({ query: str('Optional: satellite name or NORAD number') }, []),

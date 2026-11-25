@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<title>Oculon Utility</title>
+<meta name="description" content="Use OCULON: burn for a deep investigation, keep a live safety badge on a Robinhood Chain token, or sign in as a holder.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Oculon Utility"><meta property="og:description" content="Burn for a deep investigation, keep a live safety badge on a token, or sign in as a holder."><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--red:#ff5d6c;--green:#3ddc97;--amber:#f5a524;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:var(--y)}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(16px,3vw,40px);gap:16px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none;color:#fff}
+header nav{display:flex;gap:20px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}
+main{max-width:980px;margin:0 auto;padding:64px clamp(16px,5vw,40px) 120px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.32}
+header,footer{position:relative;z-index:1}header{position:sticky;z-index:5}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+h1{margin:14px 0 10px;font-size:clamp(40px,6vw,68px);font-weight:300;letter-spacing:-.04em;line-height:1.02;overflow-wrap:anywhere}
+h1 span{color:var(--y)}
+h2{margin:0 0 6px;font-size:24px;font-weight:500}
+p,li{font-size:16px;line-height:1.7;color:var(--soft);font-weight:300}
+.lead{font-size:19px;max-width:760px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:34px}
+.card{border:1px solid rgba(0,240,255,.25);background:rgba(0,10,14,.82);backdrop-filter:blur(8px);padding:22px}
+.card .amt{font:700 22px var(--mono);color:var(--y);margin-top:8px}
+.card .k{font:700 13px var(--mono);letter-spacing:.14em;color:var(--mut)}
+.panel{margin-top:22px;border:1px solid rgba(0,240,255,.25);background:rgba(0,10,14,.85);backdrop-filter:blur(8px);padding:24px}
+label{display:block;font:12px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:16px 0 6px}
+input{width:100%;background:#05090b;border:1px solid #23333a;color:#fff;font:15px var(--mono);padding:12px 14px;outline:none}
+input:focus{border-color:var(--y)}
+button{font:700 13px var(--mono);letter-spacing:.08em;background:var(--y);color:#000;border:0;padding:12px 18px;cursor:pointer;margin-top:16px}
+button.ghost{background:transparent;color:var(--y);border:1px solid rgba(0,240,255,.5)}
+button:disabled{opacity:.5;cursor:wait}
+.msg{margin-top:14px;font:14px var(--mono);overflow-wrap:anywhere}.msg.err{color:var(--red)}.msg.ok{color:var(--green)}
+code{font:.86em var(--mono);background:rgba(0,20,24,.8);border:1px solid rgba(0,240,255,.2);padding:1px 6px;color:#fff;overflow-wrap:anywhere}
+.steps{margin:10px 0 0;padding-left:20px}
+.wallet{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.pill{font:700 12px var(--mono);letter-spacing:.1em;padding:5px 10px;border:1.5px solid currentColor}
+.v-OK{color:var(--green)}.v-CAUTION{color:var(--amber)}.v-DANGER{color:var(--red)}.v-UNKNOWN,.v-null{color:var(--mut)}
+.part{border-top:1px solid #1b2a2f;padding:18px 0}.part:first-child{border-top:0}
+.part h3{margin:0;font-size:18px;font-weight:500;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.part ul{margin:10px 0 0;padding-left:18px}.part li{font-size:15px}
+.src{font:12px var(--mono);color:var(--mut);margin-top:8px}
+.list a{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #1b2a2f;text-decoration:none;color:var(--soft);font:14px var(--mono)}
+.hide{display:none}
+footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:980px;margin:0 auto;padding:24px clamp(16px,5vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
+@media (max-width:760px){.cards{grid-template-columns:minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/thetoken">Token</a><a href="/app">App</a><a href="/docs">Docs</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+<section id="home">
+  <div class="lbl">$OCULON utility</div>
+  <h1>Burn to check.<br><span>Hold to watch closer.</span></h1>
+  <p class="lead">Three ways to use OCULON, read straight from Robinhood Chain. No account, no custody, nothing paid to anyone: burns go to the dead address and are checked on chain. Oculon itself stays free for everyone.</p>
+  <div class="cards">
+    <div class="card"><div class="k">A · BURN</div><h2>Deep investigation</h2><div class="amt" id="amtA">1,500,000</div><p>One domain, wallet, token or company, checked against every relevant source and published as a public page that links your burn.</p></div>
+    <div class="card"><div class="k">B · BURN</div><h2>Live safety badge</h2><div class="amt" id="amtB">2,000,000</div><p>Oculon watches one Robinhood Chain token for 30 days. The badge shows the live verdict. Burning buys monitoring, never a better verdict.</p></div>
+    <div class="card"><div class="k">C · HOLD</div><h2>Holder tier</h2><div class="amt" id="amtC">3,500,000</div><p>Sign once with your wallet: up to 30 personal monitors, checked every 15 minutes instead of every hour.</p></div>
+  </div>
+
+  <div class="panel">
+    <h2>How to burn</h2>
+    <ol class="steps">
+      <li>From your wallet, send the amount of OCULON to the burn address <code>0x000000000000000000000000000000000000dEaD</code> on Robinhood Chain.</li>
+      <li>Copy the transaction hash once it is confirmed.</li>
+      <li>Connect the same wallet below and sign the request. Only the wallet that burned can use its burn, and each burn counts once.</li>
+    </ol>
+    <p>Token: <code id="ca">loading…</code></p>
+    <div class="wallet"><button id="connect">Connect wallet</button><span id="who" class="src"></span></div>
+    <div id="walletMsg" class="msg"></div>
+  </div>
+
+  <div class="panel" id="formA">
+    <h2>A · Start an investigation</h2>
+    <label for="aTarget">What to investigate</label><input id="aTarget" placeholder="example.com, 0x… wallet or token, or a company name">
+    <label for="aTx">Burn transaction hash</label><input id="aTx" placeholder="0x…">
+    <button id="aGo">Sign and start</button><div id="aMsg" class="msg"></div>
+  </div>
+
+  <div class="panel" id="formB">
+    <h2>B · Keep a live safety badge</h2>
+    <label for="bToken">Robinhood Chain token address</label><input id="bToken" placeholder="0x…">
+    <label for="bTx">Burn transaction hash</label><input id="bTx" placeholder="0x…">
+    <button id="bGo">Sign and start monitoring</button><div id="bMsg" class="msg"></div>
+  </div>
+
+  <div class="panel" id="formC">
+    <h2>C · Holder tier</h2>
+    <p id="cText">Sign a message with a wallet that holds at least 3,500,000 OCULON. Signing sends no transaction and costs nothing.</p>
+    <button id="cGo">Sign in as holder</button><button id="cOut" class="ghost hide">Sign out</button><div id="cMsg" class="msg"></div>
+  </div>
+
+  <div class="panel"><h2>Recent investigations</h2><div id="recent" class="list"><p class="src">None yet.</p></div></div>
+  <p class="src" style="margin-top:22px">Verdicts are automated readings of public data, not audits or financial advice. A burn cannot be refunded.</p>
+</section>
+
+<section id="inv" class="hide">
+  <div class="lbl">Investigation <span id="invId"></span></div>
+  <h1 id="invTarget">…</h1>
+  <p id="invBurn" class="src"></p>
+  <div class="panel" id="invBody"><p class="src">Running every relevant check. This page updates by itself.</p></div>
+  <p><a href="/utility">← Utility</a></p>
+</section>
+
+<section id="safe" class="hide">
+  <div class="lbl">Live safety badge</div>
+  <h1 id="safeName">…</h1>
+  <p><img id="safeBadge" alt="Oculon safety badge" height="22"></p>
+  <div class="panel" id="safeBody"></div>
+  <div class="panel"><h2>Embed the badge</h2><p>Markdown:</p><code id="embed"></code></div>
+  <p><a href="/utility">← Utility</a></p>
+</section>
+</main>
+<footer><div class="in"><span>© <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/docs">Docs</a> · <a href="/app">App</a> · <a href="/thetoken">Token</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#001a26', hi: '#00c8e0', intensity: 0.8, scale: 0.3 }); }
+const $ = (id) => document.getElementById(id);
+$('year').textContent = new Date().getFullYear();
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const fmt = (n) => Number(n).toLocaleString('en-US');
+const get = async (p) => { const r = await fetch(p, { credentials: 'same-origin' }); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; };
+const post = async (p, body) => { const r = await fetch(p, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-oculon': '1' }, body: JSON.stringify(body) }); const j = await r.json(); if (!r.ok) throw new Error(j.error || r.status); return j; };
+const say = (el, text, kind) => { el.className = 'msg' + (kind ? ' ' + kind : ''); el.textContent = text; };
+const hex = (s) => '0x' + [...new TextEncoder().encode(s)].map((b) => b.toString(16).padStart(2, '0')).join('');
+let account = null;
+
+async function connect() {
+  if (!window.ethereum) throw new Error('No wallet found in this browser. Open this page in a wallet browser or install a wallet extension.');
+  const accs = await window.ethereum.request({ method: 'eth_requestAccounts' });
+  account = String(accs[0]).toLowerCase();
+  $('who').textContent = account;
+  $('connect').textContent = 'Connected';
+  return account;
+}
+const sign = async (message) => { const a = account || await connect(); return window.ethereum.request({ method: 'personal_sign', params: [hex(message), a] }); };
+const utilityMessage = (kind, target, tx) => `Oculon ${kind === 'investigate' ? 'investigation' : 'safety badge'}\nTarget: ${target.trim()}\nBurn: ${tx.trim().toLowerCase()}`;
+const busy = async (btn, msg, fn) => { btn.disabled = true; try { await fn(); } catch (e) { say(msg, e.message || String(e), 'err'); } finally { btn.disabled = false; } };
+
+$('connect').onclick = () => busy($('connect'), $('walletMsg'), connect);
+$('aGo').onclick = () => busy($('aGo'), $('aMsg'), async () => {
+  const target = $('aTarget').value.trim(), tx = $('aTx').value.trim();
+  if (!target || !tx) throw new Error('Fill in what to investigate and the burn transaction hash.');
+  say($('aMsg'), 'Sign the request in your wallet…');
+  const signature = await sign(utilityMessage('investigate', target, tx));
+  say($('aMsg'), 'Checking the burn on Robinhood Chain…');
+  const r = await post('/api/utility/investigate', { target, tx, signature });
+  location.href = '/investigation/' + r.id;
+});
+$('bGo').onclick = () => busy($('bGo'), $('bMsg'), async () => {
+  const token = $('bToken').value.trim().toLowerCase(), tx = $('bTx').value.trim();
+  if (!token || !tx) throw new Error('Fill in the token address and the burn transaction hash.');
+  say($('bMsg'), 'Sign the request in your wallet…');
+  const signature = await sign(utilityMessage('safety', token, tx));
+  say($('bMsg'), 'Checking the burn on Robinhood Chain…');
+  await post('/api/utility/safety', { token, tx, signature });
+  location.href = '/safety/' + token;
+});
+const onApp = location.hostname.startsWith('app.') || !/\./.test(location.hostname) || location.hostname === '127.0.0.1';
+$('cGo').onclick = () => busy($('cGo'), $('cMsg'), async () => {
+  if (!onApp) { location.href = 'https://app.' + location.hostname.replace(/^www\./, '') + '/utility#formC'; return; }
+  const a = account || await connect();
+  const { message } = await post('/api/utility/nonce', { address: a });
+  const signature = await sign(message);
+  const r = await post('/api/utility/holder', { message, signature });
+  if (r.holder) { say($('cMsg'), `Holder tier on for ${r.address} until ${r.expiresAt.slice(0, 10)}. Balance ${r.balance} OCULON.`, 'ok'); $('cOut').classList.remove('hide'); }
+  else say($('cMsg'), `This wallet holds ${r.balance} OCULON; the holder tier needs ${r.needs}.`, 'err');
+});
+$('cOut').onclick = () => busy($('cOut'), $('cMsg'), async () => { await post('/api/utility/signout', {}); say($('cMsg'), 'Signed out.', 'ok'); $('cOut').classList.add('hide'); });
+
+async function home() {
+  if (!onApp) $('cGo').textContent = 'Sign in on the app';
+  const i = await get('/api/utility/info');
+  $('ca').textContent = i.token ? i.token.ca : 'not configured';
+  $('amtA').textContent = fmt(i.amounts.investigate) + ' OCULON'; $('amtB').textContent = fmt(i.amounts.safety) + ' OCULON'; $('amtC').textContent = fmt(i.amounts.holder) + ' OCULON';
+  if (i.holder) { say($('cMsg'), `Holder tier on for ${i.holder.address} until ${i.holder.expiresAt.slice(0, 10)}.`, 'ok'); $('cOut').classList.remove('hide'); }
+  if (i.investigations.length) $('recent').innerHTML = i.investigations.map((x) => `<a href="/investigation/${esc(x.id)}"><span>${esc(x.target)}</span><span>${esc(x.createdAt.slice(0, 10))} · ${esc(x.status)}</span></a>`).join('');
+}
+
+async function investigation(id) {
+  $('home').classList.add('hide'); $('inv').classList.remove('hide'); $('invId').textContent = id;
+  const draw = (v) => {
+    $('invTarget').textContent = v.target;
+    document.title = 'Oculon investigation: ' + v.target;
+    if (v.burn) $('invBurn').innerHTML = `Paid for by burning ${esc(v.burn.amount)} OCULON from <code>${esc(v.burn.from)}</code> · tx <a href="https://robin.etherscan.io/tx/${esc(v.burn.tx)}" target="_blank" rel="noopener">${esc(v.burn.tx.slice(0, 12))}…</a> · ${esc(v.createdAt.slice(0, 16).replace('T', ' '))} UTC`;
+    if (v.status !== 'done') return;
+    $('invBody').innerHTML = v.parts.map((p) => `<div class="part"><h3>${esc(p.title)}${p.verdict ? ` <span class="pill v-${esc(String(p.verdict).toUpperCase())}">${esc(String(p.verdict).toUpperCase())}</span>` : ''}</h3>${p.error ? `<p class="msg err">${esc(p.error)}</p>` : ''}${p.lines.length ? `<ul>${p.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : p.error ? '' : '<p class="src">No issues found by this check.</p>'}${p.sources.length ? `<div class="src">sources: ${esc(p.sources.join(' · '))}</div>` : ''}</div>`).join('') + '<p class="src">Automated readings of public data, not an audit.</p>';
+  };
+  for (let i = 0; i < 90; i++) { const v = await get('/api/utility/investigation?id=' + id); draw(v); if (v.status === 'done') return; await new Promise((r) => setTimeout(r, 3000)); }
+}
+
+async function safety(token) {
+  $('home').classList.add('hide'); $('safe').classList.remove('hide');
+  const s = await get('/api/utility/safety?token=' + token);
+  $('safeName').textContent = s.symbol ? `${s.symbol}${s.name ? ' · ' + s.name : ''}` : token;
+  $('safeBadge').src = '/badge/' + token + '.svg?t=' + Date.now();
+  const abs = location.origin + '/badge/' + token + '.svg';
+  $('embed').textContent = `[![Oculon safety](${abs})](${location.origin}/safety/${token})`;
+  $('safeBody').innerHTML = !s.expiresAt ? '<p>This token is not monitored. Burn 2,000,000 OCULON on the <a href="/utility">utility page</a> to start a 30-day live badge.</p>'
+    : `<h2>${s.active ? `<span class="pill v-${esc(s.verdict)}">${esc(s.verdict ?? 'CHECKING')}</span>` : 'Monitoring ended'}</h2>
+      <p class="src">Token <code>${esc(token)}</code> · ${s.active ? 'monitored until' : 'ended'} ${esc(s.expiresAt.slice(0, 10))} · last check ${esc((s.lastCheck || '').slice(0, 16).replace('T', ' '))} UTC</p>
+      ${s.reasons.length ? `<ul>${s.reasons.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : '<p>No risk flags in the last check.</p>'}
+      ${s.history.length ? `<h2 style="margin-top:18px">Verdict changes</h2><ul>${s.history.map((h) => `<li>${esc(h.at.slice(0, 16).replace('T', ' '))} UTC · ${esc(h.verdict)}</li>`).join('')}</ul>` : ''}
+      <p class="src">Heuristics over pool and explorer data, not an audit. Burning for a badge never changes the verdict.</p>`;
+}
+
+const inv = /^\/investigation\/([0-9a-f]{12})$/.exec(location.pathname);
+const saf = /^\/safety\/(0x[0-9a-fA-F]{40})$/.exec(location.pathname);
+(inv ? investigation(inv[1]) : saf ? safety(saf[1].toLowerCase()) : home()).catch((e) => { document.querySelector('main').insertAdjacentHTML('afterbegin', `<p class="msg err">${esc(e.message)}</p>`); });
+</script>
+</body>
+</html>

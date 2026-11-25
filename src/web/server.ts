@@ -25,6 +25,7 @@ import { mailEnabled } from '../sources/resend.js';
 import { analyst, crossExamine, isAnalystModel } from '../analyst.js';
 import { scrubSecrets } from '../core/keys.js';
 import { readBurns, rpcClient, type BurnInfo } from './burns.js';
+import { UTILITY, badgeSvg, createNonce, getInvestigation, holderFor, listInvestigations, runSafety, safetyState, signOutHolder, startInvestigation, startSafety, tokenConfig, verifyHolder } from '../modules/utility.js';
 
 /** Analyst questions and cross-examinations per visitor address per hour on a public install. */
 const ANALYST_PER_HOUR = Number(process.env.OCULON_ANALYST_PER_HOUR ?? 40);
@@ -282,6 +283,10 @@ export const ROUTES: Record<string, Handler> = {
   },
   '/api/breaches': async (q, o) => slim(await o.breaches((q.get('domain') ?? '').slice(0, 120))),
   '/api/phone': async (q, o) => slim(await o.phoneCheck(need(q, 'number', 32), q.get('country') ? { country: q.get('country')!.slice(0, 2) } : {})),
+  '/api/iban': async (q, o) => slim(await o.ibanCheck(need(q, 'iban', 64), q.get('country') ? { country: q.get('country')!.slice(0, 2) } : {})),
+  '/api/lookalike': async (q, o) => slim(await o.lookalikes(need(q, 'domain', 120))),
+  '/api/honeypot': async (q, o) => slim(await o.honeypotCheck(need(q, 'address', 60), q.get('chain') ? { chain: q.get('chain')!.slice(0, 12) } : {})),
+  '/api/address': async (q, o) => slim(await o.addressCheck(need(q, 'address', 120), q.get('network') ? { network: q.get('network')!.slice(0, 20) } : {})),
   '/api/satellites': async (q, o) => slim(await o.satellites((q.get('q') ?? '').slice(0, 60))),
   '/api/papers': async (q, o) => slim(await o.papers(need(q, 'topic', 200), q.get('years') ? { years: Number(q.get('years')) || 3 } : {})),
   '/api/country': async (q, o) => {
@@ -384,6 +389,12 @@ type PostHandler = (body: Record<string, unknown>, o: Oculon) => Promise<unknown
 const OWNER_ONLY = new Set(['/api/monitor', '/api/watch/delete', '/api/fences', '/api/fences/delete', '/api/cases']);
 
 export const POST_ROUTES: Record<string, PostHandler> = {
+  // Raw email headers can be several kilobytes, too long for a query string.
+  '/api/headers': async (b, o) => {
+    const raw = String(b.headers ?? '');
+    if (!raw.trim()) throw new HttpError(400, 'missing headers');
+    return o.headerCheck(raw.slice(0, 100_000));
+  },
   '/api/fences': (b, o) => {
     const box = Array.isArray(b.box) ? (b.box.map(Number) as [number, number, number, number]) : null;
     if (!box || box.length !== 4) throw new HttpError(400, 'box must be [south, west, north, east]');
@@ -507,6 +518,7 @@ export function renderPage(html: string, domain: string | null): string {
       .replace(/href="\/report"/g, `href="https://app.${domain}/report"`)
       .replace(/href="\/ask"/g, `href="https://${domain}/ask"`)
       .replace(/href="\/thetoken"/g, `href="https://${domain}/thetoken"`)
+      .replace(/href="\/utility"/g, `href="https://${domain}/utility"`)
       .replace(/href="\/docs(?:#([^"]*))?"/g, (_m, h: string | undefined) => `href="https://docs.${domain}/${h ?? ''}"`)
       .replace(/href="\/(privacy|terms)(#[^"]*)?"/g, (_m, p: string, h: string | undefined) => `href="${main}/${p}${h ?? ''}"`)
       .replace(/href="\/"/g, `href="${main}/"`);
@@ -578,6 +590,12 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
   // A Cloudflare Worker serves app.<domain> and docs.<domain> by forwarding to this server with the site name
   // and the client address in headers. Those headers count only when they carry the shared edge secret.
   const edgeSecret = (opts.edgeSecret ?? process.env.OCULON_EDGE_SECRET ?? '').trim() || null;
+
+  // Live safety badges: active monitors are re-checked about every 15 minutes.
+  const safetyTimer = setInterval(() => {
+    void runSafety(oculon).then((changes) => { for (const c of changes) log(`safety badge ${c.token}: ${c.from ?? 'new'} -> ${c.to}`); }).catch(() => {});
+  }, 5 * 60_000);
+  safetyTimer.unref();
 
   // Burns on /thetoken come from the chain RPC, cached for five minutes; a failed read keeps the last good one.
   let burnCache: { at: number; key: string; info: BurnInfo | null } | null = null;
@@ -681,18 +699,48 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       const msg = url.pathname === '/mail/confirm' ? (ok ? 'Alerts confirmed. You will get an email when one of your monitors finds a change.' : 'This confirmation link is no longer valid.') : ok ? 'You are unsubscribed. No more monitor emails will be sent.' : 'This address was already unsubscribed.';
       return send(res, 200, `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Oculon alerts</title><body style="margin:0;background:#000;color:#f2f2f2;font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;padding:16px"><div style="max-width:460px"><p style="font:600 12px monospace;letter-spacing:.2em;color:#00f0ff"><img src="/assets/logo.svg" alt="" width="18" height="18" style="vertical-align:-4px;margin-right:10px">OCULON</p><h1 style="font-weight:500">${msg}</h1><p><a style="color:#00f0ff" href="${siteDomain ? `https://app.${siteDomain}/#watch` : '/app#watch'}">Open your monitors →</a></p></div></body>`, 'text/html; charset=utf-8');
     }
+    // $OCULON utility: burn-to-investigate, live safety badges and the holder tier (see modules/utility.ts).
+    const badge = /^\/badge\/(0x[0-9a-fA-F]{40})\.svg$/.exec(url.pathname)?.[1];
+    if (badge && req.method === 'GET') return send(res, 200, badgeSvg(safetyState(oculon.ctx, badge)), 'image/svg+xml; charset=utf-8', 'public, max-age=300');
+    if ((/^\/utility\/?$/.test(url.pathname) || /^\/investigation\/[0-9a-f]{12}$/.test(url.pathname) || /^\/safety\/0x[0-9a-fA-F]{40}$/.test(url.pathname)) && req.method === 'GET' && hostName.split('.')[0] !== 'docs') {
+      return send(res, 200, renderPage(readFileSync(join(HERE, 'utility.html'), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
+    }
+    if (url.pathname.startsWith('/api/utility/')) {
+      if (!admin) return send(res, 403, '{"error":"not available on this install"}', 'application/json');
+      if (req.method === 'POST' && !sameSite()) return send(res, 403, '{"error":"forbidden"}', 'application/json');
+      const owner = `web:${visitor()}`;
+      const json = (v: unknown, status = 200) => send(res, status, JSON.stringify(v), 'application/json; charset=utf-8');
+      try {
+        if (req.method === 'GET') {
+          if (url.pathname === '/api/utility/info') return json({ token: tokenConfig(), amounts: { investigate: UTILITY.investigate.toString(), safety: UTILITY.safety.toString(), holder: UTILITY.holder.toString() }, safetyDays: UTILITY.safetyDays, holderMonitors: UTILITY.holderMonitors, holder: holderFor(oculon.ctx, owner), investigations: listInvestigations(oculon.ctx, 12) });
+          if (url.pathname === '/api/utility/investigation') { const v = getInvestigation(oculon.ctx, url.searchParams.get('id') ?? ''); return v ? json(v) : json({ error: 'no such investigation' }, 404); }
+          if (url.pathname === '/api/utility/safety') { const t = url.searchParams.get('token') ?? ''; if (!/^0x[0-9a-fA-F]{40}$/.test(t)) throw new HttpError(400, 'give a token address'); return json(safetyState(oculon.ctx, t)); }
+        }
+        if (req.method === 'POST') {
+          const b = await readJson(req);
+          if (url.pathname === '/api/utility/nonce') return json(createNonce(siteDomain ?? hostName, String(b.address ?? '')));
+          if (url.pathname === '/api/utility/holder') return json(await verifyHolder(oculon.ctx, owner, String(b.message ?? ''), String(b.signature ?? '')));
+          if (url.pathname === '/api/utility/signout') { signOutHolder(oculon.ctx, owner); return json({ ok: true }); }
+          if (url.pathname === '/api/utility/investigate') return json(await startInvestigation(oculon, String(b.tx ?? ''), String(b.target ?? ''), String(b.signature ?? '')));
+          if (url.pathname === '/api/utility/safety') return json(await startSafety(oculon, String(b.tx ?? ''), String(b.token ?? ''), String(b.signature ?? '')));
+        }
+        return json({ error: 'not found' }, 404);
+      } catch (e) {
+        return json({ error: (e as Error).message }, e instanceof HttpError ? e.status : 400);
+      }
+    }
     if (url.pathname === '/api/my' || url.pathname.startsWith('/api/my/')) {
       if (!admin) return send(res, 403, '{"error":"not available on this install"}', 'application/json');
       if (req.method === 'POST' && !sameSite()) return send(res, 403, '{"error":"forbidden"}', 'application/json');
       const owner = `web:${visitor()}`;
       try {
-        if (req.method === 'GET' && url.pathname === '/api/my') return send(res, 200, JSON.stringify({ monitors: listPersonal(oculon.ctx, owner), alerts: personalAlerts(oculon.ctx, owner, 40), email: emailStatus(oculon.ctx, owner), mail: mailEnabled(), owner: !publicMode || isAdmin(req, adminToken) }), 'application/json; charset=utf-8');
+        if (req.method === 'GET' && url.pathname === '/api/my') return send(res, 200, JSON.stringify({ monitors: listPersonal(oculon.ctx, owner), alerts: personalAlerts(oculon.ctx, owner, 40), email: emailStatus(oculon.ctx, owner), mail: mailEnabled(), owner: !publicMode || isAdmin(req, adminToken), holder: holderFor(oculon.ctx, owner) }), 'application/json; charset=utf-8');
         if (req.method === 'POST') {
           const b = await readJson(req);
           if (url.pathname === '/api/my/monitors') {
             const text = String(b.text ?? '').trim();
             if (text.length < 4 || text.length > 300) throw new HttpError(400, 'describe what to watch in 4-300 characters');
-            return send(res, 200, JSON.stringify(await addPersonal(oculon.ctx, owner, text)), 'application/json; charset=utf-8');
+            return send(res, 200, JSON.stringify(await addPersonal(oculon.ctx, owner, text, holderFor(oculon.ctx, owner) ? UTILITY.holderMonitors : undefined)), 'application/json; charset=utf-8');
           }
           if (url.pathname === '/api/my/monitors/delete') return send(res, 200, JSON.stringify({ removed: removePersonal(oculon.ctx, owner, Number(b.id)) }), 'application/json');
           if (url.pathname === '/api/my/email') return send(res, 200, JSON.stringify(await requestEmail(oculon.ctx, owner, String(b.email ?? ''), mailBase)), 'application/json');

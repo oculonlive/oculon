@@ -71,6 +71,11 @@ import { ransomware } from './modules/ransomware.js';
 import { companyCheck } from './modules/company.js';
 import { breaches, passwordCheck, pwnedRange } from './modules/breach.js';
 import { phoneCheck } from './modules/phone.js';
+import { ibanCheck } from './modules/iban.js';
+import { headerCheck } from './modules/headers.js';
+import { lookalikes } from './modules/lookalike.js';
+import { honeypotCheck } from './modules/honeypot.js';
+import { addressCheck } from './modules/address.js';
 import { satellites } from './modules/satellites.js';
 
 export interface OculonOptions extends Pick<ContextOptions, 'dbPath' | 'fetch' | 'throttle' | 'now'> {
@@ -398,6 +403,26 @@ export class Oculon {
   /** Phone number check: country, line type, carrier, premium-rate and callback-scam warnings. */
   phoneCheck(number: string, opts: { country?: string } = {}) {
     return phoneCheck(this.ctx, number, opts);
+  }
+  /** IBAN check, offline: country, length, mod-97 check digits, bank code, and a warning when the account country differs from the supplier's. */
+  ibanCheck(iban: string, opts: { country?: string } = {}) {
+    return ibanCheck(this.ctx, iban, opts);
+  }
+  /** Raw email headers: SPF, DKIM and DMARC results, the delivery path, the origin IP and spoofing signs. */
+  headerCheck(rawHeaders: string) {
+    return headerCheck(this.ctx, rawHeaders);
+  }
+  /** Lookalike domains of a brand that exist in DNS, and new certificates naming the brand (crt.sh). */
+  lookalikes(domain: string) {
+    return lookalikes(this.ctx, domain);
+  }
+  /** Can this token be sold? Buy and sell simulation with taxes (honeypot.is): Ethereum, BNB Chain, Base. */
+  honeypotCheck(address: string, opts: { chain?: string } = {}) {
+    return honeypotCheck(this.ctx, address, opts);
+  }
+  /** Crypto address without keys: chain from format, OFAC sanctions, balance and activity from free explorers. */
+  addressCheck(address: string, opts: { network?: string } = {}) {
+    return addressCheck(this.ctx, address, opts);
   }
   /** Satellites: launches of the last 30 days, or one object's orbit, owner and status (CelesTrak). */
   satellites(query = '') {

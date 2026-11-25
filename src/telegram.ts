@@ -47,9 +47,9 @@ export function formatSignal(s: Signal): string {
 }
 
 /** Commands anyone may use when the bot is public. Everything else stays with the allowlisted chats. */
-export const PUBLIC_COMMANDS = new Set(['/start', '/help', '/scam', '/url', '/factcheck', '/recall', '/email', '/travel', '/airport', '/country', '/papers', '/audit', '/monitor', '/monitors', '/unmonitor', '/cve', '/vulns', '/hazards', '/blackout', '/cloud', '/space', '/air', '/radar', '/signals', '/alerts', '/ask', '/ip', '/hash', '/ransomware', '/company', '/breaches', '/phone', '/satellite']);
+export const PUBLIC_COMMANDS = new Set(['/start', '/help', '/scam', '/url', '/factcheck', '/recall', '/email', '/travel', '/airport', '/country', '/papers', '/audit', '/monitor', '/monitors', '/unmonitor', '/cve', '/vulns', '/hazards', '/blackout', '/cloud', '/space', '/air', '/radar', '/signals', '/alerts', '/ask', '/ip', '/hash', '/ransomware', '/company', '/breaches', '/phone', '/satellite', '/iban', '/lookalike', '/honeypot', '/address', '/headers']);
 /** Commands that start many upstream calls or an LLM get a tighter budget. */
-const HEAVY = new Set(['/factcheck', '/papers', '/travel', '/country', '/ask', '/scam', '/audit', '/radar', '/ip', '/hash', '/company']);
+const HEAVY = new Set(['/factcheck', '/papers', '/travel', '/country', '/ask', '/scam', '/audit', '/radar', '/ip', '/hash', '/company', '/lookalike', '/honeypot', '/address']);
 
 export const PUBLIC_HELP = [
   '<b>Oculon</b>: check anything, every answer sourced.',
@@ -67,6 +67,11 @@ export const PUBLIC_HELP = [
   '/papers &lt;topic&gt; — research brief',
   '/audit &lt;npm:name@ver ...&gt; — dependency vulnerabilities',
   '/phone &lt;+number&gt; — who is calling? premium-rate and callback-scam warnings',
+  '/iban &lt;IBAN&gt; — is this IBAN valid before you pay?',
+  '/headers &lt;raw headers&gt; — was this email spoofed? SPF, DKIM, DMARC, origin',
+  '/lookalike &lt;domain&gt; — lookalike domains and new certificates for a brand',
+  '/honeypot &lt;token&gt; [eth|bsc|base] — can this token be sold?',
+  '/address &lt;crypto address&gt; — sanctions, balance and activity',
   '/company &lt;name, LEI or EU VAT&gt; — is this supplier real?',
   '/breaches [domain] — newest data breaches, or one domain',
   '/ip &lt;address or domain&gt; — abuse reports, scanners, Tor, threat reports',
@@ -97,7 +102,7 @@ export const HELP = [
   '/monitor &lt;request&gt; — watch anything in plain words, e.g. /monitor internet outages in Iran',
   '/recall &lt;VIN, "2018 Honda Accord" or product&gt; — vehicle and product recalls',
   '/email &lt;domain&gt; — can someone spoof email from this domain?',
-  '/phone · /company · /breaches · /ip · /hash · /ransomware · /satellite — caller, supplier, breach and threat checks',
+  '/phone · /company · /iban · /headers · /breaches · /ip · /hash · /lookalike · /honeypot · /address · /ransomware · /satellite — caller, supplier, email, breach, crypto and threat checks',
   '/airport &lt;JFK|EGLL&gt; — airport weather, delays and ground stops',
   '/country &lt;name&gt; — economy, leaders, currency, travel advice, headlines',
   '/papers &lt;topic&gt; — research brief: most cited and newest papers',
@@ -467,6 +472,32 @@ export class TelegramBot {
         const d = (await o.breaches(arg)).result;
         const items = d.breaches.slice(0, 8).map((b) => `• <b>${esc(b.title)}</b> <i>${esc(b.breachDate ?? '')} · ${b.accounts.toLocaleString('en-US')} accounts</i>`).join('\n');
         return { html: `<b>${d.query ? `Breaches: ${esc(d.query)}` : 'Newest breaches'}</b>${d.query ? ` (${d.total})` : ''}\n${items || 'None found.'}\n<i>Source: Have I Been Pwned (CC BY 4.0)</i>` };
+      }
+      case '/iban': {
+        if (!arg) return needArg('DE89 3704 0044 0532 0130 00');
+        const d = (await o.ibanCheck(arg)).result;
+        return { html: `<b>${esc(d.formatted ?? d.input)}</b>: <b>${d.valid ? 'VALID FORMAT' : 'NOT VALID'}</b>${d.countryName ? `\n${esc(d.countryName)}${d.bank ? ` · ${esc(d.bank.kind)} ${esc(d.bank.code)}` : ''}` : ''}${d.problems.map((p) => `\nx ${esc(p)}`).join('')}\n${esc(d.advice[0] ?? '')}` };
+      }
+      case '/headers': {
+        if (!arg) return needArg('Received: ... (paste the raw headers from "Show original")');
+        const d = (await o.headerCheck(arg)).result;
+        return { html: `<b>${esc(d.from.address ?? 'unknown sender')}</b>: <b>${esc(d.verdict.toUpperCase())}</b> (risk ${d.risk}/100)\nSPF ${esc(d.auth.spf ?? '?')} · DKIM ${esc(d.auth.dkim ?? '?')} · DMARC ${esc(d.auth.dmarc ?? '?')}${d.origin.ip ? `\nsent from ${esc(d.origin.ip)}${d.origin.country ? ` · ${esc(d.origin.country)}` : ''}` : ''}${d.flags.slice(0, 5).map((f) => `\n! ${esc(f)}`).join('')}\n${esc(d.advice[0] ?? '')}` };
+      }
+      case '/lookalike': {
+        if (!arg) return needArg('example.com');
+        const d = (await o.lookalikes(arg)).result;
+        return { html: `<b>${esc(d.domain)}</b>: <b>${d.risk.toUpperCase()} RISK</b>, ${d.live.length} of ${d.checked} lookalikes exist${d.live.slice(0, 10).map((l) => `\n${esc(l.domain)} · ${esc(l.kind)}${l.mx ? ' · mail' : ''}`).join('')}${d.certs.length ? `\n\nNew certificates: ${d.certs.slice(0, 5).map((c) => esc(c.name)).join(', ')}` : ''}` };
+      }
+      case '/honeypot': {
+        if (!arg) return needArg('0x6982508145454Ce325dDbE47a25d4ec3d2311933 eth');
+        const [addr, chain] = arg.split(/\s+/);
+        const d = (await o.honeypotCheck(addr!, chain ? { chain } : {})).result;
+        return { html: `<b>${esc(d.symbol ?? d.address)}</b> on ${esc(d.chain)}: <b>${esc(d.verdict.toUpperCase())}</b>\nbuy tax ${d.buyTax ?? '?'}% · sell tax ${d.sellTax ?? '?'}%${d.reasons.map((r) => `\n! ${esc(r)}`).join('')}\n${esc(d.advice[0] ?? '')}` };
+      }
+      case '/address': {
+        if (!arg) return needArg('bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh');
+        const d = (await o.addressCheck(arg)).result;
+        return { html: `<b>${esc(d.address)}</b>: <b>${d.sanctioned ? 'SANCTIONED' : d.warnings.length ? 'CHECK FIRST' : 'NO RED FLAGS'}</b>\n${esc(d.format)}${d.activity ? `\n${esc([d.activity.label, d.activity.balance, d.activity.txCount !== null ? `${d.activity.txCount} transactions` : null].filter(Boolean).join(' · '))}` : ''}${d.warnings.map((w) => `\n! ${esc(w)}`).join('')}\n${esc(d.advice[0] ?? '')}` };
       }
       case '/phone': {
         if (!arg) return needArg('+1 876 555 0100');
@@ -878,11 +909,11 @@ export class TelegramBot {
     const me = await this.call<{ username: string }>('getMe', {});
     this.log(`bot @${me.username} running; ${this.opts.allowedChats.length} allowed chat(s)`);
     if (this.isPublic) {
-      await this.call('setMyCommands', { commands: ['scam', 'url', 'factcheck', 'recall', 'email', 'phone', 'company', 'breaches', 'ip', 'hash', 'ransomware', 'travel', 'airport', 'country', 'papers', 'audit', 'monitor', 'monitors', 'unmonitor', 'cve', 'hazards', 'blackout', 'alerts', 'help'].map((c) => ({ command: c, description: `Oculon ${c}` })) }).catch(() => {});
+      await this.call('setMyCommands', { commands: ['scam', 'url', 'factcheck', 'recall', 'email', 'phone', 'company', 'iban', 'headers', 'breaches', 'ip', 'hash', 'lookalike', 'honeypot', 'address', 'ransomware', 'travel', 'airport', 'country', 'papers', 'audit', 'monitor', 'monitors', 'unmonitor', 'cve', 'hazards', 'blackout', 'alerts', 'help'].map((c) => ({ command: c, description: `Oculon ${c}` })) }).catch(() => {});
     }
     for (const chat of this.opts.allowedChats) await this.call('setMyCommands', {
       scope: { type: 'chat', chat_id: Number(chat) },
-      commands: ['ask', 'scam', 'monitors', 'unmonitor', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'recall', 'email', 'phone', 'company', 'breaches', 'ip', 'hash', 'ransomware', 'satellite', 'airport', 'country', 'papers', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
+      commands: ['ask', 'scam', 'monitors', 'unmonitor', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'recall', 'email', 'phone', 'company', 'iban', 'headers', 'breaches', 'ip', 'hash', 'lookalike', 'honeypot', 'address', 'ransomware', 'satellite', 'airport', 'country', 'papers', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
     }).catch(() => {});
     if (this.opts.watchMinutes && this.opts.watchMinutes > 0) {
       this.scheduler = startScheduler(this.oculon, {

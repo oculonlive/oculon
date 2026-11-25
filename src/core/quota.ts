@@ -86,6 +86,9 @@ export const DAILY_BUDGET: Record<string, number> = {
   threatfox: 2000,
   'ransomware-live': 1000,
   'pwned-passwords': 20_000,
+  'honeypot-is': 1500, // keyless, be gentle
+  'mempool-space': 3000,
+  'solana-rpc': 3000, // public RPC, rate limited per IP
   hibp: 200,
   gleif: 3000,
   vies: 1000,
