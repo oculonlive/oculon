@@ -363,7 +363,9 @@ export const ROUTES: Record<string, Handler> = {
     return { version: SERVER_INFO.version, mcpTools: activeTools().length, modules, onchain: onchainEnabled() };
   },
   '/api/readme': () => {
-    for (const p of [join(HERE, '..', '..', 'README.md'), join(HERE, '..', 'README.md')]) if (existsSync(p)) return { markdown: readFileSync(p, 'utf8') };
+    // The GitHub header (banner and badges, written as HTML) is left out: the docs page renders Markdown only.
+    const strip = (md: string) => (/^<p align="center">/.test(md) ? `# Oculon\n\n${md.slice(Math.max(0, md.indexOf('**Open-source')))}` : md);
+    for (const p of [join(HERE, '..', '..', 'README.md'), join(HERE, '..', 'README.md')]) if (existsSync(p)) return { markdown: strip(readFileSync(p, 'utf8')) };
     throw new HttpError(404, 'README not found');
   },
 };

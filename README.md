@@ -1,14 +1,39 @@
-# Oculon
+<p align="center">
+  <a href="https://oculon.live"><img src=".github/assets/banner.png" alt="Oculon: check before you trust. Every answer sourced." width="100%"></a>
+</p>
+
+<h1 align="center">Oculon</h1>
+
+<p align="center">
+  <a href="https://x.com/oculonlive"><img alt="X @oculonlive" src="https://img.shields.io/badge/X-@oculonlive-000000?style=for-the-badge&logo=x&logoColor=white"></a>
+  <a href="https://www.npmjs.com/package/oculon"><img alt="npm" src="https://img.shields.io/npm/v/oculon?style=for-the-badge&logo=npm&label=npm&color=00b8c8"></a>
+  <a href="https://glama.ai/mcp/servers/oculonlive/oculon"><img alt="Glama MCP" src="https://img.shields.io/badge/Glama-MCP_server-00b8c8?style=for-the-badge"></a>
+  <a href="https://t.me/oculonportal"><img alt="Telegram community" src="https://img.shields.io/badge/Telegram-community-26A5E4?style=for-the-badge&logo=telegram&logoColor=white"></a>
+  <a href="https://fomo.family/profile/oculonlive"><img alt="fomo @oculonlive" src="https://img.shields.io/badge/fomo-@oculonlive-5865F2?style=for-the-badge"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/oculonlive/oculon/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/oculonlive/oculon/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-00f0ff.svg"></a>
+  <img alt="Node 22.13+" src="https://img.shields.io/badge/node-%E2%89%A522.13-00f0ff.svg">
+  <img alt="Runtime dependencies: 0" src="https://img.shields.io/badge/runtime%20dependencies-0-00f0ff.svg">
+  <a href="https://oculon.live/safety/0x12a3f1a05d827007f17a43a250cce44868c4a263"><img alt="Oculon safety" src="https://oculon.live/badge/0x12a3f1a05d827007f17a43a250cce44868c4a263.svg"></a>
+</p>
 
 **Open-source intelligence engine for the physical and digital world.** Oculon watches more than 50 public data sources (routing tables, exploit catalogs, transponders, satellites, ship trackers, registries and prediction markets), finds what is unusual, fuses observations about the same subject from independent sources into scored signals, and labels every result with where it came from and how fresh it is. An AI agent on top answers plain-language questions with sources.
 
-[oculon.live](https://oculon.live) · [Documentation](https://oculon.live/docs) · [Privacy](https://oculon.live/privacy) · [Terms](https://oculon.live/terms) · [Token](#official-token)
-
-[![CI](https://github.com/oculonlive/oculon/actions/workflows/ci.yml/badge.svg)](https://github.com/oculonlive/oculon/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-00f0ff.svg)](LICENSE)
-![Node 22.13+](https://img.shields.io/badge/node-%E2%89%A522.13-00f0ff.svg)
-![Runtime dependencies: 0](https://img.shields.io/badge/runtime%20dependencies-0-00f0ff.svg)
-[![Oculon safety](https://oculon.live/badge/0x12a3f1a05d827007f17a43a250cce44868c4a263.svg)](https://oculon.live/safety/0x12a3f1a05d827007f17a43a250cce44868c4a263)
+| | |
+|---|---|
+| **Website** | [oculon.live](https://oculon.live) |
+| **Web app** | [app.oculon.live](https://app.oculon.live) |
+| **Docs** | [docs.oculon.live](https://docs.oculon.live) |
+| **Remote MCP** | [mcp.oculon.live](https://mcp.oculon.live) (no key, no sign-in) |
+| **For AI agents** | [oculon.live/llms.txt](https://oculon.live/llms.txt) |
+| **Source status** | [oculon.live/status](https://oculon.live/status) |
+| **Token** | [oculon.live/thetoken](https://oculon.live/thetoken) · [details below](#official-token) |
+| **Community** | [Telegram portal](https://t.me/oculonportal) · [X](https://x.com/oculonlive) · [fomo](https://fomo.family/profile/oculonlive) |
+| **Telegram bot** | [@oculon_radar_bot](https://t.me/oculon_radar_bot) |
+| **Legal** | [Privacy](https://oculon.live/privacy) · [Terms](https://oculon.live/terms) |
 
 It ships as a CLI, a TypeScript SDK, an MCP server for Claude and other agents (local, or remote at `https://mcp.oculon.live` with nothing to install), a web app and a Telegram bot, all over the same result objects. It has no runtime dependencies. About 20 sources work with no key; optional free-tier keys switch on the rest (see `.env.example`).
 
@@ -28,7 +53,7 @@ npx oculon ask "why is Nvidia in the news this week?"
 - **Honest about its sources.** `/status` shows which sources are up, slow or down, measured from real calls. A source that keeps failing is skipped for a few minutes and a mirror or the last cached answer is used instead, and the result says so.
 - **Everyday checks.** Is this message a scam? Is this link dangerous? Is this claim true? Is my car recalled? Can someone spoof my email domain? Are my dependencies safe? What should I know before I travel? Who is calling me? Has my password leaked? Is this supplier real? Each answer names its sources, and any result can be shared as a link with a preview card.
 - **Monitors in plain words.** "Tell me when there is an internet outage in Iran" becomes a rule that is re-checked on a schedule and reports only what changed, by email, in Telegram or in the app. Every visitor keeps their own monitors, with no account.
-- **Everywhere people are.** A public Telegram bot ([@oculon_radar_bot](https://t.me/oculon_radar_bot)): forward it a suspicious message and it checks it. An OpenAPI spec at `/openapi.json` for ChatGPT Actions, n8n and Zapier.
+- **Everywhere people are.** A public Telegram bot ([@oculon_radar_bot](https://t.me/oculon_radar_bot)): forward it a suspicious message and it checks it. A Telegram community, entered through the [Oculon portal](https://t.me/oculonportal). An OpenAPI spec at `/openapi.json` for ChatGPT Actions, n8n and Zapier.
 - **Free to run.** Daily per-source budgets keep every free tier free, and the data lives in one local SQLite file.
 
 ## Contents
