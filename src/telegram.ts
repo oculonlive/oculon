@@ -22,6 +22,8 @@ export interface BotOptions {
   alertMinScore?: number;
   /** Minutes between background scans for alerts; 0 disables. */
   watchMinutes?: number;
+  /** Minutes between the scans of a host process (oculon serve --watch) that feeds this bot's alerts. */
+  scheduleMinutes?: number;
   /** Anyone may use the public commands (rate limited); allowlisted chats keep every command. Default OCULON_TELEGRAM_PUBLIC=1. */
   publicMode?: boolean;
   log?: (m: string) => void;
@@ -765,7 +767,8 @@ export class TelegramBot {
         const db = o.ctx.store.db;
         if (on) db.prepare('INSERT OR IGNORE INTO telegram_subs (chat_id, created_at) VALUES (?, ?)').run(chatId, Date.now());
         else db.prepare('DELETE FROM telegram_subs WHERE chat_id = ?').run(chatId);
-        return { html: on ? `Alerts on: signals scoring ${this.opts.alertMinScore ?? 70}+ will be sent here${this.opts.watchMinutes ? ` (scan every ${this.opts.watchMinutes} min)` : ' when the bot runs with a watch interval'}.` : 'Alerts off.' };
+        const every = this.opts.watchMinutes || this.opts.scheduleMinutes;
+        return { html: on ? `Alerts on: signals scoring ${this.opts.alertMinScore ?? 70}+ will be sent here${every ? ` (scan every ${every} min)` : ' when the bot runs with a watch interval'}.` : 'Alerts off.' };
       }
       default:
         return { html: `Unknown command. ${helpHtml()}` };

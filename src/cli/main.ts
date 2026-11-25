@@ -1702,6 +1702,7 @@ export const COMMANDS: Record<string, Cmd> = {
         allowedChats: (process.env.TELEGRAM_ALLOWED_CHATS ?? '').split(',').map((s) => s.trim()).filter(Boolean),
         alertMinScore: Number(process.env.TELEGRAM_ALERT_MIN_SCORE ?? 70),
         watchMinutes: 0,
+        scheduleMinutes: Number(a.flags.watch ?? 0),
         oculon: o,
         log: (m) => log(`telegram ${m}`),
       });
