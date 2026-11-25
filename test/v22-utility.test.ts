@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { test } from 'node:test';
 import { addressFromPrivateKey, keccak256, personalHash, recoverPersonalSigner, signHash, toHex } from '../src/core/evm.js';
 import { Oculon } from '../src/index.js';
-import { badgeSvg, createNonce, holderFor, setUtilityRpc, startInvestigation, targetKind, tokenConfig, utilityMessage, verifyBurn, verifyHolder, UTILITY } from '../src/modules/utility.js';
+import { badgeSvg, createNonce, holderFor, holdMessage, refreshHolders, safetyState, setUtilityRpc, startInvestigation, startInvestigationHold, startSafetyHold, targetKind, tokenConfig, utilityMessage, verifyBurn, verifyHolder, UTILITY } from '../src/modules/utility.js';
 import { mockFetch, NOW } from './helpers.js';
 
 const N = 0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141n;
@@ -90,8 +90,49 @@ test('targets and badges', () => {
   assert.equal(targetKind('example.com'), 'domain');
   assert.equal(targetKind('bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh'), 'crypto');
   assert.equal(targetKind('Acme Trading Ltd'), 'name');
-  const svg = badgeSvg({ token: '0x1', active: true, expiresAt: null, verdict: 'DANGER', reasons: [], name: null, symbol: null, lastCheck: null, history: [] });
+  const svg = badgeSvg({ token: '0x1', active: true, expiresAt: null, heldBy: null, verdict: 'DANGER', reasons: [], name: null, symbol: null, lastCheck: null, history: [] });
   assert.match(svg, /DANGER/);
   assert.match(svg, /#d23b4a/);
-  assert.match(badgeSvg({ token: '0x1', active: false, expiresAt: null, verdict: null, reasons: [], name: null, symbol: null, lastCheck: null, history: [] }), /NOT MONITORED/);
+  assert.match(badgeSvg({ token: '0x1', active: false, expiresAt: null, heldBy: null, verdict: null, reasons: [], name: null, symbol: null, lastCheck: null, history: [] }), /NOT MONITORED/);
+});
+
+test('holding: investigation once per 30 days, badge live while the balance stays, one badge per wallet', async () => {
+  if (!tokenConfig()) return;
+  const priv = rnd(), addr = addressFromPrivateKey(priv);
+  let now = Date.parse('2026-12-01T00:00:00Z');
+  const o = new Oculon({ dbPath: ':memory:', fetch: mockFetch([]).fetch, throttle: false, now: () => new Date(now) });
+  const hold = async (kind: 'investigate' | 'safety', target: string, p = priv) => { const n = createNonce('oculon.live', addr); return { nonce: n.nonce, sig: signHash(personalHash(holdMessage(kind, target, addr, n.nonce)), p, rnd()) }; };
+  try {
+    setUtilityRpc(chain({ from: addr, amount: 0n, time: 0, balance: 1_000_000n }));
+    let h = await hold('investigate', 'example.com');
+    await assert.rejects(startInvestigationHold(o, 'example.com', addr, h.nonce, h.sig), /holds 1,000,000 OCULON; holding needs at least 1,500,000/);
+    setUtilityRpc(chain({ from: addr, amount: 0n, time: 0, balance: 2_500_000n }));
+    h = await hold('investigate', 'example.com', rnd());
+    await assert.rejects(startInvestigationHold(o, 'example.com', addr, h.nonce, h.sig), /does not match/);
+    h = await hold('investigate', 'example.com');
+    const inv = await startInvestigationHold(o, 'example.com', addr, h.nonce, h.sig);
+    assert.match(inv.id, /^[0-9a-f]{12}$/);
+    await assert.rejects(startInvestigationHold(o, 'example.com', addr, h.nonce, h.sig), /expired/, 'a nonce works once');
+    h = await hold('investigate', 'other.com');
+    await assert.rejects(startInvestigationHold(o, 'other.com', addr, h.nonce, h.sig), /next one is free from 2026-12-31/);
+
+    const t1 = '0x' + '1'.repeat(40), t2 = '0x' + '2'.repeat(40);
+    h = await hold('safety', t1);
+    await startSafetyHold(o, t1, addr, h.nonce, h.sig).catch(() => null);
+    assert.equal(safetyState(o.ctx, t1).heldBy, addr);
+    assert.equal(safetyState(o.ctx, t1).active, true);
+    h = await hold('safety', t2);
+    await assert.rejects(startSafetyHold(o, t2, addr, h.nonce, h.sig), /one badge per wallet/);
+    // The holder sells: on the next daily check the badge loses its backing and lapses two days later.
+    now += 24 * 3_600_000;
+    setUtilityRpc(chain({ from: addr, amount: 0n, time: 0, balance: 10n }));
+    const r = await refreshHolders(o.ctx);
+    assert.deepEqual(r.map((x) => x.ok), [false]);
+    assert.equal(safetyState(o.ctx, t1).heldBy, null);
+    now += 3 * 86_400_000;
+    assert.equal(safetyState(o.ctx, t1).active, false);
+  } finally {
+    setUtilityRpc(null);
+    await new Promise((r) => setTimeout(r, 50));
+  }
 });

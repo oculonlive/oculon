@@ -1,12 +1,15 @@
 /**
  * $OCULON utility, read straight from Robinhood Chain: nothing is custodied, nothing is paid to anyone.
- *   A. Burn-to-Investigate: burn 1,500,000 OCULON, get a deep investigation of one domain, wallet, token or
- *      company, published as a public page that links the burn transaction.
- *   B. Live Safety Badge: burn 2,000,000 OCULON, and Oculon watches one Robinhood Chain token for 30 days.
- *      The badge shows the live verdict. Burning buys monitoring, never a better verdict.
- *   C. Holder tier: sign a message with a wallet that holds 3,500,000 OCULON (no account, no email) and get
- *      more personal monitors, checked every 15 minutes instead of every hour.
- * A burn is a transfer of OCULON to the dead or zero address, confirmed on chain; each transaction counts once.
+ * Holding is the main way in; burning is optional for people who would rather not hold.
+ *   A. Deep investigation of one domain, wallet, token or company, published as a public page.
+ *      Hold 1,500,000 OCULON: one investigation per wallet every 30 days. Or burn 1,500,000 for one.
+ *   B. Live safety badge on one Robinhood Chain token. Hold 2,000,000: the badge stays live while the
+ *      wallet keeps that balance (checked daily; one badge per wallet). Or burn 1,000,000 for 30 days.
+ *      Paying, either way, buys monitoring, never a better verdict.
+ *   C. Holder tier: a wallet holding 3,500,000 signs in once and gets up to 30 personal monitors, checked
+ *      every 15 minutes instead of every hour.
+ * Holding is proven by a signature over a one-time nonce plus a live balance read. A burn is a transfer to the
+ * dead or zero address, confirmed on chain; each burn counts once and only the burning wallet can use it.
  */
 import { randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -17,7 +20,12 @@ import { recoverPersonalSigner } from '../core/evm.js';
 import type { Oculon } from '../index.js';
 import { formatUnits, rpcClient, type Rpc } from '../web/burns.js';
 
-export const UTILITY = { investigate: 1_500_000n, safety: 2_000_000n, holder: 3_500_000n, safetyDays: 30, holderMonitors: 30, sessionDays: 7 } as const;
+export const UTILITY = { investigate: 1_500_000n, safety: 1_000_000n, holdInvestigate: 1_500_000n, holdSafety: 2_000_000n, holder: 3_500_000n, safetyDays: 30, holdInvestigateDays: 30, holderMonitors: 30, sessionDays: 7 } as const;
+
+/** What a holder signs to spend their holding on an action. The nonce comes from createNonce and works once. */
+export function holdMessage(kind: 'investigate' | 'safety', target: string, address: string, nonce: string): string {
+  return `Oculon ${kind === 'investigate' ? 'investigation' : 'safety badge'}\nTarget: ${target.trim()}\nWallet: ${address.trim().toLowerCase()}\nPaid by: holding OCULON\nNonce: ${nonce}`;
+}
 /** Burns before the utility went live (buyback burns, for example) do not count. */
 export const UTILITY_START = Date.parse('2026-11-25T19:45:00Z');
 
@@ -55,7 +63,9 @@ function db(ctx: Ctx) {
     CREATE TABLE IF NOT EXISTS investigations (id TEXT PRIMARY KEY, tx TEXT NOT NULL, target TEXT NOT NULL, status TEXT NOT NULL, result TEXT, created_at INTEGER NOT NULL, finished_at INTEGER);
     CREATE TABLE IF NOT EXISTS safety_monitors (token TEXT PRIMARY KEY, expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL, last_check INTEGER, verdict TEXT, reasons TEXT, name TEXT, symbol TEXT);
     CREATE TABLE IF NOT EXISTS safety_checks (token TEXT NOT NULL, at INTEGER NOT NULL, verdict TEXT NOT NULL, reasons TEXT NOT NULL);
-    CREATE TABLE IF NOT EXISTS holder_sessions (key TEXT PRIMARY KEY, owner TEXT NOT NULL, address TEXT NOT NULL, balance TEXT NOT NULL, expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL);`);
+    CREATE TABLE IF NOT EXISTS holder_sessions (key TEXT PRIMARY KEY, owner TEXT NOT NULL, address TEXT NOT NULL, balance TEXT NOT NULL, expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS hold_uses (address TEXT NOT NULL, kind TEXT NOT NULL, target TEXT NOT NULL, balance TEXT NOT NULL, at INTEGER NOT NULL);`);
+  for (const col of ['holder TEXT', 'holder_check INTEGER']) { try { d.exec(`ALTER TABLE safety_monitors ADD COLUMN ${col}`); } catch { /* already there */ } }
   return d;
 }
 
@@ -95,7 +105,7 @@ function recordBurn(ctx: Ctx, kind: string, target: string, b: Burn) {
 // ---------- A. Burn-to-Investigate ----------
 
 export interface InvestigationPart { title: string; ok: boolean; verdict: string | null; lines: string[]; error?: string; sources: string[] }
-export interface Investigation { id: string; target: string; kind: string; status: 'running' | 'done'; burn: Burn | null; parts: InvestigationPart[]; createdAt: string; finishedAt: string | null }
+export interface Investigation { id: string; target: string; kind: string; status: 'running' | 'done'; burn: Burn | null; heldBy: { address: string; balance: string } | null; parts: InvestigationPart[]; createdAt: string; finishedAt: string | null }
 
 export function targetKind(t: string): 'evm' | 'crypto' | 'domain' | 'name' {
   if (/^0x[0-9a-fA-F]{40}$/.test(t)) return 'evm';
@@ -166,6 +176,37 @@ export async function startInvestigation(o: Oculon, tx: string, targetInput: str
   return { id, burn };
 }
 
+/** Proves a wallet signed this action over a fresh nonce and returns its live OCULON balance. */
+async function proveHolding(kind: 'investigate' | 'safety', target: string, address: string, nonce: string, signature: string): Promise<{ address: string; raw: bigint }> {
+  const a = address.trim().toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(a)) throw new Error('connect the wallet that holds OCULON');
+  consumeNonce(nonce, a);
+  const signer = recoverPersonalSigner(holdMessage(kind, target, a, nonce), signature);
+  if (signer !== a) throw new Error('the signature does not match the wallet address');
+  return { address: a, raw: await balanceOf(a) };
+}
+
+export async function startInvestigationHold(o: Oculon, targetInput: string, address: string, nonce: string, signature: string): Promise<{ id: string; nextFree: string }> {
+  const target = targetInput.trim().slice(0, 200);
+  if (target.length < 3) throw new Error('give what to investigate: a domain, a wallet or token address, or a company name');
+  const h = await proveHolding('investigate', target, address, nonce, signature);
+  if (h.raw < UTILITY.holdInvestigate * E18) throw new Error(`this wallet holds ${formatUnits(h.raw, 18)} OCULON; holding needs at least ${UTILITY.holdInvestigate.toLocaleString('en-US')} (or burn ${UTILITY.investigate.toLocaleString('en-US')} instead)`);
+  const d = db(o.ctx);
+  const now = o.ctx.now().getTime();
+  const last = d.prepare("SELECT at FROM hold_uses WHERE address = ? AND kind = 'investigate' ORDER BY at DESC LIMIT 1").get(h.address) as { at: number } | undefined;
+  const period = UTILITY.holdInvestigateDays * 86_400_000;
+  if (last && now - last.at < period) throw new Error(`this wallet used its investigation for this period; the next one is free from ${new Date(last.at + period).toISOString().slice(0, 10)}`);
+  d.prepare('INSERT INTO hold_uses (address, kind, target, balance, at) VALUES (?, ?, ?, ?, ?)').run(h.address, 'investigate', target, h.raw.toString(), now);
+  const id = randomBytes(6).toString('hex');
+  d.prepare('INSERT INTO investigations (id, tx, target, status, created_at) VALUES (?, ?, ?, ?, ?)').run(id, `hold:${h.address}:${formatUnits(h.raw, 18)}`, target, 'running', now);
+  void runInvestigation(o, target).then((parts) => {
+    d.prepare('UPDATE investigations SET status = ?, result = ?, finished_at = ? WHERE id = ?').run('done', JSON.stringify(parts), Date.now(), id);
+  }).catch((e) => {
+    d.prepare('UPDATE investigations SET status = ?, result = ?, finished_at = ? WHERE id = ?').run('done', JSON.stringify([{ title: 'Investigation', ok: false, verdict: null, lines: [], error: String((e as Error).message), sources: [] }]), Date.now(), id);
+  });
+  return { id, nextFree: new Date(now + period).toISOString() };
+}
+
 export function getInvestigation(ctx: Ctx, id: string): Investigation | null {
   if (!/^[0-9a-f]{12}$/.test(id)) return null;
   const row = db(ctx).prepare('SELECT i.*, b.from_addr, b.amount, b.raw, b.block, b.burned_at FROM investigations i LEFT JOIN (SELECT tx, from_addr, amount, amount AS raw, block, burned_at FROM utility_burns) b ON b.tx = i.tx WHERE i.id = ?').get(id) as Record<string, unknown> | undefined;
@@ -173,6 +214,7 @@ export function getInvestigation(ctx: Ctx, id: string): Investigation | null {
   return {
     id, target: String(row.target), kind: targetKind(String(row.target)), status: row.status as Investigation['status'],
     burn: row.from_addr ? { tx: String(row.tx), from: String(row.from_addr), amount: String(row.amount), raw: '', block: Number(row.block), time: String(row.burned_at) } : null,
+    heldBy: String(row.tx).startsWith('hold:') ? { address: String(row.tx).split(':')[1]!, balance: String(row.tx).split(':')[2] ?? '' } : null,
     parts: row.result ? (JSON.parse(String(row.result)) as InvestigationPart[]) : [],
     createdAt: new Date(Number(row.created_at)).toISOString(), finishedAt: row.finished_at ? new Date(Number(row.finished_at)).toISOString() : null,
   };
@@ -184,7 +226,7 @@ export function listInvestigations(ctx: Ctx, limit = 20): { id: string; target: 
 
 // ---------- B. Live Safety Badge ----------
 
-export interface SafetyState { token: string; active: boolean; expiresAt: string | null; verdict: string | null; reasons: string[]; name: string | null; symbol: string | null; lastCheck: string | null; history: { at: string; verdict: string }[] }
+export interface SafetyState { token: string; active: boolean; expiresAt: string | null; heldBy: string | null; verdict: string | null; reasons: string[]; name: string | null; symbol: string | null; lastCheck: string | null; history: { at: string; verdict: string }[] }
 
 export async function checkSafety(o: Oculon, token: string): Promise<SafetyState> {
   const t = token.toLowerCase();
@@ -213,16 +255,51 @@ export async function startSafety(o: Oculon, tx: string, tokenInput: string, sig
   return { state, burn };
 }
 
+/** Hold-backed badge: live while the wallet keeps the balance, re-checked daily. One badge per wallet. */
+export async function startSafetyHold(o: Oculon, tokenInput: string, address: string, nonce: string, signature: string): Promise<{ state: SafetyState }> {
+  const token = tokenInput.trim().toLowerCase();
+  if (!/^0x[0-9a-f]{40}$/.test(token)) throw new Error('give the Robinhood Chain token address to monitor: 0x followed by 40 hex characters');
+  const h = await proveHolding('safety', token, address, nonce, signature);
+  if (h.raw < UTILITY.holdSafety * E18) throw new Error(`this wallet holds ${formatUnits(h.raw, 18)} OCULON; holding needs at least ${UTILITY.holdSafety.toLocaleString('en-US')} (or burn ${UTILITY.safety.toLocaleString('en-US')} for 30 days)`);
+  const d = db(o.ctx);
+  const now = o.ctx.now().getTime();
+  const other = d.prepare('SELECT token FROM safety_monitors WHERE holder = ? AND token != ? AND expires_at > ?').get(h.address, token, now) as { token: string } | undefined;
+  if (other) throw new Error(`this wallet already backs the badge of ${other.token}; one badge per wallet`);
+  const until = now + 2 * 86_400_000;
+  d.prepare('INSERT INTO safety_monitors (token, expires_at, created_at, holder, holder_check) VALUES (?, ?, ?, ?, ?) ON CONFLICT(token) DO UPDATE SET holder = excluded.holder, holder_check = excluded.holder_check, expires_at = MAX(safety_monitors.expires_at, excluded.expires_at)').run(token, until, now, h.address, now);
+  d.prepare('INSERT INTO hold_uses (address, kind, target, balance, at) VALUES (?, ?, ?, ?, ?)').run(h.address, 'safety', token, h.raw.toString(), now);
+  const state = await checkSafety(o, token).catch(() => safetyState(o.ctx, token));
+  return { state };
+}
+
+/** Daily: a hold-backed badge stays live two more days while the wallet still holds enough; otherwise it lapses. */
+export async function refreshHolders(ctx: Ctx): Promise<{ token: string; holder: string; ok: boolean }[]> {
+  const d = db(ctx);
+  const now = ctx.now().getTime();
+  const rows = d.prepare('SELECT token, holder FROM safety_monitors WHERE holder IS NOT NULL AND (holder_check IS NULL OR holder_check <= ?)').all(now - 23 * 3_600_000) as { token: string; holder: string }[];
+  const out: { token: string; holder: string; ok: boolean }[] = [];
+  for (const r of rows) {
+    try {
+      const ok = (await balanceOf(r.holder)) >= UTILITY.holdSafety * E18;
+      if (ok) d.prepare('UPDATE safety_monitors SET holder_check = ?, expires_at = MAX(expires_at, ?) WHERE token = ?').run(now, now + 2 * 86_400_000, r.token);
+      else d.prepare('UPDATE safety_monitors SET holder_check = ?, holder = NULL WHERE token = ?').run(now, r.token);
+      out.push({ ...r, ok });
+    } catch { /* try again next round */ }
+  }
+  return out;
+}
+
 export function safetyState(ctx: Ctx, token: string): SafetyState {
   const t = token.toLowerCase();
   const d = db(ctx);
-  const m = d.prepare('SELECT * FROM safety_monitors WHERE token = ?').get(t) as { expires_at: number; last_check: number | null; verdict: string | null; reasons: string | null; name: string | null; symbol: string | null } | undefined;
+  const m = d.prepare('SELECT * FROM safety_monitors WHERE token = ?').get(t) as { expires_at: number; last_check: number | null; verdict: string | null; reasons: string | null; name: string | null; symbol: string | null; holder: string | null } | undefined;
   const hist = (d.prepare('SELECT at, verdict FROM safety_checks WHERE token = ? ORDER BY at DESC LIMIT 30').all(t) as { at: number; verdict: string }[]).map((h) => ({ at: new Date(h.at).toISOString(), verdict: h.verdict }));
-  return { token: t, active: !!m && m.expires_at > ctx.now().getTime(), expiresAt: m ? new Date(m.expires_at).toISOString() : null, verdict: m?.verdict ?? null, reasons: m?.reasons ? (JSON.parse(m.reasons) as string[]) : [], name: m?.name ?? null, symbol: m?.symbol ?? null, lastCheck: m?.last_check ? new Date(m.last_check).toISOString() : null, history: hist };
+  return { token: t, active: !!m && m.expires_at > ctx.now().getTime(), expiresAt: m ? new Date(m.expires_at).toISOString() : null, heldBy: m?.holder ?? null, verdict: m?.verdict ?? null, reasons: m?.reasons ? (JSON.parse(m.reasons) as string[]) : [], name: m?.name ?? null, symbol: m?.symbol ?? null, lastCheck: m?.last_check ? new Date(m.last_check).toISOString() : null, history: hist };
 }
 
 /** Re-checks every active monitor not checked in the last `everyMs` (default 14 minutes). Returns verdict changes. */
 export async function runSafety(o: Oculon, everyMs = 14 * 60_000): Promise<{ token: string; from: string | null; to: string }[]> {
+  await refreshHolders(o.ctx).catch(() => []);
   const now = o.ctx.now().getTime();
   const rows = db(o.ctx).prepare('SELECT token, verdict FROM safety_monitors WHERE expires_at > ? AND (last_check IS NULL OR last_check <= ?)').all(now, now - everyMs) as { token: string; verdict: string | null }[];
   const changes: { token: string; from: string | null; to: string }[] = [];
@@ -259,6 +336,13 @@ export function createNonce(domain: string, addressInput: string, now = Date.now
   return { nonce, message: holderMessage(domain, address, nonce, new Date(now).toISOString()) };
 }
 
+/** A nonce works once, for the wallet it was issued to, within ten minutes. */
+export function consumeNonce(nonce: string, address: string): void {
+  const e = nonces.get(nonce);
+  if (!e || e.exp < Date.now() || e.address !== address.toLowerCase()) throw new Error('this request expired; start again');
+  nonces.delete(nonce);
+}
+
 export async function balanceOf(address: string): Promise<bigint> {
   const cfg = tokenConfig();
   if (!cfg) throw new Error('the official token address is not configured on this install');
@@ -272,6 +356,7 @@ export async function verifyHolder(ctx: Ctx, owner: string, message: string, sig
   const nonce = /Nonce: ([0-9a-f]{24})/.exec(message)?.[1];
   const entry = nonce ? nonces.get(nonce) : undefined;
   if (!nonce || !entry || entry.exp < Date.now()) throw new Error('this sign-in request expired; start again');
+  if (!message.startsWith(`${message.split(' wants you')[0]} wants you to sign in`)) throw new Error('not a sign-in message');
   const signer = recoverPersonalSigner(message, signature);
   if (!signer || signer !== entry.address || !message.includes(entry.address)) throw new Error('the signature does not match the wallet address');
   nonces.delete(nonce);

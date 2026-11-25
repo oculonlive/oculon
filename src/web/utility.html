@@ -53,6 +53,7 @@ code{font:.86em var(--mono);background:rgba(0,20,24,.8);border:1px solid rgba(0,
 .src{font:12px var(--mono);color:var(--mut);margin-top:8px}
 .list a{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #1b2a2f;text-decoration:none;color:var(--soft);font:14px var(--mono)}
 .hide{display:none}
+.pay{display:flex;gap:18px;flex-wrap:wrap}.opt{display:flex;align-items:center;gap:8px;font:14px var(--mono);color:var(--soft);text-transform:none;letter-spacing:0;margin:0}.opt input{width:auto}
 footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:980px;margin:0 auto;padding:24px clamp(16px,5vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
 @media (max-width:760px){.cards{grid-template-columns:minmax(0,1fr)}}
 </style>
@@ -63,16 +64,17 @@ footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max
 <main>
 <section id="home">
   <div class="lbl">$OCULON utility</div>
-  <h1>Burn to check.<br><span>Hold to watch closer.</span></h1>
-  <p class="lead">Three ways to use OCULON, read straight from Robinhood Chain. No account, no custody, nothing paid to anyone: burns go to the dead address and are checked on chain. Oculon itself stays free for everyone.</p>
+  <h1>Hold to check.<br><span>Burn if you would rather not.</span></h1>
+  <p class="lead">Three ways to use OCULON, read straight from Robinhood Chain. Holding is the main way in: sign with your wallet, nothing leaves it. Burning is optional for people who would rather not hold. No account, no custody, and Oculon itself stays free for everyone.</p>
   <div class="cards">
-    <div class="card"><div class="k">A · BURN</div><h2>Deep investigation</h2><div class="amt" id="amtA">1,500,000</div><p>One domain, wallet, token or company, checked against every relevant source and published as a public page that links your burn.</p></div>
-    <div class="card"><div class="k">B · BURN</div><h2>Live safety badge</h2><div class="amt" id="amtB">2,000,000</div><p>Oculon watches one Robinhood Chain token for 30 days. The badge shows the live verdict. Burning buys monitoring, never a better verdict.</p></div>
-    <div class="card"><div class="k">C · HOLD</div><h2>Holder tier</h2><div class="amt" id="amtC">3,500,000</div><p>Sign once with your wallet: up to 30 personal monitors, checked every 15 minutes instead of every hour.</p></div>
+    <div class="card"><div class="k">A · HOLD OR BURN</div><h2>Deep investigation</h2><div class="amt" id="amtA">Hold 1,500,000</div><p>One domain, wallet, token or company, checked against every relevant source and published as a public page. Holding gives one every 30 days; or burn <b id="burnA">1,500,000</b> for one.</p></div>
+    <div class="card"><div class="k">B · HOLD OR BURN</div><h2>Live safety badge</h2><div class="amt" id="amtB">Hold 2,000,000</div><p>Oculon watches one Robinhood Chain token. Holding keeps the badge live while your balance stays (one badge per wallet); or burn <b id="burnB">1,000,000</b> for 30 days. Paying never buys a better verdict.</p></div>
+    <div class="card"><div class="k">C · HOLD</div><h2>Holder tier</h2><div class="amt" id="amtC">Hold 3,500,000</div><p>Sign once with your wallet: up to 30 personal monitors, checked every 15 minutes instead of every hour.</p></div>
   </div>
 
   <div class="panel">
-    <h2>How to burn</h2>
+    <h2>Connect your wallet</h2>
+    <p>To use your holding, connect the wallet that holds OCULON and sign the request. Signing sends no transaction and costs nothing. To burn instead:</p>
     <ol class="steps">
       <li>From your wallet, send the amount of OCULON to the burn address <code>0x000000000000000000000000000000000000dEaD</code> on Robinhood Chain.</li>
       <li>Copy the transaction hash once it is confirmed.</li>
@@ -86,14 +88,16 @@ footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max
   <div class="panel" id="formA">
     <h2>A · Start an investigation</h2>
     <label for="aTarget">What to investigate</label><input id="aTarget" placeholder="example.com, 0x… wallet or token, or a company name">
-    <label for="aTx">Burn transaction hash</label><input id="aTx" placeholder="0x…">
+    <label>Pay with</label><div class="pay"><label class="opt"><input type="radio" name="aPay" value="hold" checked> my holding (1 every 30 days)</label><label class="opt"><input type="radio" name="aPay" value="burn"> a burn</label></div>
+    <div id="aBurn" class="hide"><label for="aTx">Burn transaction hash</label><input id="aTx" placeholder="0x…"></div>
     <button id="aGo">Sign and start</button><div id="aMsg" class="msg"></div>
   </div>
 
   <div class="panel" id="formB">
     <h2>B · Keep a live safety badge</h2>
     <label for="bToken">Robinhood Chain token address</label><input id="bToken" placeholder="0x…">
-    <label for="bTx">Burn transaction hash</label><input id="bTx" placeholder="0x…">
+    <label>Pay with</label><div class="pay"><label class="opt"><input type="radio" name="bPay" value="hold" checked> my holding (live while I hold)</label><label class="opt"><input type="radio" name="bPay" value="burn"> a burn (30 days)</label></div>
+    <div id="bBurn" class="hide"><label for="bTx">Burn transaction hash</label><input id="bTx" placeholder="0x…"></div>
     <button id="bGo">Sign and start monitoring</button><div id="bMsg" class="msg"></div>
   </div>
 
@@ -104,7 +108,7 @@ footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max
   </div>
 
   <div class="panel"><h2>Recent investigations</h2><div id="recent" class="list"><p class="src">None yet.</p></div></div>
-  <p class="src" style="margin-top:22px">Verdicts are automated readings of public data, not audits or financial advice. A burn cannot be refunded.</p>
+  <p class="src" style="margin-top:22px">Verdicts are automated readings of public data, not audits or financial advice. Holding is checked live; a burn cannot be refunded.</p>
 </section>
 
 <section id="inv" class="hide">
@@ -148,12 +152,24 @@ async function connect() {
 }
 const sign = async (message) => { const a = account || await connect(); return window.ethereum.request({ method: 'personal_sign', params: [hex(message), a] }); };
 const utilityMessage = (kind, target, tx) => `Oculon ${kind === 'investigate' ? 'investigation' : 'safety badge'}\nTarget: ${target.trim()}\nBurn: ${tx.trim().toLowerCase()}`;
+const holdMessage = (kind, target, address, nonce) => `Oculon ${kind === 'investigate' ? 'investigation' : 'safety badge'}\nTarget: ${target.trim()}\nWallet: ${address.trim().toLowerCase()}\nPaid by: holding OCULON\nNonce: ${nonce}`;
+const pay = (name) => document.querySelector(`input[name=${name}]:checked`).value;
+for (const [name, box] of [['aPay', 'aBurn'], ['bPay', 'bBurn']]) document.querySelectorAll(`input[name=${name}]`).forEach((r) => r.onchange = () => $(box).classList.toggle('hide', pay(name) !== 'burn'));
+const holdSign = async (kind, target) => { const a = account || await connect(); const { nonce } = await post('/api/utility/nonce', { address: a }); return { address: a, nonce, signature: await sign(holdMessage(kind, target, a, nonce)) }; };
 const busy = async (btn, msg, fn) => { btn.disabled = true; try { await fn(); } catch (e) { say(msg, e.message || String(e), 'err'); } finally { btn.disabled = false; } };
 
 $('connect').onclick = () => busy($('connect'), $('walletMsg'), connect);
 $('aGo').onclick = () => busy($('aGo'), $('aMsg'), async () => {
   const target = $('aTarget').value.trim(), tx = $('aTx').value.trim();
-  if (!target || !tx) throw new Error('Fill in what to investigate and the burn transaction hash.');
+  if (!target) throw new Error('Fill in what to investigate.');
+  if (pay('aPay') === 'hold') {
+    say($('aMsg'), 'Sign the request in your wallet…');
+    const h = await holdSign('investigate', target);
+    say($('aMsg'), 'Checking your OCULON balance on Robinhood Chain…');
+    const r = await post('/api/utility/investigate', { mode: 'hold', target, ...h });
+    location.href = '/investigation/' + r.id; return;
+  }
+  if (!tx) throw new Error('Fill in the burn transaction hash.');
   say($('aMsg'), 'Sign the request in your wallet…');
   const signature = await sign(utilityMessage('investigate', target, tx));
   say($('aMsg'), 'Checking the burn on Robinhood Chain…');
@@ -162,7 +178,15 @@ $('aGo').onclick = () => busy($('aGo'), $('aMsg'), async () => {
 });
 $('bGo').onclick = () => busy($('bGo'), $('bMsg'), async () => {
   const token = $('bToken').value.trim().toLowerCase(), tx = $('bTx').value.trim();
-  if (!token || !tx) throw new Error('Fill in the token address and the burn transaction hash.');
+  if (!token) throw new Error('Fill in the token address.');
+  if (pay('bPay') === 'hold') {
+    say($('bMsg'), 'Sign the request in your wallet…');
+    const h = await holdSign('safety', token);
+    say($('bMsg'), 'Checking your OCULON balance on Robinhood Chain…');
+    await post('/api/utility/safety', { mode: 'hold', token, ...h });
+    location.href = '/safety/' + token; return;
+  }
+  if (!tx) throw new Error('Fill in the burn transaction hash.');
   say($('bMsg'), 'Sign the request in your wallet…');
   const signature = await sign(utilityMessage('safety', token, tx));
   say($('bMsg'), 'Checking the burn on Robinhood Chain…');
@@ -185,7 +209,8 @@ async function home() {
   if (!onApp) $('cGo').textContent = 'Sign in on the app';
   const i = await get('/api/utility/info');
   $('ca').textContent = i.token ? i.token.ca : 'not configured';
-  $('amtA').textContent = fmt(i.amounts.investigate) + ' OCULON'; $('amtB').textContent = fmt(i.amounts.safety) + ' OCULON'; $('amtC').textContent = fmt(i.amounts.holder) + ' OCULON';
+  $('amtA').textContent = 'Hold ' + fmt(i.amounts.holdInvestigate); $('amtB').textContent = 'Hold ' + fmt(i.amounts.holdSafety); $('amtC').textContent = 'Hold ' + fmt(i.amounts.holder);
+  $('burnA').textContent = fmt(i.amounts.investigate); $('burnB').textContent = fmt(i.amounts.safety);
   if (i.holder) { say($('cMsg'), `Holder tier on for ${i.holder.address} until ${i.holder.expiresAt.slice(0, 10)}.`, 'ok'); $('cOut').classList.remove('hide'); }
   if (i.investigations.length) $('recent').innerHTML = i.investigations.map((x) => `<a href="/investigation/${esc(x.id)}"><span>${esc(x.target)}</span><span>${esc(x.createdAt.slice(0, 10))} · ${esc(x.status)}</span></a>`).join('');
 }
@@ -195,6 +220,7 @@ async function investigation(id) {
   const draw = (v) => {
     $('invTarget').textContent = v.target;
     document.title = 'Oculon investigation: ' + v.target;
+    if (v.heldBy) $('invBurn').innerHTML = `Requested by a holder of ${esc(v.heldBy.balance)} OCULON: <code>${esc(v.heldBy.address)}</code> · ${esc(v.createdAt.slice(0, 16).replace('T', ' '))} UTC`;
     if (v.burn) $('invBurn').innerHTML = `Paid for by burning ${esc(v.burn.amount)} OCULON from <code>${esc(v.burn.from)}</code> · tx <a href="https://robin.etherscan.io/tx/${esc(v.burn.tx)}" target="_blank" rel="noopener">${esc(v.burn.tx.slice(0, 12))}…</a> · ${esc(v.createdAt.slice(0, 16).replace('T', ' '))} UTC`;
     if (v.status !== 'done') return;
     $('invBody').innerHTML = v.parts.map((p) => `<div class="part"><h3>${esc(p.title)}${p.verdict ? ` <span class="pill v-${esc(String(p.verdict).toUpperCase())}">${esc(String(p.verdict).toUpperCase())}</span>` : ''}</h3>${p.error ? `<p class="msg err">${esc(p.error)}</p>` : ''}${p.lines.length ? `<ul>${p.lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul>` : p.error ? '' : '<p class="src">No issues found by this check.</p>'}${p.sources.length ? `<div class="src">sources: ${esc(p.sources.join(' · '))}</div>` : ''}</div>`).join('') + '<p class="src">Automated readings of public data, not an audit.</p>';
@@ -209,9 +235,9 @@ async function safety(token) {
   $('safeBadge').src = '/badge/' + token + '.svg?t=' + Date.now();
   const abs = location.origin + '/badge/' + token + '.svg';
   $('embed').textContent = `[![Oculon safety](${abs})](${location.origin}/safety/${token})`;
-  $('safeBody').innerHTML = !s.expiresAt ? '<p>This token is not monitored. Burn 2,000,000 OCULON on the <a href="/utility">utility page</a> to start a 30-day live badge.</p>'
+  $('safeBody').innerHTML = !s.expiresAt ? '<p>This token is not monitored. Hold 2,000,000 OCULON, or burn 1,000,000, on the <a href="/utility">utility page</a> to start a live badge.</p>'
     : `<h2>${s.active ? `<span class="pill v-${esc(s.verdict)}">${esc(s.verdict ?? 'CHECKING')}</span>` : 'Monitoring ended'}</h2>
-      <p class="src">Token <code>${esc(token)}</code> · ${s.active ? 'monitored until' : 'ended'} ${esc(s.expiresAt.slice(0, 10))} · last check ${esc((s.lastCheck || '').slice(0, 16).replace('T', ' '))} UTC</p>
+      <p class="src">Token <code>${esc(token)}</code> · ${s.heldBy ? `backed by a holder: <code>${esc(s.heldBy)}</code> · ` : ''}${s.active ? (s.heldBy ? 'live while the holder keeps 2,000,000' : 'monitored until') : 'ended'} ${s.heldBy ? '' : esc(s.expiresAt.slice(0, 10))} · last check ${esc((s.lastCheck || '').slice(0, 16).replace('T', ' '))} UTC</p>
       ${s.reasons.length ? `<ul>${s.reasons.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : '<p>No risk flags in the last check.</p>'}
       ${s.history.length ? `<h2 style="margin-top:18px">Verdict changes</h2><ul>${s.history.map((h) => `<li>${esc(h.at.slice(0, 16).replace('T', ' '))} UTC · ${esc(h.verdict)}</li>`).join('')}</ul>` : ''}
       <p class="src">Heuristics over pool and explorer data, not an audit. Burning for a badge never changes the verdict.</p>`;

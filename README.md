@@ -418,13 +418,13 @@ The same address is posted on [x.com/oculonlive](https://x.com/oculonlive) and a
 
 ### Utility
 
-Everything is read from Robinhood Chain: nothing is custodied and nothing is paid to anyone. Burns go to the dead address, each burn counts once, and only the wallet that burned can use it (it signs the request). Oculon itself stays free.
+Everything is read from Robinhood Chain: nothing is custodied and nothing is paid to anyone. Holding is the main way in: the wallet signs a one-time request and its balance is read live. Burning is optional: a burn goes to the dead address, counts once, and only the wallet that burned can use it. Oculon itself stays free.
 
-| Use | How | What you get |
-|---|---|---|
-| Deep investigation | Burn 1,500,000 OCULON | One domain, wallet, token or company checked against every relevant source, published as a public page that links the burn |
-| Live safety badge | Burn 2,000,000 OCULON | 30 days of live monitoring of one Robinhood Chain token, with an embeddable badge (`/badge/<token>.svg`) that turns red on danger. Burning never changes the verdict |
-| Holder tier | Hold 3,500,000 OCULON, sign once | Up to 30 personal monitors, checked every 15 minutes instead of every hour |
+| Use | Hold | Or burn | What you get |
+|---|---|---|---|
+| Deep investigation | 1,500,000 OCULON, one every 30 days per wallet | 1,500,000 for one | One domain, wallet, token or company checked against every relevant source, published as a public page |
+| Live safety badge | 2,000,000 OCULON, live while the wallet keeps that balance (checked daily, one badge per wallet) | 1,000,000 for 30 days | Live monitoring of one Robinhood Chain token, with an embeddable badge (`/badge/<token>.svg`) that turns red on danger. Paying never changes the verdict |
+| Holder tier | 3,500,000 OCULON, sign once | | Up to 30 personal monitors, checked every 15 minutes instead of every hour |
 
 Start at [oculon.live/utility](https://oculon.live/utility). Wallet sign-in is checked with keccak256 and secp256k1 written in this repo (`src/core/evm.ts`), so it adds no dependency.
 

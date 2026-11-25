@@ -25,7 +25,7 @@ import { mailEnabled } from '../sources/resend.js';
 import { analyst, crossExamine, isAnalystModel } from '../analyst.js';
 import { scrubSecrets } from '../core/keys.js';
 import { readBurns, rpcClient, type BurnInfo } from './burns.js';
-import { UTILITY, badgeSvg, createNonce, getInvestigation, holderFor, listInvestigations, runSafety, safetyState, signOutHolder, startInvestigation, startSafety, tokenConfig, verifyHolder } from '../modules/utility.js';
+import { UTILITY, badgeSvg, createNonce, getInvestigation, holderFor, listInvestigations, runSafety, safetyState, signOutHolder, startInvestigation, startInvestigationHold, startSafety, startSafetyHold, tokenConfig, verifyHolder } from '../modules/utility.js';
 
 /** Analyst questions and cross-examinations per visitor address per hour on a public install. */
 const ANALYST_PER_HOUR = Number(process.env.OCULON_ANALYST_PER_HOUR ?? 40);
@@ -713,7 +713,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       const json = (v: unknown, status = 200) => send(res, status, JSON.stringify(v), 'application/json; charset=utf-8');
       try {
         if (req.method === 'GET') {
-          if (url.pathname === '/api/utility/info') return json({ token: tokenConfig(), amounts: { investigate: UTILITY.investigate.toString(), safety: UTILITY.safety.toString(), holder: UTILITY.holder.toString() }, safetyDays: UTILITY.safetyDays, holderMonitors: UTILITY.holderMonitors, holder: holderFor(oculon.ctx, owner), investigations: listInvestigations(oculon.ctx, 12) });
+          if (url.pathname === '/api/utility/info') return json({ token: tokenConfig(), amounts: { investigate: UTILITY.investigate.toString(), safety: UTILITY.safety.toString(), holdInvestigate: UTILITY.holdInvestigate.toString(), holdSafety: UTILITY.holdSafety.toString(), holder: UTILITY.holder.toString() }, safetyDays: UTILITY.safetyDays, holderMonitors: UTILITY.holderMonitors, holder: holderFor(oculon.ctx, owner), investigations: listInvestigations(oculon.ctx, 12) });
           if (url.pathname === '/api/utility/investigation') { const v = getInvestigation(oculon.ctx, url.searchParams.get('id') ?? ''); return v ? json(v) : json({ error: 'no such investigation' }, 404); }
           if (url.pathname === '/api/utility/safety') { const t = url.searchParams.get('token') ?? ''; if (!/^0x[0-9a-fA-F]{40}$/.test(t)) throw new HttpError(400, 'give a token address'); return json(safetyState(oculon.ctx, t)); }
         }
@@ -722,8 +722,8 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
           if (url.pathname === '/api/utility/nonce') return json(createNonce(siteDomain ?? hostName, String(b.address ?? '')));
           if (url.pathname === '/api/utility/holder') return json(await verifyHolder(oculon.ctx, owner, String(b.message ?? ''), String(b.signature ?? '')));
           if (url.pathname === '/api/utility/signout') { signOutHolder(oculon.ctx, owner); return json({ ok: true }); }
-          if (url.pathname === '/api/utility/investigate') return json(await startInvestigation(oculon, String(b.tx ?? ''), String(b.target ?? ''), String(b.signature ?? '')));
-          if (url.pathname === '/api/utility/safety') return json(await startSafety(oculon, String(b.tx ?? ''), String(b.token ?? ''), String(b.signature ?? '')));
+          if (url.pathname === '/api/utility/investigate') return json(b.mode === 'hold' ? await startInvestigationHold(oculon, String(b.target ?? ''), String(b.address ?? ''), String(b.nonce ?? ''), String(b.signature ?? '')) : await startInvestigation(oculon, String(b.tx ?? ''), String(b.target ?? ''), String(b.signature ?? '')));
+          if (url.pathname === '/api/utility/safety') return json(b.mode === 'hold' ? await startSafetyHold(oculon, String(b.token ?? ''), String(b.address ?? ''), String(b.nonce ?? ''), String(b.signature ?? '')) : await startSafety(oculon, String(b.tx ?? ''), String(b.token ?? ''), String(b.signature ?? '')));
         }
         return json({ error: 'not found' }, 404);
       } catch (e) {
