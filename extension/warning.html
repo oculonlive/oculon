@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Dangerous site blocked - Oculon Shield</title>
+  <link rel="icon" href="icons/icon-32.png">
+  <link rel="stylesheet" href="ui.css">
+  <style>
+    body { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; }
+    main { width: 100%; max-width: 620px; }
+    h1 { font-size: 30px; line-height: 1.2; font-weight: 600; margin: 22px 0 10px; }
+    h1 span { color: var(--danger); }
+    .host { font: 15px ui-monospace, "Cascadia Mono", Consolas, monospace; color: var(--text); background: #12060a; border: 1px solid #4a1020; border-radius: 8px; padding: 8px 12px; word-break: break-all; }
+    .card { margin-top: 16px; border-color: #3a1018; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 22px; }
+    .actions button { padding: 10px 18px; }
+    .note { margin-top: 18px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand"><img src="icons/icon-32.png" alt="">OCULON <small>SHIELD</small></div>
+    <h1><span>Dangerous site.</span> Oculon stopped this page before you used it.</h1>
+    <div class="host" id="host"></div>
+    <div class="card danger">
+      <div class="verdict"><span class="dot"></span><span class="vt" id="verdict">Flagged as dangerous</span><span class="score" id="score"></span></div>
+      <ul class="reasons" id="reasons"></ul>
+      <div class="small" id="more" style="margin-top:8px"></div>
+    </div>
+    <p class="muted">Sites like this steal passwords, card details and wallet seed phrases, or ask you to sign a transaction that empties your wallet. Do not enter anything here.</p>
+    <div class="actions">
+      <button id="back">Go back to safety</button>
+      <button class="ghost" id="go">Continue anyway</button>
+    </div>
+    <p class="muted note">"Continue anyway" allows this domain until you close the browser. You can clear allowed sites in the extension settings.</p>
+  </main>
+  <script type="module" src="warning.js"></script>
+</body>
+</html>

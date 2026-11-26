@@ -14,7 +14,7 @@ import { DOC_MAX_BYTES } from './modules/doc.js';
 import { briefOf, verdictOf } from './core/verdict.js';
 import { CARD_HTML, CARD_URI, CARD_URI_OPENAI, MCP_APP_MIME, SKYBRIDGE_MIME, type CardData } from './web/card.js';
 
-export const SERVER_INFO = { name: 'oculon', version: '0.2.0' };
+export const SERVER_INFO = { name: 'oculon', version: '0.3.0' };
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
 type Json = Record<string, unknown>;

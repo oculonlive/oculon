@@ -1,0 +1,42 @@
+:root {
+  --bg: #000;
+  --panel: #07090b;
+  --line: #1a2329;
+  --text: #ececec;
+  --muted: #8a959a;
+  --accent: #00f0ff;
+  --ok: #16c784;
+  --warn: #f59e0b;
+  --danger: #ff3b5c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body { font: 14px/1.45 "Space Grotesk", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.brand { display: flex; align-items: center; gap: 10px; font: 600 12px/1 ui-monospace, "Cascadia Mono", Consolas, monospace; letter-spacing: .22em; color: var(--accent); }
+.brand img { width: 20px; height: 20px; }
+.brand small { color: var(--muted); letter-spacing: .1em; font-weight: 400; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 0 0 6px; }
+.verdict { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.ok .dot { background: var(--ok); } .ok .vt { color: var(--ok); }
+.warn .dot { background: var(--warn); } .warn .vt { color: var(--warn); }
+.danger .dot { background: var(--danger); } .danger .vt { color: var(--danger); }
+.score { margin-left: auto; color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.subject { color: var(--muted); font-size: 12px; margin-top: 2px; word-break: break-all; }
+ul.reasons { margin: 8px 0 0; padding-left: 18px; color: #c9c9c9; font-size: 13px; }
+ul.reasons li { margin: 2px 0; }
+input, select, button { font: inherit; color: var(--text); }
+input[type=text], select { width: 100%; background: #000; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; outline: none; }
+input[type=text]:focus, select:focus { border-color: var(--accent); }
+button { background: var(--accent); color: #000; border: 0; border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+button:hover { filter: brightness(1.1); }
+button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); font-weight: 500; }
+button.ghost:hover { border-color: var(--accent); filter: none; }
+button:disabled { opacity: .5; cursor: default; }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.hidden { display: none !important; }

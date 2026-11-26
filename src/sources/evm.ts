@@ -35,7 +35,7 @@ export const EVM_CHAINS: Record<string, EvmChain> = {
   optimism: { key: 'optimism', id: 10, label: 'Optimism', native: 'ETH', rpc: 'https://optimism-rpc.publicnode.com', scan: 'blockscout', alchemy: 'opt-mainnet', explorer: 'https://optimistic.etherscan.io' },
   base: { key: 'base', id: 8453, label: 'Base', native: 'ETH', rpc: 'https://base-rpc.publicnode.com', scan: null, alchemy: 'base-mainnet', explorer: 'https://basescan.org' },
   bsc: { key: 'bsc', id: 56, label: 'BNB Chain', native: 'BNB', rpc: 'https://bsc-rpc.publicnode.com', scan: null, alchemy: 'bnb-mainnet', explorer: 'https://bscscan.com' },
-  robinhood: { key: 'robinhood', id: 4663, label: 'Robinhood Chain', native: 'ETH', rpc: null, scan: 'blockscout', alchemy: null, explorer: 'https://robinhood.blockscout.com' },
+  robinhood: { key: 'robinhood', id: 4663, label: 'Robinhood Chain', native: 'ETH', rpc: null, scan: 'blockscout', alchemy: null, explorer: 'https://robinhoodchain.blockscout.com' },
 };
 const ALIAS: Record<string, string> = { ethereum: 'eth', mainnet: 'eth', arb: 'arbitrum', matic: 'polygon', pol: 'polygon', op: 'optimism', bnb: 'bsc', rh: 'robinhood' };
 

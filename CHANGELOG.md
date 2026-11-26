@@ -2,6 +2,17 @@
 
 All notable changes are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## 0.3.0
+
+Rug Radar, Wallet Guard and the Oculon Shield browser extension.
+
+- Rug Radar at `/rugradar` (JSON at `/api/rh/launches`): every new token on Robinhood Chain (Uniswap v2, v3, v4 and Pons pools) gets a quick read from its pool as it launches. Tokens that draw liquidity get the full check: verified source, the 10 largest wallets, every pool and the deployer's record. Liquidity is re-read for two days. A pool that held $3,000 or more and lost over 80% of it is marked RUGGED, and a launch that never drew liquidity is marked DEAD after a day. A ticker reused from an earlier launch is flagged as a copy. Danger and rug alerts for pools holding $5,000 or more go to a Telegram channel when `OCULON_RADAR_CHAT` is set. `OCULON_RUGRADAR=0` turns the scan off.
+- Wallet Guard at `/guard`: the live approvals of a wallet on Robinhood Chain, Ethereum, Arbitrum, Polygon or Optimism, with risky spenders flagged. A connected wallet can revoke each one (`approve(spender, 0)` or `setApprovalForAll(spender, false)`), or every high-risk one in a row.
+- Oculon Shield in `extension/` (Chrome and Edge, Manifest V3): a warning page before phishing and drainer sites, a banner on suspicious ones, a risk pill on token pages, and a toolbar check for any link, wallet or token. It only sends the domain or address being checked to the Oculon API.
+- Fixed: approvals on Robinhood Chain were never found, because Blockscout pads log topics with nulls.
+- Fixed: holder concentration on Robinhood Chain counted pools, the Uniswap v4 PoolManager, launchpad lockers and burn addresses as holders. EIP-7702 smart accounts still count as wallets.
+- Fixed: Robinhood Chain explorer links now go to robinhoodchain.blockscout.com, since robinhood.blockscout.com returns 404.
+
 ## 0.2.0
 
 Twenty-two new checks and seven new free sources: wallet safety, pages, files, apps and repos, and one report per target. Still no runtime dependency: the QR reader, the image decoders and the ZIP reader for Office files are written in Oculon itself.

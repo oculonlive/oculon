@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "Oculon Shield",
+  "short_name": "Oculon",
+  "version": "0.1.0",
+  "description": "Warns you before phishing and wallet drainer sites, and shows the Oculon risk check on token pages. Free, open source, no tracking.",
+  "homepage_url": "https://oculon.live",
+  "minimum_chrome_version": "110",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Oculon Shield",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "permissions": ["storage", "webNavigation"],
+  "host_permissions": ["https://app.oculon.live/*", "https://oculon.live/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content/banner.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": ["https://dexscreener.com/*", "https://app.uniswap.org/*", "https://robin.etherscan.io/*", "https://robinhoodchain.blockscout.com/*", "https://robinhood.blockscout.com/*"],
+      "js": ["content/token.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}

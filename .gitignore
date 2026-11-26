@@ -18,3 +18,5 @@ bug-rec/
 launch/
 
 .claude/settings.local.json
+
+extension/dist/

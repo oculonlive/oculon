@@ -112,11 +112,24 @@ export async function rhToken(ctx: Ctx, address: string): Promise<Sourced<RhToke
   };
 }
 
-/** Share of supply held by the 10 largest holders (0-1). */
+interface Holder { value: string; address?: { hash?: string; is_contract?: boolean; proxy_type?: string | null } }
+
+/**
+ * Wallets that can sell: pools, the Uniswap v4 PoolManager, launchpad lockers and burn addresses hold tokens
+ * nobody can dump, so they are left out. EIP-7702 accounts are wallets even though the explorer calls them contracts.
+ */
+export function sellerHolder(h: Holder): boolean {
+  const a = h.address;
+  if (!a?.hash) return true;
+  if (/^0x0{40}$|^0x0{36}dead$/i.test(a.hash)) return false;
+  return !a.is_contract || a.proxy_type === 'eip7702';
+}
+
+/** Share of supply held by the 10 largest wallets that can sell (0-1). */
 export async function topHolderShare(ctx: Ctx, address: string, totalSupply: number): Promise<Sourced<number>> {
-  const r = await ctx.http.get<{ items?: { value: string }[] }>(bs(`/tokens/${enc(address)}/holders`), { source: 'blockscout', ttlSec: 600 });
+  const r = await ctx.http.get<{ items?: Holder[] }>(bs(`/tokens/${enc(address)}/holders`), { source: 'blockscout', ttlSec: 600 });
   if (!r.data?.items || !totalSupply) return { data: null, prov: r.prov };
-  const top = r.data.items.slice(0, 10).reduce((a, h) => a + Number(h.value), 0);
+  const top = r.data.items.filter(sellerHolder).slice(0, 10).reduce((a, h) => a + Number(h.value), 0);
   return { data: Math.min(1, top / totalSupply), prov: r.prov };
 }
 
@@ -182,10 +195,10 @@ export interface TokenMarket {
 }
 
 /** Market data for up to 30 tokens in one GeckoTerminal call. Tokens without pools are simply absent. */
-export async function tokensMarket(ctx: Ctx, addresses: string[]): Promise<Sourced<Map<string, TokenMarket>>> {
+export async function tokensMarket(ctx: Ctx, addresses: string[], ttlSec = 900): Promise<Sourced<Map<string, TokenMarket>>> {
   const list = addresses.slice(0, 30);
   if (!list.length) return { data: new Map(), prov: { source: 'geckoterminal', url: '', status: 'LIVE', fetchedAt: new Date().toISOString(), note: 'nothing to look up' } };
-  const r = await ctx.http.get<{ data?: { attributes: { address: string; symbol: string; total_reserve_in_usd?: string | null; volume_usd?: { h24?: string } } }[] }>(`${GT}/tokens/multi/${list.join(',')}`, { source: 'geckoterminal', ttlSec: 900 });
+  const r = await ctx.http.get<{ data?: { attributes: { address: string; symbol: string; total_reserve_in_usd?: string | null; volume_usd?: { h24?: string } } }[] }>(`${GT}/tokens/multi/${list.join(',')}`, { source: 'geckoterminal', ttlSec });
   const m = new Map<string, TokenMarket>();
   for (const t of r.data?.data ?? []) m.set(t.attributes.address.toLowerCase(), { symbol: t.attributes.symbol, reserveUsd: Number(t.attributes.total_reserve_in_usd ?? 0), volume24h: Number(t.attributes.volume_usd?.h24 ?? 0) });
   return { data: r.data ? m : null, prov: r.prov };

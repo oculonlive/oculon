@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Wallet Guard · Oculon</title>
+<meta name="description" content="See who can still move tokens out of your wallet, and revoke the risky ones in one click. Robinhood Chain, Ethereum, Arbitrum, Polygon and Optimism.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Wallet Guard: who can still move your tokens?"><meta property="og:description" content="Every live approval your wallet signed, the risky ones flagged, revoked from your own wallet in one click."><meta property="og:url" content="https://oculon.live/guard"><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--red:#ff5d6c;--amb:#ffb84d;--grn:#3ddc97;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(16px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}header nav a:hover{color:#fff}
+main{max-width:960px;margin:0 auto;padding:64px clamp(16px,4vw,40px) 120px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.3}
+footer{position:relative;z-index:1}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+h1{margin:14px 0 10px;font-size:clamp(42px,6vw,72px);font-weight:300;letter-spacing:-.04em;line-height:1.02}
+h1 span{color:var(--y)}
+.lead{font-size:18px;line-height:1.7;color:var(--soft);font-weight:300;max-width:720px}
+.box{margin-top:30px;border:1px solid rgba(0,240,255,.4);background:rgba(0,14,18,.82);backdrop-filter:blur(8px);padding:20px}
+.form{display:flex;gap:8px;flex-wrap:wrap}
+.form input{flex:1 1 320px;min-width:0;background:#05090a;border:1px solid #2a3437;color:#fff;font:14px var(--mono);padding:12px}
+.form select{background:#05090a;border:1px solid #2a3437;color:#fff;font:14px var(--mono);padding:12px}
+.btn{font:700 13px var(--mono);letter-spacing:.08em;background:var(--y);color:#000;border:0;padding:12px 16px;cursor:pointer;text-transform:uppercase}
+.btn.ghost{background:transparent;color:var(--y);border:1px solid rgba(0,240,255,.5)}
+.btn.red{background:var(--red);color:#000}
+.btn:disabled{opacity:.45;cursor:default}
+.who{margin-top:12px;font:12px var(--mono);color:var(--mut);display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.sum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:24px}
+.sum div{border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:14px}
+.sum b{display:block;font:400 11px var(--mono);letter-spacing:.14em;color:var(--mut);text-transform:uppercase}
+.sum span{display:block;margin-top:6px;font:700 24px var(--mono)}
+.verdict{margin-top:16px;font:700 15px var(--mono);letter-spacing:.06em}
+.reasons{margin:8px 0 0;padding-left:18px}.reasons li{font-size:15px;line-height:1.6;color:var(--soft);font-weight:300}
+.list{margin-top:18px;border:1px solid #1f2a2d;background:rgba(4,8,9,.88)}
+.ap{display:grid;grid-template-columns:80px minmax(0,1.2fr) minmax(0,1.3fr) minmax(0,.7fr) 120px;gap:12px;align-items:center;padding:14px 16px;border-bottom:1px solid #141c1e}
+.ap:last-child{border-bottom:0}
+.pill{display:inline-block;font:700 11px var(--mono);letter-spacing:.08em;padding:5px 8px;border:1px solid}
+.r-high{color:var(--red);border-color:rgba(255,93,108,.5);background:rgba(255,93,108,.08)}
+.r-medium{color:var(--amb);border-color:rgba(255,184,77,.5);background:rgba(255,184,77,.07)}
+.r-low{color:var(--grn);border-color:rgba(61,220,151,.45);background:rgba(61,220,151,.06)}
+.tk{font:600 15px var(--sans);overflow:hidden;text-overflow:ellipsis}.tk em,.sp em{display:block;font:400 12px var(--mono);font-style:normal;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sp{font:13px var(--mono);color:#e8eef0;overflow:hidden;text-overflow:ellipsis}
+.amt{font:13px var(--mono);color:#e8eef0}
+.ap .btn{padding:9px 10px;font-size:11px;width:100%}
+.why{grid-column:2 / -1;font:13px var(--sans);color:var(--mut);margin-top:-6px}
+.msg{margin-top:14px;font:13px var(--mono);color:var(--mut);min-height:18px}
+.msg.err{color:var(--red)}.msg.ok{color:var(--grn)}
+.empty{padding:30px 16px;text-align:center;color:var(--mut);font:14px var(--mono)}
+h2{margin:56px 0 12px;font-size:26px;font-weight:400;padding-top:24px;border-top:1px solid var(--line)}
+p,li{font-size:17px;line-height:1.75;color:var(--soft);font-weight:300}
+.note{font-size:13px;color:var(--mut)}
+code{font:.86em var(--mono);background:rgba(0,20,24,.8);border:1px solid rgba(0,240,255,.2);padding:1px 6px;color:#fff}
+footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:960px;margin:0 auto;padding:26px clamp(16px,4vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
+@media (max-width:760px){.sum{grid-template-columns:minmax(0,1fr)}.ap{grid-template-columns:70px minmax(0,1fr)}.ap .sp,.ap .amt{grid-column:2}.ap .act{grid-column:1 / -1}.why{grid-column:1 / -1;margin-top:0}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/rugradar">Rug Radar</a><a href="/thetoken">Token</a><a href="/app">App</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+  <div class="lbl">Wallet Guard</div>
+  <h1>Who can still<br><span>move your tokens?</span></h1>
+  <p class="lead">Every approval your wallet ever signed, checked against what the chain still allows today. Risky spenders are flagged, and you can revoke them from your own wallet in one click. Nothing is custodied; Oculon never asks you to sign anything except the revoke you choose.</p>
+  <!--onchain-->
+  <div class="box">
+    <div class="form">
+      <input id="addr" placeholder="Wallet address (0x...)" autocomplete="off" spellcheck="false">
+      <select id="chain"><option value="robinhood">Robinhood Chain</option><option value="eth">Ethereum</option><option value="arbitrum">Arbitrum</option><option value="polygon">Polygon</option><option value="optimism">Optimism</option></select>
+      <button class="btn" id="scan">Scan</button>
+    </div>
+    <div class="who"><button class="btn ghost" id="connect">Connect wallet to revoke</button><span id="acct">Scanning works without connecting.</span></div>
+  </div>
+  <div id="out"></div>
+  <div class="msg" id="msg"></div>
+  <!--/onchain-->
+  <!--offchain-->
+  <p class="lead">On-chain features are paused on this install.</p>
+  <!--/offchain-->
+  <h2>What it checks</h2>
+  <ul>
+    <li><b>Every Approval and ApprovalForAll</b> your wallet emitted, from the chain's explorer, then the allowance each spender still has today, read live from the chain. Used up and revoked approvals drop out.</li>
+    <li><b>Who the spender is:</b> a known router or marketplace, a verified contract, an unverified contract, or a plain wallet. Unlimited access for an unverified contract or a wallet is how drainers keep access after one bad signature.</li>
+    <li><b>Fake approvals</b> that spam tokens emit to scare you are filtered out.</li>
+  </ul>
+  <h2>How revoke works</h2>
+  <p>A revoke is an ordinary transaction from your wallet to the token: <code>approve(spender, 0)</code>, or <code>setApprovalForAll(spender, false)</code> for NFTs. Your wallet shows it before you sign and you pay the gas. Oculon never sees your keys. Check the token and spender in your wallet's prompt before you confirm.</p>
+  <p class="note">A spender being flagged reads public data, it is not proof it is malicious. Not financial advice.</p>
+</main>
+<footer><div class="in"><span>© <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/rugradar">Rug Radar</a> · <a href="/docs">Docs</a> · <a href="/thetoken">Token</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#001a26', hi: '#00c8e0', intensity: 0.8, scale: 0.3 }); }
+document.getElementById('year').textContent = new Date().getFullYear();
+(function () {
+  const out = document.getElementById('out');
+  if (!out) return;
+  const CHAIN_IDS = { robinhood: 4663, eth: 1, arbitrum: 42161, polygon: 137, optimism: 10 };
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const short = (a) => a ? a.slice(0, 6) + '…' + a.slice(-4) : '';
+  const pad = (a) => a.toLowerCase().replace(/^0x/, '').padStart(64, '0');
+  const msg = (t, cls) => { const m = document.getElementById('msg'); m.textContent = t || ''; m.className = 'msg' + (cls ? ' ' + cls : ''); };
+  const eth = () => window.ethereum || null;
+  let account = null, last = null;
+  const q = new URLSearchParams(location.search);
+  if (q.get('address')) document.getElementById('addr').value = q.get('address');
+  if (q.get('chain') && CHAIN_IDS[q.get('chain')]) document.getElementById('chain').value = q.get('chain');
+
+  async function scan() {
+    const address = document.getElementById('addr').value.trim();
+    const chain = document.getElementById('chain').value;
+    if (!/^0x[0-9a-fA-F]{40}$/.test(address)) return msg('Give a wallet address: 0x followed by 40 hex characters.', 'err');
+    history.replaceState(null, '', '?address=' + address + '&chain=' + chain);
+    out.innerHTML = '<div class="list"><div class="empty">Reading every approval this wallet signed. This can take up to a minute for busy wallets.</div></div>';
+    msg('');
+    document.getElementById('scan').disabled = true;
+    try {
+      const r = await fetch('/api/approvals?address=' + address + '&chain=' + chain);
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      last = { address: address.toLowerCase(), chain, report: j.result };
+      render();
+    } catch (e) {
+      out.innerHTML = '';
+      msg('Could not scan: ' + e.message, 'err');
+    } finally {
+      document.getElementById('scan').disabled = false;
+    }
+  }
+
+  function render() {
+    if (!last) return;
+    const r = last.report;
+    const list = r.approvals || [];
+    const high = list.filter((a) => a.risk === 'high').length;
+    const mine = account && account === last.address;
+    const color = high ? 'var(--red)' : list.length ? 'var(--amb)' : 'var(--grn)';
+    out.innerHTML = '<div class="sum"><div><b>Live approvals</b><span>' + list.length + '</span></div><div><b>High risk</b><span style="color:' + (high ? 'var(--red)' : 'inherit') + '">' + high + '</span></div><div><b>Unlimited</b><span>' + (r.unlimited ?? list.filter((a) => a.unlimited).length) + '</span></div></div>'
+      + '<div class="verdict" style="color:' + color + '">' + esc(String(r.verdict || '').toUpperCase()) + '</div>'
+      + (r.reasons && r.reasons.length ? '<ul class="reasons">' + r.reasons.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '')
+      + (high && mine ? '<p><button class="btn red" id="revall">Revoke all ' + high + ' high risk</button></p>' : '')
+      + '<div class="list">' + (list.length ? list.map((a, i) => '<div class="ap"><span><i class="pill r-' + esc(a.risk) + '">' + esc(a.risk.toUpperCase()) + '</i></span>'
+        + '<span class="tk">' + esc(a.symbol || a.tokenName || short(a.token)) + '<em>' + esc(a.kind === 'nft' ? 'NFT collection' : 'token') + ' · ' + short(a.token) + '</em></span>'
+        + '<span class="sp">' + esc(a.spenderName || short(a.spender)) + '<em>' + esc(a.spenderType) + (a.approvedAt ? ' · ' + esc(a.approvedAt.slice(0, 10)) : '') + '</em></span>'
+        + '<span class="amt">' + esc(a.unlimited ? 'unlimited' : a.amount) + '</span>'
+        + '<span class="act"><button class="btn' + (a.risk === 'high' ? ' red' : ' ghost') + '" data-i="' + i + '"' + (mine ? '' : ' disabled title="Connect this wallet to revoke"') + '>Revoke</button></span>'
+        + (a.why ? '<div class="why">' + esc(a.why) + '</div>' : '') + '</div>').join('')
+        : '<div class="empty">No live approvals. Nothing can move tokens out of this wallet without a new signature.</div>') + '</div>'
+      + (!mine && list.length ? '<p class="note">Connect this wallet to revoke from this page' + (r.revokeUrl ? ', or use <a href="' + esc(r.revokeUrl) + '" target="_blank" rel="noopener">revoke.cash</a>' : '') + '.</p>' : '');
+    out.querySelectorAll('button[data-i]').forEach((b) => b.addEventListener('click', () => revoke([list[Number(b.dataset.i)]])));
+    const all = document.getElementById('revall');
+    if (all) all.addEventListener('click', () => revoke(list.filter((a) => a.risk === 'high')));
+  }
+
+  async function ensureChain(chain) {
+    const want = '0x' + CHAIN_IDS[chain].toString(16);
+    const cur = await eth().request({ method: 'eth_chainId' });
+    if (cur === want) return;
+    try {
+      await eth().request({ method: 'wallet_switchEthereumChain', params: [{ chainId: want }] });
+    } catch (e) {
+      if (e && e.code === 4902) throw new Error('Your wallet does not know this chain yet. Add it in your wallet, then try again.');
+      throw e;
+    }
+  }
+
+  async function revoke(items) {
+    if (!eth() || !account || !last || account !== last.address) return msg('Connect the scanned wallet first.', 'err');
+    try {
+      await ensureChain(last.chain);
+      let done = 0;
+      for (const a of items) {
+        msg('Confirm the revoke of ' + (a.symbol || short(a.token)) + ' for ' + (a.spenderName || short(a.spender)) + ' in your wallet (' + (done + 1) + ' of ' + items.length + ')');
+        const data = a.kind === 'nft' ? '0xa22cb465' + pad(a.spender) + pad('0') : '0x095ea7b3' + pad(a.spender) + pad('0');
+        const hash = await eth().request({ method: 'eth_sendTransaction', params: [{ from: account, to: a.token, data }] });
+        done++;
+        msg('Sent ' + short(hash) + '. ' + (done < items.length ? 'Next one…' : 'Rescanning in a moment.'), 'ok');
+      }
+      setTimeout(scan, 12000);
+    } catch (e) {
+      msg(e && e.code === 4001 ? 'You declined in your wallet. Nothing was sent.' : 'Revoke failed: ' + ((e && e.message) || e), 'err');
+    }
+  }
+
+  document.getElementById('connect').addEventListener('click', async () => {
+    if (!eth()) return msg('No browser wallet found. Open this page in your wallet app\'s browser, or install a wallet extension.', 'err');
+    try {
+      const accs = await eth().request({ method: 'eth_requestAccounts' });
+      account = (accs[0] || '').toLowerCase();
+      document.getElementById('acct').textContent = 'Connected: ' + short(account);
+      document.getElementById('connect').textContent = 'Connected';
+      if (!document.getElementById('addr').value.trim() || !last) { document.getElementById('addr').value = account; scan(); } else render();
+    } catch (e) { msg('Wallet did not connect.', 'err'); }
+  });
+  document.getElementById('scan').addEventListener('click', scan);
+  document.getElementById('addr').addEventListener('keydown', (e) => { if (e.key === 'Enter') scan(); });
+  if (q.get('address')) scan();
+})();
+</script>
+</body>
+</html>

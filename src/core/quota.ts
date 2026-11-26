@@ -30,7 +30,7 @@ export const DAILY_BUDGET: Record<string, number> = {
   coingecko: 300, // demo: 10,000/month
   fred: 2000,
   'github-search': 1000,
-  geckoterminal: 2500,
+  geckoterminal: 9000,
   kalshi: 2000,
   manifold: 2000,
   itunes: 1000,

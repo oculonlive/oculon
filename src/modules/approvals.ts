@@ -56,13 +56,16 @@ export async function approvalsCheck(ctx: Ctx, input: string, opts: { chain?: st
 
   // Newest event per (token, spender). ERC-20 Approval has 3 topics; ERC-721 Approval (single NFT) has 4 and is skipped.
   const pairs = new Map<string, { token: string; spender: string; kind: 'token' | 'nft'; at: number; signed: boolean }>();
-  for (const l of erc.data ?? []) {
+  // Blockscout pads topics with nulls up to four; only the real ones count.
+  for (const l0 of erc.data ?? []) {
+    const l = { ...l0, topics: l0.topics.filter(Boolean) };
     if (l.topics.length !== 3) continue;
     const k = `${l.address.toLowerCase()}|${topicAddr(l.topics[2]!)}|token`;
     const at = Number(l.timeStamp);
     if ((pairs.get(k)?.at ?? 0) <= at) pairs.set(k, { token: l.address.toLowerCase(), spender: topicAddr(l.topics[2]!), kind: 'token', at, signed: signed.has(l.transactionHash.toLowerCase()) });
   }
-  for (const l of all.data ?? []) {
+  for (const l0 of all.data ?? []) {
+    const l = { ...l0, topics: l0.topics.filter(Boolean) };
     if (l.topics.length < 3) continue;
     const k = `${l.address.toLowerCase()}|${topicAddr(l.topics[2]!)}|nft`;
     const at = Number(l.timeStamp);

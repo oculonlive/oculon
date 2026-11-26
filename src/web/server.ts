@@ -26,6 +26,7 @@ import { analyst, crossExamine, isAnalystModel } from '../analyst.js';
 import { scrubSecrets } from '../core/keys.js';
 import { readBurns, rpcClient, type BurnInfo } from './burns.js';
 import { CHECK_ROUTES } from '../modules/checks.js';
+import { postAlerts, radarList, radarScan, radarStats } from '../modules/rugradar.js';
 import { llmsFull, llmsTxt, replayPage, statusPage, type ToolDoc } from './pages.js';
 import { UTILITY, badgeSvg, createNonce, getInvestigation, holderFor, listInvestigations, runSafety, safetyState, signOutHolder, startInvestigation, startInvestigationHold, startSafety, startSafetyHold, tokenConfig, verifyHolder } from '../modules/utility.js';
 
@@ -47,6 +48,8 @@ export interface WebOptions {
   /** RPC for the burn list on /thetoken (default ROBINHOOD_PUBLIC_RPC_URL) and a fetch for tests. */
   burnRpcUrl?: string;
   burnFetch?: typeof fetch;
+  /** Rug Radar scans every 3 minutes (default: on in public mode with on-chain features; OCULON_RUGRADAR=0 turns it off). */
+  rugRadar?: boolean;
   port?: number;
   host?: string;
   /** Open to the internet: read-only overview and docs for visitors, full app only with the admin cookie. */
@@ -366,6 +369,10 @@ export const ROUTES: Record<string, Handler> = {
   '/api/console': (q) => runConsole(need(q, 'cmd', 120)),
   '/api/search': (q, o) => searchEntities(o, need(q, 'q', 120), Math.min(30, Number(q.get('limit') ?? 12) || 12)),
   '/api/profile': (q, o) => entityProfile(o, need(q, 'id', 300)) ?? (() => { throw new HttpError(404, 'no such entity'); })(),
+  '/api/rh/launches': (q, o) => {
+    const hours = Math.min(168, Math.max(1, Number(q.get('hours') ?? 24) || 24));
+    return { stats: radarStats(o.ctx, hours), launches: radarList(o.ctx, { hours, limit: Math.min(300, Number(q.get('limit') ?? 150) || 150), verdict: (q.get('verdict') ?? '').slice(0, 10) }) };
+  },
   '/api/rh/deployers': (q, o) => rhDeployers(o, Math.min(100, Number(q.get('limit') ?? 25) || 25)),
   '/api/sources': (_q, o) => sourceHealth(o),
   '/api/accuracy': (_q, o) => accuracy(o),
@@ -501,7 +508,7 @@ function streamSignals(req: IncomingMessage, res: ServerResponse, o: Oculon, onl
 }
 
 /** Endpoints that only exist for the on-chain features. */
-const ONCHAIN_ROUTES = new Set(['/api/defi', '/api/protocol', '/api/robinhood', '/api/rhtoken', '/api/deployer', '/api/rh/deployers', '/api/wallet', '/api/token']);
+const ONCHAIN_ROUTES = new Set(['/api/rh/launches', '/api/defi', '/api/protocol', '/api/robinhood', '/api/rhtoken', '/api/deployer', '/api/rh/deployers', '/api/wallet', '/api/token']);
 
 /** Drops on-chain signals, entities and watch items from shared views while those features are paused. */
 function withoutOnchain(path: string, out: unknown): unknown {
@@ -679,6 +686,24 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     void runSafety(oculon).then((changes) => { for (const c of changes) log(`safety badge ${c.token}: ${c.from ?? 'new'} -> ${c.to}`); }).catch(() => {});
   }, 5 * 60_000);
   safetyTimer.unref();
+
+  // Rug Radar: new Robinhood Chain launches every 3 minutes; danger and rug alerts go to OCULON_RADAR_CHAT.
+  let radarTimer: NodeJS.Timeout | null = null;
+  if ((opts.rugRadar ?? (publicMode && process.env.OCULON_RUGRADAR !== '0')) && onchainEnabled()) {
+    let busy = false;
+    const radarPass = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const r = await radarScan(oculon.ctx);
+        const sent = await postAlerts(r.alerts, { base: siteDomain ? `https://${siteDomain}` : 'https://oculon.live' });
+        if (r.added || r.alerts.length) log(`rug radar: ${r.added} new, ${r.checked} checked, ${r.followed} followed, ${r.alerts.length} alert(s), ${sent} posted`);
+      } catch (e) { log(`rug radar failed: ${(e as Error).message}`); } finally { busy = false; }
+    };
+    radarTimer = setInterval(() => void radarPass(), 3 * 60_000);
+    radarTimer.unref();
+    setTimeout(() => void radarPass(), 15_000).unref();
+  }
 
   // Burns on /thetoken come from the chain RPC, cached for five minutes; a failed read keeps the last good one.
   let burnCache: { at: number; key: string; info: BurnInfo | null } | null = null;
@@ -1017,6 +1042,10 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=300', 'access-control-allow-origin': '*' });
       return res.end(b.supply);
     }
+    const toolPage = /^\/(rugradar|guard)\/?$/.exec(url.pathname)?.[1];
+    if (toolPage && sub !== 'docs') {
+      return send(res, 200, renderPage(readFileSync(join(HERE, `${toolPage}.html`), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
+    }
     if (/^\/thetoken\/?$/.test(url.pathname) && sub !== 'docs') {
       let info: Partial<TokenInfo> = {};
       try { info = JSON.parse(readFileSync(join(HERE, 'token.json'), 'utf8')) as Partial<TokenInfo>; } catch { /* no file: nothing official */ }
@@ -1093,6 +1122,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     stop: () =>
       new Promise((resolve) => {
         scheduler?.stop();
+        if (radarTimer) clearInterval(radarTimer);
         server.close(() => {
           if (!opts.oculon) oculon.close();
           resolve();

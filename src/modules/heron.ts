@@ -163,7 +163,7 @@ export function rhVerdict(input: { verified: boolean | null; top10Share: number 
     level = Math.max(level, 1);
   }
   if (input.top10Share !== null && input.top10Share >= 0.9) {
-    reasons.push(`top 10 holders own ${Math.round(input.top10Share * 100)}% of supply`);
+    reasons.push(`top 10 wallets own ${Math.round(input.top10Share * 100)}% of supply (pools, lockers and burns left out)`);
     level = Math.max(level, input.top10Share >= 0.97 && (input.holders ?? 0) < 200 ? 2 : 1);
   }
   for (const p of input.pools.slice(0, 3)) {

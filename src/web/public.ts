@@ -23,6 +23,7 @@ export const PUBLIC_API = new Set([
   '/api/hazards',
   '/api/robinhood',
   '/api/rhtoken',
+  '/api/rh/launches',
   '/api/squawks',
   '/api/defi',
   '/api/quakes',
