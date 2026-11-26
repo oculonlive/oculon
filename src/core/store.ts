@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync, statSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { oculonHome } from './paths.js';
 
@@ -164,14 +165,44 @@ CREATE TABLE IF NOT EXISTS proof_batches (
 );
 `;
 
+/**
+ * Rebuilds a database whose volume is full: a compacted copy is written to the temp directory (outside the volume),
+ * raw API responses are dropped from it (they are only a cache), it is checked, and then it replaces the file, its
+ * log and its index on the volume. Returns the reopened database; on any failure before the swap, the original.
+ */
+export function rescueFullDb(db: DatabaseSync, path: string, tmp = tmpdir()): DatabaseSync {
+  const copy = join(tmp, `oculon-rescue-${process.pid}.db`);
+  try {
+    if (existsSync(copy)) unlinkSync(copy);
+    db.exec(`VACUUM INTO '${copy.replace(/'/g, "''")}'`);
+    const c = new DatabaseSync(copy);
+    c.exec("DELETE FROM cache WHERE key NOT LIKE 'derived:%'");
+    c.exec('VACUUM');
+    const ok = (c.prepare('PRAGMA quick_check').get() as Record<string, string>)['quick_check'] === 'ok';
+    c.close();
+    if (!ok) return db;
+  } catch { try { if (existsSync(copy)) unlinkSync(copy); } catch { /* ignore */ } return db; }
+  db.close();
+  for (const f of [`${path}-wal`, `${path}-shm`, path]) { try { if (existsSync(f)) unlinkSync(f); } catch { /* ignore */ } }
+  copyFileSync(copy, path);
+  try { unlinkSync(copy); } catch { /* ignore */ }
+  return new DatabaseSync(path);
+}
+
 export class Store {
-  readonly db: DatabaseSync;
+  db: DatabaseSync;
 
   constructor(path: string = process.env.OCULON_DB || join(oculonHome(), 'oculon.db')) {
     if (path !== ':memory:') mkdirSync(dirname(path), { recursive: true });
     this.db = new DatabaseSync(path);
     // WAL plus a busy timeout: the web console runs the CLI in a second process against the same file.
     if (path !== ':memory:') this.db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 8000;');
+    // A full volume leaves the write-ahead log unable to fold back, and then nothing can be written at all.
+    if (path !== ':memory:') {
+      try { this.db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch (e) {
+        if (/full/i.test((e as Error).message)) { this.db = rescueFullDb(this.db, path); this.db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout = 8000;'); }
+      }
+    }
     this.db.exec(SCHEMA);
   }
 
