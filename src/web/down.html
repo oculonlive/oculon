@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Is It Down · Oculon</title>
+<meta name="description" content="Is it down or is it just you? Official status pages of popular services, plus our own probe for the big ones that publish none.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Is It Down: popular services, checked live"><meta property="og:description" content="Official status pages and open incidents for GitHub, Discord, OpenAI, Cloudflare and more, plus a clearly labelled probe for X, YouTube, Instagram and WhatsApp."><meta property="og:url" content="https://oculon.live/down"><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--red:#ff5d6c;--amb:#ffb84d;--grn:#3ddc97;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(16px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}header nav a:hover{color:#fff}
+main{max-width:1100px;margin:0 auto;padding:64px clamp(16px,4vw,40px) 120px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.3}
+footer{position:relative;z-index:1}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:10px}
+.live{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(255,93,108,.7);animation:pulse 1.6s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(255,93,108,0)}100%{box-shadow:0 0 0 0 rgba(255,93,108,0)}}
+h1{margin:14px 0 10px;font-size:clamp(42px,6vw,72px);font-weight:300;letter-spacing:-.04em;line-height:1.02}
+h1 span{color:var(--y)}
+.lead{font-size:18px;line-height:1.7;color:var(--soft);font-weight:300;max-width:720px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:34px}
+.stats div{border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:16px}
+.stats b{display:block;font:400 11px var(--mono);letter-spacing:.14em;color:var(--mut);text-transform:uppercase}
+.stats span{display:block;margin-top:8px;font:700 clamp(22px,3vw,30px) var(--mono)}
+.stats .r span{color:var(--red)}.stats .a span{color:var(--amb)}.stats .g span{color:var(--grn)}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:30px 0 14px}
+.bar input{flex:1;min-width:0;background:#05090a;border:1px solid #2a3437;color:#fff;font:14px var(--mono);padding:11px 12px}
+.bar .upd{font:12px var(--mono);color:var(--mut)}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.card{border:1px solid #1f2a2d;background:rgba(4,8,9,.88);padding:14px 16px;cursor:pointer;min-width:0;text-align:left;color:inherit;font:inherit}
+.card:hover{border-color:#2f4246}
+.card .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.card .nm{font:600 16px var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .src{margin-top:8px;font:11px var(--mono);letter-spacing:.06em;color:var(--mut);text-transform:uppercase}
+.card .sum{margin-top:6px;font-size:14px;line-height:1.5;color:var(--soft);font-weight:300;overflow-wrap:anywhere}
+.pill{display:inline-block;flex:none;font:700 11px var(--mono);letter-spacing:.08em;padding:5px 8px;border:1px solid;text-transform:uppercase}
+.s-outage{color:var(--red);border-color:rgba(255,93,108,.5);background:rgba(255,93,108,.08)}
+.s-degraded{color:var(--amb);border-color:rgba(255,184,77,.5);background:rgba(255,184,77,.07)}
+.s-operational{color:var(--grn);border-color:rgba(61,220,151,.45);background:rgba(61,220,151,.06)}
+.s-unknown{color:var(--mut);border-color:#333}
+.det{display:none;grid-column:1/-1;border:1px solid #1f2a2d;background:rgba(0,0,0,.6);padding:16px 18px}
+.det.open{display:block}
+.det h3{margin:0 0 6px;font-size:20px;font-weight:500}
+.det .facts{display:flex;flex-wrap:wrap;gap:8px 18px;font:12px var(--mono);color:var(--mut);margin:8px 0}.det .facts b{color:#e8eef0;font-weight:400}
+.det ul{margin:10px 0;padding-left:18px}.det li{font-size:15px;line-height:1.6;color:var(--soft);font-weight:300;margin-bottom:8px;overflow-wrap:anywhere}
+.det li em{display:block;font:12px var(--mono);font-style:normal;color:var(--mut)}
+.det .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.det .links a{font:700 12px var(--mono);letter-spacing:.06em;color:var(--y);border:1px solid rgba(0,240,255,.35);padding:8px 10px;text-decoration:none}
+.empty{grid-column:1/-1;padding:40px 16px;text-align:center;color:var(--mut);font:14px var(--mono);border:1px solid #1f2a2d}
+h2{margin:56px 0 12px;font-size:26px;font-weight:400;padding-top:24px;border-top:1px solid var(--line)}
+p,li{font-size:17px;line-height:1.75;color:var(--soft);font-weight:300}
+.note{font-size:13px;color:var(--mut)}
+code{font:13px var(--mono);color:var(--y)}
+footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:1100px;margin:0 auto;padding:26px clamp(16px,4vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
+@media (max-width:820px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bar .upd{width:100%}}
+@media (max-width:520px){.grid{grid-template-columns:minmax(0,1fr)}header nav{gap:14px}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/thetoken">Token</a><a href="/app">App</a><a href="/docs">Docs</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+  <div class="lbl"><i class="live"></i>Live · refreshed every minute</div>
+  <h1>Is It <span>Down</span></h1>
+  <p class="lead">Is it down, or is it just you? Popular services, read from their official status pages. For big services that publish no status feed, Oculon makes one small request from its own server, and that result is labelled as our probe.</p>
+  <div class="stats">
+    <div class="r"><b>Outage</b><span id="s-o">-</span></div>
+    <div class="a"><b>Degraded</b><span id="s-d">-</span></div>
+    <div><b>Unknown</b><span id="s-u">-</span></div>
+    <div class="g"><b>Operational</b><span id="s-g">-</span></div>
+  </div>
+  <div class="bar"><input id="q" placeholder="Search a service, for example discord or x" autocomplete="off" spellcheck="false" aria-label="Search services"><span class="upd" id="upd">loading</span></div>
+  <div class="grid" id="grid"><div class="empty">Loading services</div></div>
+  <h2>Where the answers come from</h2>
+  <ul>
+    <li><b>Official status page</b>: the company's own Atlassian Statuspage (or Slack's status API). It shows the overall state, components with problems and open incidents with their latest update. It only shows what the company has chosen to report.</li>
+    <li><b>Our probe from one location</b>: for services such as X, Google, YouTube, Instagram, WhatsApp and Telegram, which publish no public status feed, the Oculon server makes one small HTTPS request and records the answer and how long it took. Any answer means the service is reachable from our server. No answer can also be a problem on our side or in one region, so it is never an official outage report.</li>
+    <li>Answers are cached for two and a half minutes.</li>
+  </ul>
+  <p class="note">JSON at <code>/api/down</code> and <code>/api/down?service=github</code>.</p>
+</main>
+<footer><div class="in"><span>© <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/docs">Docs</a> · <a href="/app">App</a> · <a href="/thetoken">Token</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#1a0006', hi: '#00c8e0', intensity: 0.7, scale: 0.3 }); }
+document.getElementById('year').textContent = new Date().getFullYear();
+(function () {
+  const grid = document.getElementById('grid');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const when = (iso) => iso ? new Date(iso).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+  const safeUrl = (u) => /^https:\/\//.test(u || '') ? u : '';
+  let data = [], open = '';
+  function detail(s) {
+    const facts = ['<span>state <b>' + esc(s.state) + '</b></span>', '<span>source <b>' + esc(s.source) + '</b></span>', '<span>checked <b>' + esc(when(s.checkedAt)) + '</b></span>'];
+    if (s.probe) facts.push('<span>answer <b>' + esc(s.probe.answer || 'none') + '</b></span>', '<span>latency <b>' + (s.probe.latencyMs == null ? '-' : esc(s.probe.latencyMs) + ' ms') + '</b></span>');
+    let body = '<p class="note">' + esc(s.summary) + '</p>';
+    if (s.components.length) body += '<div class="facts">' + s.components.map((c) => '<span>' + esc(c.name) + ' <b>' + esc(c.status) + '</b></span>').join('') + '</div>';
+    if (s.incidents.length) body += '<ul>' + s.incidents.map((i) => '<li><b>' + esc(i.title) + '</b><em>' + esc(i.status) + ' · impact ' + esc(i.impact) + ' · updated ' + esc(when(i.updated)) + '</em>' + (i.detail ? esc(i.detail) : '') + (safeUrl(i.url) ? ' <a href="' + esc(i.url) + '" target="_blank" rel="noopener">details</a>' : '') + '</li>').join('') + '</ul>';
+    else if (s.official) body += '<p class="note">No open incidents on the status page.</p>';
+    if (!s.official) body += '<p class="note">This is one request from the Oculon server, not an official report from the company.</p>';
+    return '<div class="det open"><h3>' + esc(s.name) + '</h3><div class="facts">' + facts.join('') + '</div>' + body + '<div class="links"><a href="' + esc(safeUrl(s.page)) + '" target="_blank" rel="noopener">' + (s.official ? 'Official status page' : 'Open the site') + '</a></div></div>';
+  }
+  function render() {
+    const q = document.getElementById('q').value.trim().toLowerCase();
+    const rows = data.filter((s) => !q || s.name.toLowerCase().includes(q) || s.id.includes(q) || s.category.includes(q));
+    if (!rows.length) { grid.innerHTML = '<div class="empty">' + (data.length ? 'No service matches. The board covers ' + data.length + ' services.' : 'No data yet.') + '</div>'; return; }
+    let html = '';
+    rows.forEach((s, i) => {
+      html += '<button class="card" data-id="' + esc(s.id) + '" aria-expanded="' + (open === s.id) + '"><div class="top"><span class="nm">' + esc(s.name) + '</span><i class="pill s-' + esc(s.state) + '">' + esc(s.state) + '</i></div><div class="src">' + esc(s.source) + '</div><div class="sum">' + esc(s.summary) + '</div></button>';
+      if (open === s.id) html += detail(s);
+    });
+    grid.innerHTML = html;
+  }
+  grid.addEventListener('click', (e) => {
+    const c = e.target.closest('.card');
+    if (!c) return;
+    const id = c.getAttribute('data-id');
+    open = open === id ? '' : id;
+    render();
+  });
+  document.getElementById('q').addEventListener('input', render);
+  async function load() {
+    try {
+      const r = await fetch('/api/down');
+      if (!r.ok) throw new Error(String(r.status));
+      const j = await r.json();
+      const c = j.result.counts;
+      document.getElementById('s-o').textContent = c.outage;
+      document.getElementById('s-d').textContent = c.degraded;
+      document.getElementById('s-u').textContent = c.unknown;
+      document.getElementById('s-g').textContent = c.operational;
+      data = j.result.services;
+      render();
+      document.getElementById('upd').textContent = 'last checked ' + new Date(j.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    } catch (e) {
+      document.getElementById('upd').textContent = 'could not refresh, retrying in a minute';
+      if (!data.length) grid.innerHTML = '<div class="empty">The status board did not load. It will try again in a minute.</div>';
+    }
+  }
+  load();
+  setInterval(load, 60000);
+})();
+</script>
+</body>
+</html>

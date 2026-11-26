@@ -1,4 +1,4 @@
-# Cloudflare Worker for app.oculon.live, docs.oculon.live and mcp.oculon.live.
+# Cloudflare Worker for app.oculon.live, docs.oculon.live and mcp.oculon.live and console.oculon.live.
 # Deploy: npx wrangler deploy --config edge/wrangler.toml
 # Secret: npx wrangler secret put EDGE_SECRET --config edge/wrangler.toml  (same value as OCULON_EDGE_SECRET on the server)
 name = "oculon-edge"
@@ -10,6 +10,7 @@ routes = [
   { pattern = "app.oculon.live", custom_domain = true },
   { pattern = "docs.oculon.live", custom_domain = true },
   { pattern = "mcp.oculon.live", custom_domain = true },
+  { pattern = "console.oculon.live", custom_domain = true },
 ]
 
 [vars]

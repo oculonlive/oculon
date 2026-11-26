@@ -27,8 +27,13 @@ import { scrubSecrets } from '../core/keys.js';
 import { readBurns, rpcClient, type BurnInfo } from './burns.js';
 import { CHECK_ROUTES } from '../modules/checks.js';
 import { postAlerts, radarList, radarScan, radarStats } from '../modules/rugradar.js';
+import { inboxRoute } from '../modules/inbox.js';
+import { wirePostText } from '../modules/wire.js';
+import { trendsPostText } from '../modules/trends.js';
+import { discordInfo, startDiscordSentinel } from '../modules/discord.js';
+import { API_TIERS, createDevSession, createKey, devSession, endDevSession, FREE_PATHS, FREE_TOOLS, gate, keyFromHeaders, listKeys, pathTier, refreshWallet, revokeKey, toolTier, usageFor, type GateResult } from '../modules/apikeys.js';
 import { llmsFull, llmsTxt, replayPage, statusPage, type ToolDoc } from './pages.js';
-import { UTILITY, badgeSvg, createNonce, getInvestigation, holderFor, listInvestigations, runSafety, safetyState, signOutHolder, startInvestigation, startInvestigationHold, startSafety, startSafetyHold, tokenConfig, verifyHolder } from '../modules/utility.js';
+import { UTILITY, badgeSvg, createNonce, getInvestigation, holderFor, listInvestigations, runSafety, safetyState, signOutHolder, startInvestigation, startInvestigationHold, startSafety, startSafetyHold, signInWallet, tokenConfig, verifyHolder } from '../modules/utility.js';
 
 /** Analyst questions and cross-examinations per visitor address per hour on a public install. */
 const ANALYST_PER_HOUR = Number(process.env.OCULON_ANALYST_PER_HOUR ?? 40);
@@ -50,6 +55,12 @@ export interface WebOptions {
   burnFetch?: typeof fetch;
   /** Rug Radar scans every 3 minutes (default: on in public mode with on-chain features; OCULON_RUGRADAR=0 turns it off). */
   rugRadar?: boolean;
+  /** Prove It: check pending OpenTimestamps proofs every 30 minutes (default on; OCULON_PROVE_TIMER=0 turns it off). */
+  prove?: boolean;
+  /** Discord Sentinel bot in this process (default: on in public mode when DISCORD_BOT_TOKEN is set; OCULON_DISCORD=0 turns it off). */
+  discord?: boolean;
+  /** Gate outside API and MCP calls by API key tier and daily quota (default: public mode with OCULON_API_KEYS=1). */
+  apiGate?: boolean;
   port?: number;
   host?: string;
   /** Open to the internet: read-only overview and docs for visitors, full app only with the admin cookie. */
@@ -288,6 +299,27 @@ export const ROUTES: Record<string, Handler> = {
   },
   '/api/breaches': async (q, o) => slim(await o.breaches((q.get('domain') ?? '').slice(0, 120))),
   '/api/phone': async (q, o) => slim(await o.phoneCheck(need(q, 'number', 32), q.get('country') ? { country: q.get('country')!.slice(0, 2) } : {})),
+  '/api/prove': async (q, o) => slim(await o.proveStatus(need(q, 'hash', 64))),
+  '/api/terms': async (q, o) => slim(await o.termsRead({ url: need(q, 'url', 2000) })),
+  '/api/down': async (q, o) => slim(await o.downStatus(q.get('service')?.trim().slice(0, 60) || undefined)),
+  '/api/charity': async (q, o) => slim(await o.charityCheck(q.get('q')?.trim().slice(0, 120) ?? '', q.get('ein') ? { ein: q.get('ein')!.slice(0, 12) } : {})),
+  '/api/brandshield': async (q, o) => slim(await o.brandShield(need(q, 'domain', 120))),
+  '/api/wire': (q, o) => { const d = o.wire(q.get('date')?.trim() || undefined); return { ...d, post: wirePostText(d) }; },
+  '/api/trends': (q, o) => { const t = o.trends(Math.min(30, Math.max(1, Number(q.get('days') ?? 7) || 7))); return { ...t, post: trendsPostText(t) }; },
+  '/api/rescue': async (q, o) => {
+    try {
+      return slim(await o.rescuePlan((q.get('situation') ?? '').slice(0, 200), (q.get('country') ?? '').slice(0, 8) || undefined));
+    } catch (e) {
+      throw e instanceof HttpError ? e : new HttpError(400, (e as Error).message);
+    }
+  },
+  '/api/spot': async (q, o) => {
+    try {
+      return slim(await o.spotRound((q.get('date') ?? '').slice(0, 10) || undefined));
+    } catch (e) {
+      throw e instanceof HttpError ? e : new HttpError(400, (e as Error).message);
+    }
+  },
   '/api/iban': async (q, o) => slim(await o.ibanCheck(need(q, 'iban', 64), q.get('country') ? { country: q.get('country')!.slice(0, 2) } : {})),
   '/api/lookalike': async (q, o) => slim(await o.lookalikes(need(q, 'domain', 120))),
   '/api/honeypot': async (q, o) => slim(await o.honeypotCheck(need(q, 'address', 60), q.get('chain') ? { chain: q.get('chain')!.slice(0, 12) } : {})),
@@ -410,12 +442,35 @@ async function readJson(req: IncomingMessage, limit = 10_000): Promise<Record<st
 type PostHandler = (body: Record<string, unknown>, o: Oculon) => Promise<unknown> | unknown;
 
 /** File uploads (base64 in a JSON body) and the check each one runs. */
-const UPLOADS: Record<string, 'doc' | 'image' | 'qr' | 'eml' | 'apk' | 'where'> = { '/api/doc': 'doc', '/api/imagecheck': 'image', '/api/qr': 'qr', '/api/eml': 'eml', '/api/apk': 'apk', '/api/where': 'where' };
+const UPLOADS: Record<string, 'doc' | 'image' | 'qr' | 'eml' | 'apk' | 'where' | 'screenshot'> = { '/api/doc': 'doc', '/api/imagecheck': 'image', '/api/qr': 'qr', '/api/eml': 'eml', '/api/apk': 'apk', '/api/where': 'where', '/api/screenshot': 'screenshot' };
 
 /** Writes that change what the whole install watches. */
 const OWNER_ONLY = new Set(['/api/monitor', '/api/watch/delete', '/api/fences', '/api/fences/delete', '/api/cases']);
 
 export const POST_ROUTES: Record<string, PostHandler> = {
+  // Security Checkup: answers and counts only (never a password or a full email); scored and not stored.
+  '/api/checkup': async (b, o) => {
+    try {
+      return slim(await o.checkup(b as import('../modules/checkup.js').CheckupInput));
+    } catch (e) {
+      throw new HttpError(400, (e as Error).message);
+    }
+  },
+  '/api/terms': async (b, o) => {
+    const text = typeof b.text === 'string' ? b.text : '';
+    const url = typeof b.url === 'string' ? b.url.trim().slice(0, 2000) : '';
+    if (!text.trim() && !url) throw new HttpError(400, 'paste the terms or give the link to them');
+    return slim(await o.termsRead(text.trim() ? { text: text.slice(0, 60_000) } : { url }));
+  },
+  // Prove It: only the file's SHA-256 arrives; the page hashes the file in the browser.
+  '/api/prove': async (b, o) => {
+    try {
+      return slim(await o.proveSubmit(String(b.sha256 ?? ''), b.label == null ? undefined : String(b.label)));
+    } catch (e) {
+      const m = (e as Error).message;
+      throw new HttpError(/^invalid /.test(m) ? 400 : /daily limit/.test(m) ? 429 : 502, m);
+    }
+  },
   // Raw email headers can be several kilobytes, too long for a query string.
   '/api/headers': async (b, o) => {
     const raw = String(b.headers ?? '');
@@ -653,6 +708,8 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
   const limiter = new RateLimiter();
   // OCULON_OPEN=1 opens the whole app to every visitor (no sign-in, no read-only gate, no rate limit).
   const openApp = opts.open ?? process.env.OCULON_OPEN === '1';
+  // API keys: OCULON_API_KEYS=1 puts outside calls (no key, free key, holder key) behind the tier and quota gate.
+  const apiGate = opts.apiGate ?? (publicMode && process.env.OCULON_API_KEYS === '1');
   // One MCP server for the HTTP transport, sharing this server's Oculon instance.
   const appBase = siteDomainEarly(opts) ? `https://app.${siteDomainEarly(opts)}` : `http://127.0.0.1:${opts.port ?? 4747}`;
   const mcpServer = new McpServer(() => oculon, { remote: publicMode, baseUrl: appBase });
@@ -704,6 +761,28 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     radarTimer.unref();
     setTimeout(() => void radarPass(), 15_000).unref();
   }
+  // Prove It: pending OpenTimestamps proofs are checked every 30 minutes, at most 12 per pass.
+  let proveTimer: NodeJS.Timeout | null = null;
+  if (opts.prove ?? process.env.OCULON_PROVE_TIMER !== '0') {
+    let busy = false;
+    const provePass = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const r = await oculon.proveUpgrade({ limit: 12 });
+        if (r.checked) log(`prove: ${r.checked} checked, ${r.confirmed} confirmed, ${r.pending} pending`);
+      } catch (e) { log(`prove upgrade failed: ${(e as Error).message}`); } finally { busy = false; }
+    };
+    proveTimer = setInterval(() => void provePass(), 30 * 60_000);
+    proveTimer.unref();
+    setTimeout(() => void provePass(), 60_000).unref();
+  }
+  // Discord Sentinel: one Gateway session for the whole install, so only the public server runs it by default.
+  let stopDiscord: (() => void) | null = null;
+  if (opts.discord ?? (publicMode && process.env.OCULON_DISCORD !== '0')) {
+    stopDiscord = startDiscordSentinel(oculon, { base: siteDomain ? `https://app.${siteDomain}` : `http://127.0.0.1:${opts.port ?? 4747}`, log });
+    if (stopDiscord) log('discord sentinel: starting');
+  }
 
   // Burns on /thetoken come from the chain RPC, cached for five minutes; a failed read keeps the last good one.
   let burnCache: { at: number; key: string; info: BurnInfo | null } | null = null;
@@ -742,16 +821,25 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     const url = new URL(req.url ?? '/', 'http://localhost');
     const viaEdge = Boolean(edgeSecret) && tokenMatches(String(req.headers['x-oculon-edge'] ?? ''), edgeSecret!);
     const edgeSite = viaEdge ? String(req.headers['x-oculon-site'] ?? '') : '';
-    const hostName = siteDomain && /^(app|docs|mcp)$/.test(edgeSite) ? `${edgeSite}.${siteDomain}` : String(req.headers.host ?? '').split(':')[0]!.toLowerCase();
+    const hostName = siteDomain && /^(app|docs|mcp|console)$/.test(edgeSite) ? `${edgeSite}.${siteDomain}` : String(req.headers.host ?? '').split(':')[0]!.toLowerCase();
     const admin = !publicMode || openApp || isAdmin(req, adminToken);
+    if (url.pathname.startsWith('/api/') && req.method === 'OPTIONS') {
+      res.writeHead(204, { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'authorization, x-api-key, content-type', 'access-control-max-age': '86400' });
+      return res.end();
+    }
     // Remote MCP: POST /mcp on any host, or POST / on mcp.<domain>. Open to anyone who may use the app.
     const mcpHost = hostName.split('.')[0] === 'mcp';
     if (url.pathname === '/mcp' || (mcpHost && url.pathname === '/')) {
       if (!admin) return send(res, 403, '{"error":"the MCP endpoint is not public on this install"}', 'application/json');
-      return handleMcpHttp(req, res, mcpServer, () => mcpPage(url.pathname === '/mcp'), log);
+      const mcpIp = (viaEdge && String(req.headers['x-oculon-client-ip'] ?? '').trim()) || clientIp(req);
+      const guard = apiGate && !isAdmin(req, adminToken) ? async (tool: string) => { const g = await gate(oculon.ctx, req, mcpIp, tool, toolTier(tool), siteDomain); return g.ok ? null : g.error; } : undefined;
+      return handleMcpHttp(req, res, mcpServer, () => mcpPage(url.pathname === '/mcp'), log, guard);
     }
     // mcp.<domain> also serves the page's icon and scripts.
     if (mcpHost && !(/^\/assets\/[\w.-]+$/.test(url.pathname) || url.pathname === '/favicon.ico')) return send(res, 404, '{"error":"POST JSON-RPC messages to / on this host"}', 'application/json');
+    // Scam Inbox: the Email Worker (edge/inbox) posts forwarded mail here; only the shared secret header admits a request.
+    if (url.pathname === '/api/inbox') return inboxRoute(oculon, req, res, { ...(siteDomain ? { base: `https://app.${siteDomain}`, domain: siteDomain } : {}), log });
+    if (url.pathname === '/api/discord/info' && req.method === 'GET') return send(res, 200, JSON.stringify(discordInfo()), 'application/json; charset=utf-8', 'public, max-age=300');
     // The main domain hands /app and /docs to their subdomains before anything else answers them.
     if (siteDomain && hostName === siteDomain && /^\/(app|docs)\/?$/.test(url.pathname) && (req.method === 'GET' || req.method === 'HEAD')) {
       res.writeHead(301, { location: `https://${url.pathname.replace(/\//g, '')}.${siteDomain}/${url.search}`, 'cache-control': 'no-store' });
@@ -773,7 +861,8 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
         res.writeHead(303, { location: '/', 'set-cookie': 'oculon_admin=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0', 'cache-control': 'no-store' });
         return res.end();
       }
-      if (!admin) {
+      // The developer console and calls that carry an API key are checked by the key gate below instead.
+      if (!admin && !(apiGate && (url.pathname.startsWith('/api/dev/') || keyFromHeaders(req.headers)))) {
         if (req.method !== 'GET') return send(res, 403, '{"error":"this install is read-only"}', 'application/json');
         if (url.pathname.startsWith('/api/')) {
           if (!PUBLIC_API.has(url.pathname)) return send(res, 403, '{"error":"private endpoint"}', 'application/json');
@@ -784,6 +873,36 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
           return send(res, 200, locked(false), 'text/html; charset=utf-8');
         }
       }
+    }
+    // API keys: calls from outside Oculon's own pages go through the key gate (free or holder tier, daily quota).
+    let keyed: Extract<GateResult, { kind: 'key' | 'keyless' }> | null = null;
+    if (apiGate && url.pathname.startsWith('/api/') && !isAdmin(req, adminToken)) {
+      const gip = (viaEdge && String(req.headers['x-oculon-client-ip'] ?? '').trim()) || clientIp(req);
+      const g = await gate(oculon.ctx, req, gip, url.pathname, pathTier(url.pathname), siteDomain);
+      if (!g.ok) {
+        res.setHeader('access-control-allow-origin', '*');
+        return send(res, g.status, JSON.stringify({ error: g.error }), 'application/json; charset=utf-8');
+      }
+      if (g.kind !== 'first-party') {
+        keyed = g;
+        res.setHeader('access-control-allow-origin', '*');
+        res.setHeader('x-ratelimit-limit', String(g.limit));
+        res.setHeader('x-ratelimit-remaining', String(g.remaining));
+        res.setHeader('x-oculon-tier', g.tier);
+      }
+    }
+    const withKey = keyed?.kind === 'key';
+    if (url.pathname === '/api/key') {
+      if (!keyed || !keyed.ok) return send(res, 200, JSON.stringify({ key: null, tier: null, note: 'send your key as "authorization: Bearer ocl_..." to see its tier and quota' }), 'application/json; charset=utf-8');
+      return send(res, 200, JSON.stringify({ key: keyed.kind === 'key' ? keyed.keyId : null, tier: keyed.tier, limit: keyed.limit, remaining: keyed.remaining, holderMin: API_TIERS.holderMin.toString(), resetsAt: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1)).toISOString() }), 'application/json; charset=utf-8');
+    }
+    if (url.pathname === '/api/catalog' && req.method === 'GET') {
+      const spec = openApiSpec(siteDomain ? `https://${siteDomain}` : `http://${req.headers.host ?? '127.0.0.1'}`) as { paths?: Record<string, Record<string, { summary?: string; description?: string }>> };
+      const endpoints = Object.entries(spec.paths ?? {}).map(([path, ops]) => { const [method, op] = Object.entries(ops)[0] ?? ['get', {}]; return { path, method: method.toUpperCase(), summary: op.summary ?? op.description ?? '', tier: pathTier(path) }; });
+      const r = (await mcpServer.handle({ jsonrpc: '2.0', id: 0, method: 'tools/list' })) as { result?: { tools?: { name: string; description?: string }[] } } | null;
+      const tools = (r?.result?.tools ?? []).map((t) => ({ name: t.name, summary: (t.description ?? '').split(/(?<=\.)\s/)[0] ?? '', tier: toolTier(t.name) }));
+      res.setHeader('access-control-allow-origin', '*');
+      return send(res, 200, JSON.stringify({ tiers: { free: { daily: API_TIERS.daily.free, keyless: API_TIERS.keylessDaily }, holder: { daily: API_TIERS.daily.holder, hold: API_TIERS.holderMin.toString() } }, endpoints, tools, freePaths: [...FREE_PATHS], freeTools: [...FREE_TOOLS] }), 'application/json; charset=utf-8', 'public, max-age=300');
     }
     // Visitors get a random id in a cookie; it owns their personal monitors. No account, no personal data.
     const visitor = (): string => {
@@ -812,6 +931,40 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     if (badge && req.method === 'GET') return send(res, 200, badgeSvg(safetyState(oculon.ctx, badge)), 'image/svg+xml; charset=utf-8', 'public, max-age=300');
     if ((/^\/utility\/?$/.test(url.pathname) || /^\/investigation\/[0-9a-f]{12}$/.test(url.pathname) || /^\/safety\/0x[0-9a-fA-F]{40}$/.test(url.pathname)) && req.method === 'GET' && hostName.split('.')[0] !== 'docs') {
       return send(res, 200, renderPage(readFileSync(join(HERE, 'utility.html'), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
+    }
+    // Developer console: sign in with a wallet, make and revoke API keys, see usage. The session lives in an HttpOnly cookie.
+    if (url.pathname.startsWith('/api/dev/')) {
+      const json = (v: unknown, status = 200, cookie?: string) => { if (cookie) res.setHeader('set-cookie', cookie); return send(res, status, JSON.stringify(v), 'application/json; charset=utf-8'); };
+      if (req.method === 'POST' && !sameSite()) return json({ error: 'forbidden' }, 403);
+      const tok = /(?:^|;\s*)oculon_dev=([A-Za-z0-9_-]{20,64})/.exec(String(req.headers.cookie ?? ''))?.[1] ?? null;
+      const me = devSession(oculon.ctx, tok);
+      const cookie = (v: string, age: number) => `oculon_dev=${v}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${age}${publicMode ? '; Secure' : ''}`;
+      try {
+        if (req.method === 'GET' && url.pathname === '/api/dev/me') {
+          if (!me) return json({ signedIn: false, tiers: { holderMin: API_TIERS.holderMin.toString(), daily: API_TIERS.daily, keyless: API_TIERS.keylessDaily } });
+          const keys = listKeys(oculon.ctx, me);
+          return json({ signedIn: true, address: me, tier: keys.find((k) => !k.revoked)?.tier ?? null, keys, usage: usageFor(oculon.ctx, me), tiers: { holderMin: API_TIERS.holderMin.toString(), daily: API_TIERS.daily, keyless: API_TIERS.keylessDaily, maxKeys: API_TIERS.maxKeys } });
+        }
+        if (req.method === 'POST') {
+          const b = await readJson(req);
+          if (url.pathname === '/api/dev/nonce') return json(createNonce(siteDomain ?? hostName, String(b.address ?? '')));
+          if (url.pathname === '/api/dev/login') {
+            const address = signInWallet(String(b.message ?? ''), String(b.signature ?? ''));
+            const t = await refreshWallet(oculon.ctx, address).catch(() => null);
+            const sess = createDevSession(oculon.ctx, address);
+            log(`console sign-in ${address.slice(0, 8)}`);
+            return json({ signedIn: true, address, tier: t?.tier ?? null, balance: t?.balance ?? null }, 200, cookie(sess.token, API_TIERS.sessionDays * 86_400));
+          }
+          if (url.pathname === '/api/dev/logout') { endDevSession(oculon.ctx, tok); return json({ ok: true }, 200, cookie('', 0)); }
+          if (!me) return json({ error: 'sign in with your wallet first' }, 401);
+          if (url.pathname === '/api/dev/keys') { const k = await createKey(oculon.ctx, me, String(b.label ?? '')); log(`api key made for ${me.slice(0, 8)} (${k.info.tier})`); return json(k); }
+          if (url.pathname === '/api/dev/revoke') return json({ revoked: revokeKey(oculon.ctx, me, String(b.id ?? '')) });
+          if (url.pathname === '/api/dev/refresh') return json(await refreshWallet(oculon.ctx, me));
+        }
+        return json({ error: 'not found' }, 404);
+      } catch (e) {
+        return json({ error: (e as Error).message }, e instanceof HttpError ? e.status : 400);
+      }
     }
     if (url.pathname.startsWith('/api/utility/')) {
       if (!admin) return send(res, 403, '{"error":"not available on this install"}', 'application/json');
@@ -902,7 +1055,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       return send(res, 403, '{"error":"the shared watchlist is managed by the owner; add your own monitors instead"}', 'application/json');
     }
     if (UPLOADS[url.pathname] && req.method === 'POST') {
-      if (!sameSite()) return send(res, 403, '{"error":"forbidden"}', 'application/json');
+      if (!withKey && !sameSite()) return send(res, 403, '{"error":"forbidden"}', 'application/json');
       const ip = (viaEdge && String(req.headers['x-oculon-client-ip'] ?? '').trim()) || clientIp(req);
       if (publicMode && !isAdmin(req, adminToken) && !analystLimit(ip)) return send(res, 429, '{"error":"You have checked a lot this hour. Try again a bit later."}', 'application/json');
       try {
@@ -914,13 +1067,17 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
         const { createHash } = await import('node:crypto');
         const kind = UPLOADS[url.pathname]!;
         const hash = createHash('sha256').update(file).digest('hex');
-        const run = { doc: () => oculon.docCheck(file, name), image: () => oculon.imageCheck(file, name), qr: () => oculon.qrCheck(file, name), eml: () => oculon.emlCheck(file, name), apk: () => oculon.apkCheck(file, name), where: () => oculon.whereCheck(file, name) }[kind] as () => Promise<ModuleResult<unknown>>;
+        const run = { doc: () => oculon.docCheck(file, name), image: () => oculon.imageCheck(file, name), qr: () => oculon.qrCheck(file, name), eml: () => oculon.emlCheck(file, name), apk: () => oculon.apkCheck(file, name), where: () => oculon.whereCheck(file, name), screenshot: () => oculon.screenshotCheck(file, name) }[kind] as () => Promise<ModuleResult<unknown>>;
         const r = await oculon.recordCheck(kind, hash, run, { label: name });
         log(`POST ${url.pathname}`);
         return send(res, 200, JSON.stringify({ ...slim(r.value), check: r.check }), 'application/json; charset=utf-8');
       } catch (e) {
         return send(res, e instanceof HttpError ? e.status : 400, JSON.stringify({ error: (e as Error).message }), 'application/json; charset=utf-8');
       }
+    }
+    if (req.method === 'POST' && url.pathname === '/api/prove' && publicMode && !isAdmin(req, adminToken)) {
+      const pip = (viaEdge && String(req.headers['x-oculon-client-ip'] ?? '').trim()) || clientIp(req);
+      if (!analystLimit(pip)) return send(res, 429, '{"error":"You have timestamped a lot this hour. Try again a bit later."}', 'application/json');
     }
     if (req.method === 'POST' && POST_ROUTES[url.pathname]) {
       // Writes only from this dashboard: a custom header (forces a CORS preflight that this server never
@@ -929,11 +1086,11 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       const origin = req.headers.origin;
       const host = String(req.headers.host ?? '').toLowerCase();
       const originHost = (() => { try { return new URL(String(origin)).host.toLowerCase(); } catch { return null; } })();
-      if (req.headers['x-oculon'] !== '1' || !String(req.headers['content-type'] ?? '').startsWith('application/json') || (origin && originHost !== host && originHost !== hostName)) {
+      if (!withKey && (req.headers['x-oculon'] !== '1' || !String(req.headers['content-type'] ?? '').startsWith('application/json') || (origin && originHost !== host && originHost !== hostName))) {
         return send(res, 403, '{"error":"forbidden"}', 'application/json');
       }
       try {
-        const body = await readJson(req, url.pathname === '/api/headers' || url.pathname === '/api/signature' || url.pathname === '/api/job' ? 200_000 : undefined);
+        const body = await readJson(req, url.pathname === '/api/headers' || url.pathname === '/api/signature' || url.pathname === '/api/job' || url.pathname === '/api/terms' ? 300_000 : undefined);
         const out = url.pathname === '/api/job'
           ? await oculon.recordCheck('job', String(body.message ?? ''), async () => POST_ROUTES[url.pathname]!(body, oculon), { label: `job offer: ${String(body.message ?? '').trim().slice(0, 60)}` }).then((r) => ({ ...(r.value as object), check: r.check }))
           : url.pathname === '/api/signature'
@@ -998,6 +1155,19 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       res.writeHead(200, { 'content-type': 'application/vnd.opentimestamps.v1', 'content-disposition': `attachment; filename="${otsId}.ots"`, 'cache-control': 'public, max-age=3600', 'access-control-allow-origin': '*' });
       return void res.end(file);
     }
+    // Prove It: the proof for a hash as a standard .ots file. no-cache: it is upgraded once Bitcoin confirms it.
+    const proveHash = /^\/prove\/([0-9a-fA-F]{64})\.ots$/.exec(url.pathname)?.[1];
+    if (proveHash) {
+      const file = oculon.proveOts(proveHash);
+      if (!file) return send(res, 404, '{"error":"no proof for this hash"}', 'application/json');
+      res.writeHead(200, { 'content-type': 'application/vnd.opentimestamps.v1', 'content-disposition': `attachment; filename="${proveHash.toLowerCase().slice(0, 16)}.ots"`, 'cache-control': 'no-cache', 'access-control-allow-origin': '*', 'x-content-type-options': 'nosniff' });
+      return void res.end(file);
+    }
+    // Oculon Embed: any website may load this script. Cached an hour; cross-origin by design.
+    if (url.pathname === '/embed.js') {
+      res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'public, max-age=3600', 'access-control-allow-origin': '*', 'cross-origin-resource-policy': 'cross-origin', 'x-content-type-options': 'nosniff' });
+      return void res.end(readFileSync(join(HERE, 'assets', 'embed.js')));
+    }
     // Shared results: /r/<id> is a public snapshot page with link-preview tags.
     const shareId = /^\/r\/([A-Za-z0-9_-]{6,16})\/?$/.exec(url.pathname)?.[1];
     if (shareId) {
@@ -1042,9 +1212,28 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=300', 'access-control-allow-origin': '*' });
       return res.end(b.supply);
     }
-    const toolPage = /^\/(rugradar|guard)\/?$/.exec(url.pathname)?.[1];
-    if (toolPage && sub !== 'docs') {
-      return send(res, 200, renderPage(readFileSync(join(HERE, `${toolPage}.html`), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
+    const ckCard = /^\/checkup\/card\/([A-Z]-\d{1,3})\.svg$/.exec(url.pathname)?.[1];
+    if (ckCard && req.method === 'GET') {
+      const { checkupCardSvg, parseCard } = await import('../modules/checkup.js');
+      const p = parseCard(ckCard);
+      const svg = p && checkupCardSvg(p.grade, p.score);
+      return svg ? send(res, 200, svg, 'image/svg+xml; charset=utf-8', 'public, max-age=86400') : send(res, 404, 'not found', 'text/plain; charset=utf-8');
+    }
+    if (url.pathname === '/wire/today.png') {
+      try {
+        const date = url.searchParams.get('date')?.trim() || undefined;
+        const png = oculon.wireCard(date);
+        res.writeHead(200, { 'content-type': 'image/png', 'cache-control': 'public, max-age=600', 'access-control-allow-origin': '*', 'x-content-type-options': 'nosniff' });
+        return void res.end(png);
+      } catch (e) {
+        return send(res, statusFor(e), JSON.stringify({ error: (e as Error).message }), 'application/json');
+      }
+    }
+    // The developer console: console.<domain>, or /console on any host.
+    if ((sub === 'console' && url.pathname === '/') || /^\/console\/?$/.test(url.pathname)) return send(res, 200, renderPage(readFileSync(join(HERE, 'console.html'), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
+    const toolPage = /^\/(rugradar|guard|inbox|discord|prove|embed|screenshot|terms-reader|rescue|checkup|spot|down|charity|brandshield|today|trends|wall)\/?$/.exec(url.pathname)?.[1];
+    if (toolPage && sub !== 'docs' && existsSync(join(HERE, `${toolPage.replace('-', '')}.html`))) {
+      return send(res, 200, renderPage(readFileSync(join(HERE, `${toolPage.replace('-', '')}.html`), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
     }
     if (/^\/thetoken\/?$/.test(url.pathname) && sub !== 'docs') {
       let info: Partial<TokenInfo> = {};
@@ -1123,6 +1312,8 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       new Promise((resolve) => {
         scheduler?.stop();
         if (radarTimer) clearInterval(radarTimer);
+        stopDiscord?.();
+        if (proveTimer) clearInterval(proveTimer);
         server.close(() => {
           if (!opts.oculon) oculon.close();
           resolve();

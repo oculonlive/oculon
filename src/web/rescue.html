@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>I Got Scammed · Oculon</title>
+<meta name="description" content="Clicked a link, gave a code, sent money or a seed phrase? A calm checklist for the next 10 minutes, today and this week, with official places to report it.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="I got scammed: what to do now"><meta property="og:description" content="A step-by-step checklist for the next 10 minutes, today and this week, and where to report it in your country."><meta property="og:url" content="https://oculon.live/rescue"><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--red:#ff5d6c;--amb:#ffb84d;--grn:#3ddc97;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(16px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none;white-space:nowrap}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}header nav a:hover{color:#fff}
+main{max-width:960px;margin:0 auto;padding:64px clamp(16px,4vw,40px) 120px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.3}
+footer{position:relative;z-index:1}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+h1{margin:14px 0 10px;font-size:clamp(40px,6vw,68px);font-weight:300;letter-spacing:-.04em;line-height:1.02}
+h1 span{color:var(--y)}
+.lead{font-size:18px;line-height:1.7;color:var(--soft);font-weight:300;max-width:720px}
+.calm{margin-top:22px;border-left:3px solid var(--grn);padding:10px 16px;background:rgba(61,220,151,.05);font-size:16px;line-height:1.6;color:#e8eef0}
+.box{margin-top:30px;border:1px solid rgba(0,240,255,.4);background:rgba(0,14,18,.82);backdrop-filter:blur(8px);padding:20px}
+.step{font:700 12px var(--mono);letter-spacing:.14em;color:var(--y);text-transform:uppercase;margin:0 0 12px}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.opt{display:flex;gap:12px;align-items:flex-start;border:1px solid #2a3437;background:#05090a;padding:12px;cursor:pointer;text-align:left;color:#fff;font:inherit}
+.opt input{margin:4px 0 0;accent-color:#00f0ff;flex:none;width:18px;height:18px}
+.opt b{display:block;font-weight:500;font-size:16px}.opt em{display:block;font-style:normal;color:var(--mut);font-size:13px;line-height:1.45;margin-top:2px}
+.opt.on{border-color:var(--y);background:rgba(0,240,255,.06)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;align-items:center}
+select{background:#05090a;border:1px solid #2a3437;color:#fff;font:14px var(--mono);padding:12px;min-width:0;max-width:100%}
+.btn{font:700 13px var(--mono);letter-spacing:.08em;background:var(--y);color:#000;border:0;padding:12px 16px;cursor:pointer;text-transform:uppercase}
+.btn.ghost{background:transparent;color:var(--y);border:1px solid rgba(0,240,255,.5)}
+.btn:disabled{opacity:.45;cursor:default}
+.msg{margin-top:14px;font:13px var(--mono);color:var(--mut);min-height:18px}.msg.err{color:var(--red)}
+.phase{margin-top:28px}
+.phase h3{margin:0 0 10px;font-weight:500;font-size:20px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.phase h3 small{font:12px var(--mono);color:var(--mut);letter-spacing:.08em}
+.phase.now h3{color:var(--red)}
+.todo{display:flex;gap:12px;align-items:flex-start;border:1px solid #1f2a2d;background:rgba(4,8,9,.88);padding:12px 14px;margin-bottom:6px}
+.todo input{margin:5px 0 0;accent-color:#3ddc97;flex:none;width:18px;height:18px}
+.todo p{margin:0;font-size:16px;line-height:1.6;color:#e8eef0}
+.todo.done p{color:var(--mut);text-decoration:line-through}
+.todo .tool{display:inline-block;margin-top:6px;font:700 12px var(--mono);color:var(--y);text-decoration:none;border-bottom:1px solid rgba(0,240,255,.35)}
+.todo .for{display:block;font:11px var(--mono);color:var(--mut);margin-top:4px;letter-spacing:.04em}
+.rep{border:1px solid #1f2a2d;background:rgba(4,8,9,.88);padding:14px;margin-bottom:6px}
+.rep a{font-weight:500;font-size:17px;color:var(--y);text-decoration:none;word-break:break-word}
+.rep p{margin:4px 0 0;font-size:15px;line-height:1.6}
+.rep .ph{font:13px var(--mono);color:#fff;margin-top:6px}
+.rep .u{font:12px var(--mono);color:var(--mut);word-break:break-all;margin-top:4px}
+h2{margin:56px 0 12px;font-size:26px;font-weight:400;padding-top:24px;border-top:1px solid var(--line)}
+p,li{font-size:17px;line-height:1.75;color:var(--soft);font-weight:300}
+.note{font-size:13px;color:var(--mut)}
+.prog{font:12px var(--mono);color:var(--mut)}
+footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:960px;margin:0 auto;padding:26px clamp(16px,4vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
+@media (max-width:700px){.opts{grid-template-columns:minmax(0,1fr)}header nav{gap:14px}.row .btn,.row select{flex:1 1 100%}}
+@media print{header,footer,#liquidbg,#pick,.noprint{display:none!important}body{background:#fff;color:#000}main{padding:0}.todo,.rep{border-color:#999;background:#fff}.todo p,.rep p,p,li{color:#000}.rep a,.todo .tool{color:#000}h1 span{color:#000}.phase.now h3{color:#000}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/checkup">Checkup</a><a href="/guard">Wallet Guard</a><a href="/app">App</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+  <div class="lbl">Rescue</div>
+  <h1>I got <span>scammed.</span></h1>
+  <p class="lead">Tell us what happened and where you live. You get one checklist: what to do in the next 10 minutes, today, and this week, and the official places to report it.</p>
+  <p class="calm">Take a breath. It happens to careful people every day, and acting quickly makes a real difference. Nothing you choose here is sent anywhere except to build the checklist, and your ticks stay in this browser.</p>
+
+  <div class="box" id="pick">
+    <p class="step">1 · What happened? Pick all that apply</p>
+    <div class="opts" id="opts"><p class="note">Loading</p></div>
+    <p class="step" style="margin-top:22px">2 · Where do you live?</p>
+    <div class="row">
+      <select id="country" aria-label="Country"><option value="">Choose a country</option></select>
+      <button class="btn" id="go" disabled>Show my checklist</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="out"></div>
+
+  <h2>Good to know</h2>
+  <ul>
+    <li><b>No one can get the money back for a fee.</b> "Recovery" services that contact you after a scam are a second scam.</li>
+    <li><b>Banks, police and exchanges never ask</b> for your password, a one-time code or your recovery phrase.</li>
+    <li><b>Reporting helps</b> even when the money is gone: it can stop the same scam reaching the next person.</li>
+  </ul>
+  <p class="note" id="foot">General guidance, not legal or financial advice. If you are in danger or being threatened, call your local emergency number. JSON at <code>/api/rescue</code>.</p>
+</main>
+<footer><div class="in"><span>&copy; <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/checkup">Checkup</a> · <a href="/spot">Spot the Scam</a> · <a href="/guard">Wallet Guard</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#001a10', hi: '#00c8e0', intensity: 0.5, scale: 0.3 }); }
+document.getElementById('year').textContent = new Date().getFullYear();
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const KEY = 'oculon.rescue';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } };
+  const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* private mode: ticks just are not kept */ } };
+  let state = load();
+  state.done = state.done || {};
+  let catalog = null;
+  const picked = new Set(Array.isArray(state.situations) ? state.situations : []);
+  const fromHash = location.hash.slice(1).split(',').filter(Boolean);
+  if (fromHash.length) { picked.clear(); fromHash.forEach((x) => picked.add(x)); }
+
+  function msg(t, cls) { $('msg').textContent = t || ''; $('msg').className = 'msg' + (cls ? ' ' + cls : ''); }
+  function canGo() { $('go').disabled = !picked.size || !$('country').value; }
+
+  function renderPick() {
+    $('opts').innerHTML = catalog.situations.map((s) => '<label class="opt' + (picked.has(s.id) ? ' on' : '') + '" id="s-' + esc(s.id) + '"><input type="checkbox" value="' + esc(s.id) + '"' + (picked.has(s.id) ? ' checked' : '') + '><span><b>' + esc(s.title) + '</b><em>' + esc(s.summary) + '</em></span></label>').join('');
+    $('country').innerHTML = '<option value="">Choose a country</option>' + catalog.countries.map((c) => '<option value="' + esc(c.code) + '">' + esc(c.name) + '</option>').join('');
+    if (state.country) $('country').value = state.country;
+    canGo();
+  }
+
+  $('opts').addEventListener('change', (e) => {
+    const i = e.target.closest('input'); if (!i) return;
+    i.checked ? picked.add(i.value) : picked.delete(i.value);
+    i.closest('.opt').classList.toggle('on', i.checked);
+    canGo();
+  });
+  $('country').addEventListener('change', canGo);
+
+  async function show() {
+    const list = [...picked];
+    const country = $('country').value;
+    state.situations = list; state.country = country; save(state);
+    $('go').disabled = true; msg('Building your checklist');
+    try {
+      const r = await fetch('/api/rescue?situation=' + encodeURIComponent(list.join(',')) + '&country=' + encodeURIComponent(country));
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      render(j.result);
+      msg('');
+      history.replaceState(null, '', '#' + list.join(','));
+      $('out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (e) { msg('Could not build the checklist: ' + e.message, 'err'); }
+    finally { canGo(); }
+  }
+  $('go').addEventListener('click', show);
+
+  function render(p) {
+    const titles = Object.fromEntries(p.situations.map((s) => [s.id, s.title]));
+    const total = p.checklist.reduce((n, g) => n + g.steps.length, 0);
+    const html = p.checklist.filter((g) => g.steps.length).map((g) => '<div class="phase ' + esc(g.phase) + '"><h3>' + esc(g.label) + ' <small>' + g.steps.length + ' step' + (g.steps.length === 1 ? '' : 's') + '</small></h3>'
+      + g.steps.map((s) => {
+        const done = Boolean(state.done[s.id]);
+        const tool = s.tool ? '<a class="tool noprint" href="' + esc(s.tool.href) + '">' + esc(s.tool.label) + '</a>' : '';
+        const why = p.selected.length > 1 ? '<span class="for">for: ' + s.situations.map((x) => esc(titles[x] || x)).join(' · ') + '</span>' : '';
+        return '<label class="todo' + (done ? ' done' : '') + '"><input type="checkbox" data-id="' + esc(s.id) + '"' + (done ? ' checked' : '') + '><span><p>' + esc(s.text) + '</p>' + tool + why + '</span></label>';
+      }).join('') + '</div>').join('');
+    const countryName = (p.countries.find((c) => c.code === p.country) || {}).name || '';
+    const reps = p.reports.map((r) => '<div class="rep"><a href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.name) + '</a><p>' + esc(r.what) + '</p>' + (r.phone ? '<div class="ph">Phone: ' + esc(r.phone) + '</div>' : '') + '<div class="u">' + esc(r.url) + '</div></div>').join('');
+    $('out').innerHTML = '<h2>Your checklist</h2><div class="row noprint"><span class="prog" id="prog"></span><button class="btn ghost" id="print">Print</button><button class="btn ghost" id="reset">Clear ticks</button><button class="btn ghost" id="edit">Change answers</button></div>'
+      + html
+      + '<h2>Report it' + (countryName ? ' · ' + esc(countryName) : '') + '</h2>' + (reps || '<p>No reporting link fits this choice.</p>')
+      + (p.countryNote ? '<p class="note">' + esc(p.countryNote) + '</p>' : '')
+      + '<p class="note">Links opened and checked on ' + esc(p.linksChecked) + '. ' + esc(p.note) + '</p>';
+    progress(total);
+    $('print').onclick = () => window.print();
+    $('reset').onclick = () => { state.done = {}; save(state); render(p); };
+    $('edit').onclick = () => $('pick').scrollIntoView({ behavior: 'smooth' });
+    $('out').onchange = (e) => {
+      const i = e.target.closest('input[data-id]'); if (!i) return;
+      if (i.checked) state.done[i.dataset.id] = 1; else delete state.done[i.dataset.id];
+      save(state);
+      i.closest('.todo').classList.toggle('done', i.checked);
+      progress(total);
+    };
+  }
+  function progress(total) {
+    const n = [...document.querySelectorAll('#out input[data-id]')].filter((i) => i.checked).length;
+    const el = $('prog'); if (el) el.textContent = n + ' of ' + total + ' done';
+  }
+
+  (async () => {
+    try {
+      const r = await fetch('/api/rescue');
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      catalog = j.result;
+      renderPick();
+      if (picked.size && state.country) show();
+    } catch (e) { $('opts').innerHTML = ''; msg('Could not load the list: ' + e.message, 'err'); }
+  })();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Live Wall · Oculon</title>
+<meta name="description" content="Oculon's signals as they arrive: a world map, a ticker of the newest signals with their sources, and the sources that are up right now.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Oculon Live Wall"><meta property="og:description" content="Signals as they arrive, on a map and a ticker, with their sources."><meta property="og:url" content="https://oculon.live/wall"><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--red:#ff5d6c;--amb:#ffb84d;--grn:#3ddc97;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;height:100vh;overflow:hidden}
+a{color:inherit}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:14px clamp(16px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}header nav a:hover{color:#fff}
+.kiosk header{display:none}
+.wall{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:0;min-height:0;overflow:hidden}
+.map{position:relative;min-width:0;min-height:300px;border-right:1px solid #141c1e}
+.map canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.map .tag{position:absolute;left:clamp(12px,2vw,28px);top:clamp(12px,2vw,24px);font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:10px;pointer-events:none}
+.map .tag b{color:#fff;font-weight:700;letter-spacing:.3em}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 0 0 rgba(255,93,108,.7);animation:pulse 1.6s infinite}
+.dot.off{background:#555;animation:none}
+@keyframes pulse{70%{box-shadow:0 0 0 10px rgba(255,93,108,0)}100%{box-shadow:0 0 0 0 rgba(255,93,108,0)}}
+.legend{position:absolute;left:clamp(12px,2vw,28px);bottom:14px;font:11px var(--mono);color:var(--mut);display:flex;gap:16px;flex-wrap:wrap;pointer-events:none}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
+.side{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.clock{padding:22px 22px 16px;border-bottom:1px solid #141c1e}
+.clock .t{font:700 clamp(34px,3.4vw,46px) var(--mono);letter-spacing:.02em}
+.clock .d{font:12px var(--mono);color:var(--mut);letter-spacing:.14em;text-transform:uppercase;margin-top:4px}
+.cnt{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #141c1e}
+.cnt div{padding:16px 22px;border-right:1px solid #141c1e;min-width:0}.cnt div:nth-child(2n){border-right:0}
+.cnt div:nth-child(n+3){border-top:1px solid #141c1e}
+.cnt b{display:block;font:400 10px var(--mono);letter-spacing:.14em;color:var(--mut);text-transform:uppercase}
+.cnt span{display:block;margin-top:6px;font:700 26px var(--mono);color:var(--y)}
+.feed{flex:1;overflow:hidden;padding:8px 0;min-height:160px}
+.feed .it{padding:10px 22px;border-bottom:1px solid #0d1314}.feed .it.new{animation:in 1.2s ease-out}
+.feed .it .m{font:11px var(--mono);color:var(--mut);display:flex;gap:8px;justify-content:space-between}
+.feed .it .m em{font-style:normal;color:var(--y);text-transform:uppercase;letter-spacing:.08em}
+.feed .it .h{font-size:14px;line-height:1.4;margin-top:4px;overflow-wrap:anywhere;color:#e8eef0}
+.feed .it.hi .h{color:#fff;font-weight:600}
+@keyframes in{from{background:rgba(0,240,255,.14)}to{background:transparent}}
+.ticker{flex:none;border-top:1px solid #1f2a2d;background:#030607;overflow:hidden;white-space:nowrap;height:46px;display:flex;align-items:center}
+.ticker .tr{display:inline-block;padding-left:100%;animation:scroll linear infinite;font:14px var(--mono);color:#dfe8ea}
+.ticker .tr span{margin-right:48px}
+.ticker .tr b{color:var(--y);font-weight:700;margin-right:8px;text-transform:uppercase}
+.ticker .tr i{font-style:normal;color:var(--mut);margin-left:8px}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+.empty{padding:20px 22px;color:var(--mut);font:13px var(--mono)}
+@media (max-width:820px){body{height:auto;min-height:100vh;overflow:visible}header nav{gap:14px}.wall{flex:none;grid-template-columns:minmax(0,1fr);overflow:visible}.map{border-right:0;border-bottom:1px solid #141c1e;height:calc(56vw + 70px);min-height:250px}.legend{font-size:10px;gap:4px 12px;bottom:8px}.feed{max-height:60vh}}
+@media (prefers-reduced-motion:reduce){.ticker .tr{animation:none;padding-left:16px}.dot{animation:none}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/today">Today</a><a href="/trends">Trends</a><a href="/app">App</a></nav></div></header>
+<div class="wall">
+  <div class="map" id="mapbox">
+    <canvas id="map" aria-label="World map of recent signals"></canvas>
+    <div class="tag"><i class="dot off" id="livedot"></i><b>OCULON</b> live wall</div>
+    <div class="legend"><span><i style="background:#00f0ff"></i>position in the signal</span><span><i style="border:1px solid #00f0ff"></i>country named in the signal</span><span><i style="background:#ff5d6c"></i>new in the last 10 minutes</span></div>
+  </div>
+  <aside class="side">
+    <div class="clock"><div class="t" id="clock">--:--:--</div><div class="d" id="date">UTC</div></div>
+    <div class="cnt">
+      <div><b>Signals, last hour</b><span id="c-h">-</span></div>
+      <div><b>Signals, 24h</b><span id="c-d">-</span></div>
+      <div><b>Sources up</b><span id="c-s">-</span></div>
+      <div><b>On the map</b><span id="c-m">-</span></div>
+    </div>
+    <div class="feed" id="feed"><div class="empty">Loading signals</div></div>
+  </aside>
+</div>
+<div class="ticker"><div class="tr" id="ticker"><span>Waiting for signals</span></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  if (params.get('kiosk') === '1') document.body.classList.add('kiosk');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const HIDE = new Set(['live']);
+  const DAY = 86400000;
+  const ago = (ms) => { const m = Math.max(0, (Date.now() - ms) / 60000); return m < 1 ? 'now' : m < 60 ? Math.round(m) + 'm ago' : m < 1440 ? (m / 60).toFixed(1) + 'h ago' : Math.round(m / 1440) + 'd ago'; };
+
+  // Country centroids (approximate), used only when a signal names a country and carries no position of its own.
+  const C = { US:[-98,39,'United States'],CA:[-106,56,'Canada'],MX:[-102,23,'Mexico'],BR:[-52,-10,'Brazil'],AR:[-64,-34,'Argentina'],CL:[-71,-33,'Chile'],PE:[-75,-9,'Peru'],CO:[-73,4,'Colombia'],VE:[-66,7,'Venezuela'],HT:[-72.5,19,'Haiti'],CU:[-79,21.5,'Cuba'],GB:[-2,54,'United Kingdom'],IE:[-8,53,'Ireland'],FR:[2,46.5,'France'],ES:[-3.7,40,'Spain'],PT:[-8,39.5,'Portugal'],DE:[10,51,'Germany'],NL:[5.5,52.2,'Netherlands'],BE:[4.5,50.6,'Belgium'],IT:[12.5,42.8,'Italy'],CH:[8.2,46.8,'Switzerland'],AT:[14.5,47.5,'Austria'],PL:[19.5,52,'Poland'],CZ:[15.5,49.8,'Czechia'],SE:[15,62,'Sweden'],NO:[9,61,'Norway'],FI:[26,63,'Finland'],DK:[9.5,56,'Denmark'],EE:[25.5,58.7,'Estonia'],LV:[24.6,56.9,'Latvia'],LT:[23.9,55.3,'Lithuania'],UA:[31,49,'Ukraine'],BY:[28,53.5,'Belarus'],RU:[60,58,'Russia'],RO:[25,46,'Romania'],BG:[25.5,42.7,'Bulgaria'],GR:[22,39,'Greece'],TR:[35,39,'Turkey'],IL:[35,31.4,'Israel'],LB:[35.9,33.9,'Lebanon'],SY:[38.5,35,'Syria'],IQ:[44,33,'Iraq'],IR:[54,32.5,'Iran'],SA:[45,24,'Saudi Arabia'],AE:[54,24,'United Arab Emirates'],QA:[51.2,25.3,'Qatar'],YE:[48,15.5,'Yemen'],EG:[30,26.5,'Egypt'],LY:[17,27,'Libya'],SD:[30,15.5,'Sudan'],ET:[39.5,8.6,'Ethiopia'],KE:[38,0.2,'Kenya'],NG:[8,9.5,'Nigeria'],ZA:[24.7,-29,'South Africa'],DZ:[2.6,28,'Algeria'],MA:[-6.5,31.8,'Morocco'],PK:[69.5,30,'Pakistan'],AF:[66,34,'Afghanistan'],IN:[79,22,'India'],BD:[90.3,23.8,'Bangladesh'],CN:[104,35,'China'],TW:[121,23.7,'Taiwan'],KR:[127.8,36.4,'South Korea'],KP:[127.2,40.2,'North Korea'],JP:[138,37,'Japan'],PH:[122,12.5,'Philippines'],VN:[106,16,'Vietnam'],TH:[101,15,'Thailand'],MM:[96,21,'Myanmar'],MY:[102,4,'Malaysia'],SG:[103.8,1.35,'Singapore'],ID:[117,-2.5,'Indonesia'],AU:[134,-25,'Australia'],NZ:[172,-41.5,'New Zealand'] };
+  const NAMES = Object.entries(C).map(([k, v]) => [v[2], k]).sort((a, b) => b[0].length - a[0].length);
+
+  /** Where a signal can be drawn: a position written in its own text, else a country it names, else nowhere. */
+  function placeOf(s) {
+    const texts = [s.title].concat((s.evidence || []).map((e) => e && e.text)).filter(Boolean).join(' | ');
+    const m = /(?<![\d.])(-?\d{1,2}\.\d{2,})\s*,\s*(-?\d{1,3}\.\d{2,})(?![\d.])/.exec(texts);
+    if (m) { const lat = +m[1], lon = +m[2]; if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && !(lat === 0 && lon === 0)) return { lon, lat, exact: true }; }
+    const iso = /,\s([A-Z]{2})(?=[:)\s,]|$)/.exec(s.title);
+    if (iso && C[iso[1]]) return { lon: C[iso[1]][0], lat: C[iso[1]][1], exact: false };
+    for (const [name, k] of NAMES) if (new RegExp('\\b' + name + '\\b').test(s.title)) return { lon: C[k][0], lat: C[k][1], exact: false };
+    return null;
+  }
+
+  const sigs = new Map();
+  const shownIds = new Set();
+  function add(s, fresh) {
+    if (!s || !s.id || HIDE.has(s.module) || sigs.has(s.id)) return false;
+    const ts = typeof s.ts === 'number' ? s.ts : Date.parse(s.createdAt);
+    if (!isFinite(ts)) return false;
+    const p = placeOf(s);
+    // Slight spread so several signals on one country do not sit on one pixel.
+    if (p && !p.exact) { const h = [...s.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7); p.lon += ((h & 255) / 255 - .5) * 3; p.lat += (((h >> 8) & 255) / 255 - .5) * 2; }
+    sigs.set(s.id, { s, ts, p, fresh: fresh ? Date.now() : 0 });
+    return true;
+  }
+  const list = () => [...sigs.values()].filter((x) => Date.now() - x.ts < DAY).sort((a, b) => b.ts - a.ts);
+
+  function renderSide(withTicker) {
+    const all = list();
+    const hour = all.filter((x) => Date.now() - x.ts < 3600000).length;
+    $('c-h').textContent = hour >= 200 ? '200+' : hour;
+    $('c-d').textContent = all.length >= 200 ? '200+' : all.length;
+    $('c-m').textContent = all.filter((x) => x.p).length;
+    const top = all.slice(0, 14);
+    $('feed').innerHTML = top.length ? top.map((x) => { const src = [...new Set((x.s.evidence || []).map((e) => e && e.source).filter(Boolean))].slice(0, 2).join(', '); const isNew = shownIds.size > 0 && !shownIds.has(x.s.id); return '<div class="it' + (x.s.score >= 75 ? ' hi' : '') + (isNew ? ' new' : '') + '"><div class="m"><span><em>' + esc(x.s.module) + '</em> ' + esc(src) + '</span><span>' + ago(x.ts) + '</span></div><div class="h">' + esc(x.s.title) + '</div></div>'; }).join('') : '<div class="empty">No signals in the last 24 hours on this server.</div>';
+    for (const x of top) shownIds.add(x.s.id);
+    if (withTicker === false) return;
+    const tk = all.slice(0, 30);
+    const tr = $('ticker');
+    tr.innerHTML = tk.length ? tk.map((x) => { const src = (x.s.evidence || []).map((e) => e && e.source).filter(Boolean)[0] || x.s.module; return '<span><b>' + esc(x.s.module) + '</b>' + esc(x.s.title) + '<i>' + esc(src) + ' · ' + ago(x.ts) + '</i></span>'; }).join('') : '<span>No signals in the last 24 hours.</span>';
+    tr.style.animationDuration = Math.max(40, tr.scrollWidth / 90) + 's';
+  }
+
+  /* ---------- clock ---------- */
+  function tick() { const d = new Date(); $('clock').textContent = d.toISOString().slice(11, 19); $('date').textContent = d.toUTCString().slice(0, 16) + ' · UTC'; }
+  tick(); setInterval(tick, 1000);
+
+  /* ---------- map ---------- */
+  const box = $('mapbox'), cv = $('map'), cx = cv.getContext('2d');
+  let W = 0, H = 0, proj = null, base = null, land = null;
+  const fallbackProj = (lon, lat) => [((lon + 180) / 360) * W, ((90 - lat) / 180) * H];
+  function project(lon, lat) { return proj ? proj([lon, lat]) : fallbackProj(lon, lat); }
+  function layout() {
+    const dpr = window.devicePixelRatio || 1;
+    W = box.clientWidth; H = box.clientHeight;
+    cv.width = W * dpr; cv.height = H * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    base = document.createElement('canvas'); base.width = W * dpr; base.height = H * dpr;
+    const bx = base.getContext('2d'); bx.scale(dpr, dpr);
+    if (window.d3) proj = d3.geoNaturalEarth1().fitExtent([[16, 40], [W - 16, H - 36]], { type: 'Sphere' });
+    if (land && window.d3) {
+      // Dot-matrix land, as on the overview page.
+      const mc = document.createElement('canvas'); mc.width = 720; mc.height = 360; const mx = mc.getContext('2d');
+      mx.fillStyle = '#fff'; mx.beginPath(); d3.geoPath(d3.geoEquirectangular().scale(720 / (2 * Math.PI)).translate([360, 180]), mx)(land); mx.fill();
+      const md = mx.getImageData(0, 0, 720, 360).data;
+      const step = W < 700 ? 2.2 : 1.2;
+      bx.fillStyle = '#2c2c2c';
+      for (let lat = -58; lat <= 82; lat += step) for (let lon = -180; lon < 180; lon += step) { if (md[(Math.min(359, Math.floor((90 - lat) * 2)) * 720 + Math.floor((lon + 180) * 2) % 720) * 4] < 128) continue; const [px, py] = project(lon, lat); bx.beginPath(); bx.arc(px, py, W < 700 ? .9 : 1.2, 0, 7); bx.fill(); }
+    } else {
+      bx.strokeStyle = '#111a1c'; bx.lineWidth = 1;
+      for (let lon = -180; lon <= 180; lon += 30) { const [x] = project(lon, 0); bx.beginPath(); bx.moveTo(x, 0); bx.lineTo(x, H); bx.stroke(); }
+      for (let lat = -60; lat <= 60; lat += 30) { const [, y] = project(0, lat); bx.beginPath(); bx.moveTo(0, y); bx.lineTo(W, y); bx.stroke(); }
+    }
+  }
+  function frame(t) {
+    const s = t / 1000, now = Date.now();
+    cx.clearRect(0, 0, W, H);
+    if (base) cx.drawImage(base, 0, 0, W, H);
+    for (const x of list()) {
+      if (!x.p) continue;
+      const [px, py] = project(x.p.lon, x.p.lat);
+      const age = now - x.ts, recent = age < 600000;
+      const a = Math.max(.25, 1 - age / DAY);
+      const col = recent ? '255,93,108' : '0,240,255';
+      if (recent || (x.fresh && now - x.fresh < 60000)) { const k = (s * .6 + (x.ts % 997) / 997) % 1; cx.strokeStyle = 'rgba(' + col + ',' + (1 - k) + ')'; cx.lineWidth = 1.4; cx.beginPath(); cx.arc(px, py, 4 + k * 22, 0, 7); cx.stroke(); }
+      const r = 2 + Math.min(3, x.s.score / 30);
+      if (x.p.exact) { cx.fillStyle = 'rgba(' + col + ',' + a + ')'; cx.beginPath(); cx.arc(px, py, r, 0, 7); cx.fill(); }
+      else { cx.strokeStyle = 'rgba(' + col + ',' + a + ')'; cx.lineWidth = 1.2; cx.beginPath(); cx.arc(px, py, r + 1, 0, 7); cx.stroke(); }
+    }
+    requestAnimationFrame(frame);
+  }
+  layout();
+  requestAnimationFrame(frame);
+  let rs = 0; window.addEventListener('resize', () => { clearTimeout(rs); rs = setTimeout(layout, 150); });
+  if (window.d3 && window.topojson) {
+    fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json').then((r) => r.json()).then((t) => { land = topojson.merge(t, t.objects.countries.geometries); layout(); }).catch(() => {});
+  }
+
+  /* ---------- data ---------- */
+  async function loadRecent() {
+    try {
+      const r = await fetch('/api/signals?limit=200');
+      if (!r.ok) throw new Error(String(r.status));
+      for (const s of await r.json()) add(s, false);
+      renderSide();
+    } catch (e) { if (!sigs.size) $('feed').innerHTML = '<div class="empty">Signals could not be loaded right now.</div>'; }
+  }
+  async function loadStatus() {
+    try {
+      const r = await fetch('/api/status?hours=1');
+      if (!r.ok) throw new Error(String(r.status));
+      const j = await r.json();
+      const src = j.sources || [];
+      $('c-s').textContent = src.length ? src.filter((x) => x.state !== 'down').length + '/' + src.length : '-';
+    } catch (e) { $('c-s').textContent = '-'; }
+  }
+  function stream() {
+    if (!window.EventSource) return;
+    const es = new EventSource('/api/stream');
+    es.onopen = () => $('livedot').classList.remove('off');
+    es.onerror = () => $('livedot').classList.add('off');
+    es.addEventListener('signal', (ev) => { try { if (add(JSON.parse(ev.data), true)) renderSide(false); } catch (e) {} });
+  }
+  loadRecent().then(stream);
+  loadStatus();
+  setInterval(loadStatus, 60000);
+  setInterval(renderSide, 30000);
+  setInterval(loadRecent, 300000);
+})();
+</script>
+</body>
+</html>

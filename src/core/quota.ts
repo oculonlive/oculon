@@ -30,6 +30,12 @@ export const DAILY_BUDGET: Record<string, number> = {
   coingecko: 300, // demo: 10,000/month
   fred: 2000,
   'github-search': 1000,
+  opentimestamps: 12000, // public calendars, keyless: 2 POSTs per new proof, up to 2 GETs per pending check
+  blockstream: 4000, // block lookups for confirmations, cached 30 days
+  'gemini-vision': 60, // Gemini free tier: gemini-2.5-flash allows ~20 requests/day; the fallback models have their own limits
+  'down-status': 30_000, // ~32 official status JSON feeds, cached 150 s
+  'down-probe': 8_000, // one small HTTPS request per probed service, cached 150 s
+  propublica: 3_000, // ProPublica Nonprofit Explorer API v2, keyless
   geckoterminal: 9000,
   kalshi: 2000,
   manifold: 2000,

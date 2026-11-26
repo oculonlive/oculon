@@ -37,7 +37,7 @@ async function readBody(req: IncomingMessage): Promise<string> {
 type Msg = { jsonrpc?: string; id?: number | string | null; method?: string; params?: Record<string, unknown>; result?: unknown; error?: unknown };
 
 /** Answers one HTTP request on the MCP endpoint. `page` renders the HTML a browser GET sees. */
-export async function handleMcpHttp(req: IncomingMessage, res: ServerResponse, mcp: McpServer, page: () => Promise<string>, log: (m: string) => void = () => {}): Promise<void> {
+export async function handleMcpHttp(req: IncomingMessage, res: ServerResponse, mcp: McpServer, page: () => Promise<string>, log: (m: string) => void = () => {}, guard?: (tool: string) => Promise<string | null>): Promise<void> {
   if (req.method === 'OPTIONS') return reply(res, 204, undefined);
   if (req.method === 'GET' || req.method === 'HEAD') {
     if (/text\/html/.test(String(req.headers.accept ?? ''))) {
@@ -65,7 +65,9 @@ export async function handleMcpHttp(req: IncomingMessage, res: ServerResponse, m
   for (const m of messages) {
     // Responses and notifications from the client need no answer.
     if (!m.method) continue;
-    const r = await mcp.handle({ jsonrpc: '2.0', id: m.id, method: m.method, params: m.params });
+    // A tool call may be refused by the API key gate (tier or daily quota); the client sees it as a tool error.
+    const refused = guard && m.method === 'tools/call' ? await guard(String(m.params?.name ?? '')) : null;
+    const r = refused ? { jsonrpc: '2.0', id: m.id, result: { content: [{ type: 'text', text: refused }], isError: true } } : await mcp.handle({ jsonrpc: '2.0', id: m.id, method: m.method, params: m.params });
     if (m.method === 'tools/call') log(`mcp ${String(m.params?.name ?? '')}`);
     if (r && m.id !== undefined && m.id !== null) out.push(r);
   }

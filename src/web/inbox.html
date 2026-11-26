@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Scam Inbox · Oculon</title>
+<meta name="description" content="Forward a suspicious email to check@oculon.live and get the verdict back by email: sender authentication, links, attachments and known scam patterns.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Scam Inbox: forward a suspicious email, get the verdict back"><meta property="og:description" content="Send it to check@oculon.live. Headers, links and attachments are checked and the verdict comes back by email."><meta property="og:url" content="https://oculon.live/inbox"><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--red:#ff5d6c;--amb:#ffb84d;--grn:#3ddc97;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(16px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}header nav a:hover{color:#fff}
+main{max-width:960px;margin:0 auto;padding:64px clamp(16px,4vw,40px) 120px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.3}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+h1{margin:14px 0 10px;font-size:clamp(42px,6vw,72px);font-weight:300;letter-spacing:-.04em;line-height:1.02}
+h1 span{color:var(--y)}
+.lead{font-size:18px;line-height:1.7;color:var(--soft);font-weight:300;max-width:720px}
+.box{margin-top:30px;border:1px solid rgba(0,240,255,.4);background:rgba(0,14,18,.82);backdrop-filter:blur(8px);padding:22px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.addr{font:700 clamp(20px,3.4vw,30px) var(--mono);color:#fff;word-break:break-all;flex:1 1 280px}
+.btn{font:700 13px var(--mono);letter-spacing:.08em;background:var(--y);color:#000;border:0;padding:12px 16px;cursor:pointer;text-transform:uppercase;text-decoration:none;display:inline-block}
+.btn.ghost{background:transparent;color:var(--y);border:1px solid rgba(0,240,255,.5)}
+.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:22px}
+.steps div{border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:16px}
+.steps b{display:block;font:400 11px var(--mono);letter-spacing:.14em;color:var(--y);text-transform:uppercase;margin-bottom:8px}
+.steps p{margin:0;font-size:15px;line-height:1.6}
+h2{margin:56px 0 12px;font-size:26px;font-weight:400;padding-top:24px;border-top:1px solid var(--line)}
+p,li{font-size:17px;line-height:1.75;color:var(--soft);font-weight:300}
+table{width:100%;border-collapse:collapse;margin-top:8px}
+td{padding:10px 12px;border-bottom:1px solid #141c1e;font-size:15px;color:var(--soft);vertical-align:top}
+td:first-child{font:600 14px var(--sans);color:#fff;width:30%}
+.note{font-size:13px;color:var(--mut)}
+code{font:.86em var(--mono);background:rgba(0,20,24,.8);border:1px solid rgba(0,240,255,.2);padding:1px 6px;color:#fff}
+footer{position:relative;z-index:1;border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:960px;margin:0 auto;padding:26px clamp(16px,4vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
+@media (max-width:760px){.steps{grid-template-columns:minmax(0,1fr)}td:first-child{width:40%}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/guard">Wallet Guard</a><a href="/discord">Discord</a><a href="/app">App</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+  <div class="lbl">Scam Inbox</div>
+  <h1>Not sure about an email?<br><span>Forward it.</span></h1>
+  <p class="lead">Send a suspicious email to the address below. Oculon checks who really sent it, every link, every attachment and the known scam patterns, and emails you the verdict.</p>
+  <div class="box">
+    <div class="addr" id="addr">check@oculon.live</div>
+    <button class="btn ghost" id="copy" type="button">Copy address</button>
+    <a class="btn" href="mailto:check@oculon.live">Open mail app</a>
+  </div>
+  <div class="steps">
+    <div><b>1. Forward</b><p>Forward the email to check@oculon.live, as an attachment if your mail app can.</p></div>
+    <div><b>2. Checked</b><p>Sender authentication, links, attachments and scam patterns go through the same checks as the Oculon email check.</p></div>
+    <div><b>3. Verdict</b><p>The answer comes back to the address you forwarded from, with the main reasons and a link to the full report.</p></div>
+  </div>
+
+  <h2>Forward as an attachment for the full check</h2>
+  <p>A normal forward copies the text but drops the original headers, which say whether the sender's domain really sent it (SPF, DKIM, DMARC) and which servers it passed through. Forwarded as an attachment, the email arrives untouched and everything can be checked.</p>
+  <ul>
+    <li><b>Gmail (web):</b> open the email, choose the three-dot menu, then <b>Forward as attachment</b>.</li>
+    <li><b>Outlook:</b> open the email, choose <b>More actions</b> (three dots), then <b>Forward as attachment</b>.</li>
+    <li><b>Apple Mail:</b> select the email, then <b>Message &gt; Forward as Attachment</b>.</li>
+    <li><b>Phone apps</b> often cannot attach an email. A normal forward still works: the text, links and attachments are checked, and the reply says that the headers were not available.</li>
+  </ul>
+  <p class="note">Do not click anything in the suspicious email before forwarding it. Forwarding is safe; the links inside are only opened by the check services, never in your browser.</p>
+
+  <h2>What is kept</h2>
+  <table>
+    <tr><td>The raw email</td><td>Not stored. It is read in memory for the check and then dropped.</td></tr>
+    <tr><td>The check result</td><td>Kept for 90 days, like every Oculon check: the verdict, the reasons, the subject and sender of the checked email, attachment names and fingerprints (SHA-256). It is shown only at the report link in your reply, which uses a random id.</td></tr>
+    <tr><td>Your address</td><td>Kept only as a one-way hash with the date and the verdict, for the daily limits, and removed after 30 days. It is used for nothing else and never added to a mailing list.</td></tr>
+    <tr><td>Who sends the reply</td><td>The reply is sent through Resend, an email delivery service, to the address you forwarded from.</td></tr>
+  </table>
+
+  <h2>Limits</h2>
+  <ul>
+    <li>Up to <b>10 checks per sender per day</b>, and 300 per day for the whole inbox. Over the limit, no reply is sent.</li>
+    <li>Emails up to <b>5 MB</b>, including attachments.</li>
+    <li>No reply to automatic messages (out-of-office replies, mailing lists, bounces), or when the sending domain failed authentication, so the inbox cannot be used to send mail to someone else.</li>
+    <li>Free for everyone. No account needed.</li>
+  </ul>
+  <p class="note">A verdict is what the sources found at that moment, not a guarantee that an email is safe. Oculon never asks for passwords, codes or payments by email. Prefer a page? Upload the .eml file in the <a href="/app">app</a> instead.</p>
+</main>
+<footer><div class="in"><span>© <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/guard">Wallet Guard</a> · <a href="/discord">Discord</a> · <a href="/docs">Docs</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#001a26', hi: '#00c8e0', intensity: 0.8, scale: 0.3 }); }
+document.getElementById('year').textContent = new Date().getFullYear();
+document.getElementById('copy').addEventListener('click', async (e) => {
+  try { await navigator.clipboard.writeText(document.getElementById('addr').textContent.trim()); e.target.textContent = 'Copied'; } catch (_) { e.target.textContent = 'Select and copy'; }
+  setTimeout(() => { e.target.textContent = 'Copy address'; }, 2000);
+});
+</script>
+</body>
+</html>

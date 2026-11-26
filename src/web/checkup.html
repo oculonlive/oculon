@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Security Checkup · Oculon</title>
+<meta name="description" content="A five-minute security checkup: is your password in breach lists, can your email domain be spoofed, and six habits that stop most account takeovers. Graded A to F.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Security Checkup: five minutes, graded A to F"><meta property="og:description" content="Password breach check hashed in your browser, email domain spoofing, wallet approvals and six habits. Nothing personal is sent."><meta property="og:url" content="https://oculon.live/checkup"><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--red:#ff5d6c;--amb:#ffb84d;--grn:#3ddc97;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(16px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none;white-space:nowrap}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}header nav a:hover{color:#fff}
+main{max-width:960px;margin:0 auto;padding:64px clamp(16px,4vw,40px) 120px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.3}
+footer{position:relative;z-index:1}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+h1{margin:14px 0 10px;font-size:clamp(40px,6vw,68px);font-weight:300;letter-spacing:-.04em;line-height:1.02}
+h1 span{color:var(--y)}
+.lead{font-size:18px;line-height:1.7;color:var(--soft);font-weight:300;max-width:720px}
+.box{margin-top:22px;border:1px solid rgba(0,240,255,.4);background:rgba(0,14,18,.82);backdrop-filter:blur(8px);padding:20px}
+.step{font:700 12px var(--mono);letter-spacing:.14em;color:var(--y);text-transform:uppercase;margin:0 0 8px}
+.box p.h{margin:0 0 12px;font-size:15px;line-height:1.6;color:var(--soft)}
+.form{display:flex;gap:8px;flex-wrap:wrap}
+.form input{flex:1 1 300px;min-width:0;background:#05090a;border:1px solid #2a3437;color:#fff;font:14px var(--mono);padding:12px}
+select{background:#05090a;border:1px solid #2a3437;color:#fff;font:14px var(--mono);padding:12px;min-width:0;max-width:100%}
+.btn{font:700 13px var(--mono);letter-spacing:.08em;background:var(--y);color:#000;border:0;padding:12px 16px;cursor:pointer;text-transform:uppercase;text-decoration:none;display:inline-block}
+.btn.ghost{background:transparent;color:var(--y);border:1px solid rgba(0,240,255,.5)}
+.btn:disabled{opacity:.45;cursor:default}
+.q{margin:14px 0 0}
+.q b{display:block;font-weight:500;font-size:16px;margin-bottom:8px}
+.ch{display:flex;gap:6px;flex-wrap:wrap}
+.ch label{border:1px solid #2a3437;background:#05090a;padding:9px 12px;font:13px var(--mono);cursor:pointer;color:var(--soft)}
+.ch input{position:absolute;opacity:0;pointer-events:none}
+.ch label:has(input:checked){border-color:var(--y);color:var(--y);background:rgba(0,240,255,.07)}
+.ch label:has(input:focus-visible){outline:2px solid var(--y)}
+.msg{margin-top:12px;font:13px var(--mono);color:var(--mut);min-height:18px}.msg.err{color:var(--red)}.msg.ok{color:var(--grn)}
+.res{display:grid;grid-template-columns:200px minmax(0,1fr);gap:24px;align-items:center;margin-top:30px}
+.grade{width:200px;height:200px;border:2px solid;display:grid;place-items:center;text-align:center}
+.grade b{display:block;font:600 96px/1 var(--sans)}.grade span{font:16px var(--mono);color:#fff}
+.g-A,.g-B{color:var(--grn);border-color:rgba(61,220,151,.6)}.g-C,.g-D{color:var(--amb);border-color:rgba(255,184,77,.6)}.g-F{color:var(--red);border-color:rgba(255,93,108,.6)}
+.items{margin-top:20px;border:1px solid #1f2a2d;background:rgba(4,8,9,.88)}
+.it{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:12px 16px;border-bottom:1px solid #141c1e;align-items:center}
+.it:last-child{border-bottom:0}
+.it b{font-weight:500}.it em{display:block;font-style:normal;font:12px var(--mono);color:var(--mut);margin-top:2px;word-break:break-word}
+.pts{font:700 14px var(--mono)}
+.fixes{margin:10px 0 0;padding-left:22px}.fixes li{margin-bottom:6px}
+.fixes small{font:12px var(--mono);color:var(--grn)}
+.share{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.card{margin-top:16px;max-width:100%;height:auto;border:1px solid #1f2a2d;display:block}
+h2{margin:56px 0 12px;font-size:26px;font-weight:400;padding-top:24px;border-top:1px solid var(--line)}
+p,li{font-size:17px;line-height:1.75;color:var(--soft);font-weight:300}
+.note{font-size:13px;color:var(--mut)}
+code{font:.86em var(--mono);background:rgba(0,20,24,.8);border:1px solid rgba(0,240,255,.2);padding:1px 6px;color:#fff}
+footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:960px;margin:0 auto;padding:26px clamp(16px,4vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
+@media (max-width:700px){.res{grid-template-columns:minmax(0,1fr)}.grade{width:100%;height:160px}header nav{gap:14px}.form .btn,.form select{flex:1 1 100%}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/rescue">Rescue</a><a href="/spot">Spot</a><a href="/app">App</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+  <div class="lbl">Security Checkup</div>
+  <h1>Five minutes. <span>One grade.</span></h1>
+  <p class="lead">Check the password you use most, how well your email domain is protected, and six habits that stop most account takeovers. You get a score from 0 to 100, a grade, and the fixes that matter most.</p>
+
+  <div class="box">
+    <p class="step">1 · A password you use (optional)</p>
+    <p class="h">It is hashed in this browser. Only the first 5 characters of the hash are sent, so nobody, including Oculon, sees the password.</p>
+    <div class="form"><input id="pw" type="password" autocomplete="off" placeholder="Type a password to check" aria-label="Password"></div>
+  </div>
+
+  <div class="box">
+    <p class="step">2 · Your email (optional)</p>
+    <p class="h">Only the part after the @ is sent, to check whether mail from that domain can be forged and whether the domain has had breaches.</p>
+    <div class="form"><input id="email" type="text" autocomplete="off" spellcheck="false" placeholder="you@example.com or just example.com" aria-label="Email or email domain"></div>
+  </div>
+
+  <div class="box">
+    <p class="step">3 · A crypto wallet (optional)</p>
+    <p class="h">A public address only. It is read for risky token approvals, the same check as Wallet Guard.</p>
+    <div class="form"><input id="wallet" type="text" autocomplete="off" spellcheck="false" placeholder="0x... (leave empty to skip)" aria-label="Wallet address"><select id="chain" aria-label="Chain"><option value="eth">Ethereum</option><option value="robinhood">Robinhood Chain</option><option value="arbitrum">Arbitrum</option><option value="polygon">Polygon</option><option value="optimism">Optimism</option></select></div>
+  </div>
+
+  <div class="box" id="habits">
+    <p class="step">4 · Six habits</p>
+    <div class="q"><b>Do you use a password manager?</b><div class="ch" data-k="passwordManager"><label><input type="radio" name="passwordManager" value="yes">Yes</label><label><input type="radio" name="passwordManager" value="no">No</label></div></div>
+    <div class="q"><b>How do you sign in to your email with two-step sign-in?</b><div class="ch" data-k="twoFactor"><label><input type="radio" name="twoFactor" value="key">Passkey or security key</label><label><input type="radio" name="twoFactor" value="app">Authenticator app</label><label><input type="radio" name="twoFactor" value="sms">Text message code</label><label><input type="radio" name="twoFactor" value="none">I do not use it</label></div></div>
+    <div class="q"><b>Does every account have its own password?</b><div class="ch" data-k="uniquePasswords"><label><input type="radio" name="uniquePasswords" value="all">Yes, all</label><label><input type="radio" name="uniquePasswords" value="most">Most</label><label><input type="radio" name="uniquePasswords" value="few">I reuse a few</label></div></div>
+    <div class="q"><b>Is there a SIM PIN or a port-out lock with your carrier?</b><div class="ch" data-k="simLock"><label><input type="radio" name="simLock" value="yes">Yes</label><label><input type="radio" name="simLock" value="unsure">Not sure</label><label><input type="radio" name="simLock" value="no">No</label></div></div>
+    <div class="q"><b>How do your phone, computer and browser update?</b><div class="ch" data-k="updates"><label><input type="radio" name="updates" value="auto">Automatically</label><label><input type="radio" name="updates" value="sometimes">When I remember</label><label><input type="radio" name="updates" value="rarely">Rarely</label></div></div>
+    <div class="q"><b>Are your files and photos backed up?</b><div class="ch" data-k="backups"><label><input type="radio" name="backups" value="yes">Yes, automatically</label><label><input type="radio" name="backups" value="sometimes">Sometimes</label><label><input type="radio" name="backups" value="no">No</label></div></div>
+  </div>
+
+  <div class="box">
+    <p class="step">5 · Your result</p>
+    <button class="btn" id="go">Get my score</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="out"></div>
+
+  <h2>What is sent</h2>
+  <ul>
+    <li><b>Password:</b> never. The browser sends 5 hex characters of its SHA-1 hash to <code>/api/pwned</code> and compares the rest itself (Have I Been Pwned's range method).</li>
+    <li><b>Email:</b> only the domain, to <code>/api/emailsec</code> and <code>/api/breaches</code>.</li>
+    <li><b>Score:</b> your answers and the counts above go to <code>/api/checkup</code>, which scores them and keeps nothing. The share card shows only the grade and score.</li>
+  </ul>
+  <p class="note">A score reads your answers at one moment and cannot see everything; it is guidance, not a guarantee. Breach data from Have I Been Pwned (CC BY 4.0).</p>
+</main>
+<footer><div class="in"><span>&copy; <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/rescue">Rescue</a> · <a href="/spot">Spot the Scam</a> · <a href="/guard">Wallet Guard</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#00101a', hi: '#00c8e0', intensity: 0.5, scale: 0.3 }); }
+document.getElementById('year').textContent = new Date().getFullYear();
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const msg = (t, cls) => { $('msg').textContent = t || ''; $('msg').className = 'msg' + (cls ? ' ' + cls : ''); };
+  const getJson = async (url) => { const r = await fetch(url); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status)); return j; };
+  const KEY = 'oculon.checkup.habits';
+  try { const saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; for (const k in saved) { const i = document.querySelector('input[name="' + k + '"][value="' + saved[k] + '"]'); if (i) i.checked = true; } } catch (e) { /* nothing saved */ }
+
+  async function passwordCheck(pw) {
+    if (!crypto.subtle) throw new Error('this browser cannot hash here (it needs a secure https page)');
+    const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(pw));
+    const hex = [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+    const j = await getJson('/api/pwned?prefix=' + hex.slice(0, 5));
+    const hit = j.suffixes.find((s) => s[0] === hex.slice(5));
+    return { pwned: Boolean(hit && hit[1] > 0), count: hit ? hit[1] : 0 };
+  }
+
+  $('go').addEventListener('click', async () => {
+    const habits = {};
+    document.querySelectorAll('#habits .ch').forEach((g) => { const c = g.querySelector('input:checked'); if (c) habits[g.dataset.k] = c.value; });
+    try { localStorage.setItem(KEY, JSON.stringify(habits)); } catch (e) { /* private mode */ }
+    const body = { habits };
+    const skipped = [];
+    const pw = $('pw').value;
+    const raw = $('email').value.trim().toLowerCase();
+    const domain = raw ? raw.slice(raw.lastIndexOf('@') + 1).replace(/^www\./, '').replace(/[\s/].*$/, '') : '';
+    const wallet = $('wallet').value.trim();
+    if (domain && !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(domain)) return msg('That email domain does not look right. Try something like example.com.', 'err');
+    if (wallet && !/^0x[0-9a-fA-F]{40}$/.test(wallet)) return msg('A wallet address is 0x followed by 40 hex characters, or leave it empty.', 'err');
+    if (!pw && !domain && !wallet && !Object.keys(habits).length) return msg('Answer at least one question first.', 'err');
+    $('go').disabled = true;
+    try {
+      if (pw) { msg('Checking the password hash'); try { body.password = await passwordCheck(pw); } catch (e) { skipped.push('password check (' + e.message + ')'); } }
+      if (domain) {
+        msg('Checking ' + domain);
+        const [es, br] = await Promise.allSettled([getJson('/api/emailsec?domain=' + encodeURIComponent(domain)), getJson('/api/breaches?domain=' + encodeURIComponent(domain))]);
+        if (es.status === 'fulfilled' && es.value.result && es.value.result.verdict) body.emailDomain = { verdict: es.value.result.verdict }; else skipped.push('email domain check (' + (es.reason ? es.reason.message : 'no answer') + ')');
+        if (br.status === 'fulfilled' && br.value.result) body.domainBreaches = br.value.result.total; else skipped.push('breach list (' + (br.reason ? br.reason.message : 'no answer') + ')');
+      }
+      if (wallet) {
+        msg('Reading wallet approvals, this can take a minute');
+        try { const j = await getJson('/api/approvals?address=' + wallet + '&chain=' + $('chain').value); body.wallet = { riskyApprovals: (j.result.approvals || []).filter((a) => a.risk === 'high' || a.risk === 'medium').length }; } catch (e) { skipped.push('wallet approvals (' + e.message + ')'); }
+      }
+      msg('Scoring');
+      const r = await fetch('/api/checkup', { method: 'POST', headers: { 'content-type': 'application/json', 'x-oculon': '1' }, body: JSON.stringify(body) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+      render(j.result, skipped);
+      msg(skipped.length ? 'Some checks could not run and were left out: ' + skipped.join('; ') : '', skipped.length ? 'err' : 'ok');
+    } catch (e) { msg('Could not score: ' + e.message, 'err'); }
+    finally { $('go').disabled = false; $('pw').value = ''; }
+  });
+
+  function render(r, skipped) {
+    const card = '/checkup/card/' + r.grade + '-' + r.score + '.svg';
+    const text = 'I took the Oculon Security Checkup and got ' + r.grade + ' (' + r.score + '/100). Five minutes, and the password never leaves the browser.';
+    const link = location.origin + '/checkup';
+    const items = r.items.map((i) => '<div class="it"><span><b>' + esc(i.label) + '</b><em>' + esc(i.answer) + '</em></span><span class="pts" style="color:' + (i.points === i.max ? 'var(--grn)' : i.points ? 'var(--amb)' : 'var(--red)') + '">' + i.points + ' / ' + i.max + '</span></div>').join('');
+    const fixes = r.topFixes.length ? '<ol class="fixes">' + r.topFixes.map((f) => '<li>' + esc(f.fix) + (f.gain ? ' <small>+' + f.gain + ' points</small>' : '') + '</li>').join('') + '</ol>' : '<p>Nothing to fix in what you answered. Keep it that way.</p>';
+    $('out').innerHTML = '<div class="res"><div class="grade g-' + esc(r.grade) + '"><div><b>' + esc(r.grade) + '</b><span>' + r.score + ' / 100</span></div></div><div><h2 style="margin:0;border:0;padding:0">Top fixes</h2>' + fixes + '</div></div>'
+      + '<div class="items">' + items + '</div><p class="note">' + esc(r.note) + (skipped.length ? ' Checks that could not run were left out.' : '') + '</p>'
+      + '<img class="card" src="' + card + '" alt="Share card: grade ' + esc(r.grade) + ', ' + r.score + ' of 100" width="1200" height="630">'
+      + '<div class="share"><a class="btn" target="_blank" rel="noopener" href="https://x.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(link) + '">Share on X</a><button class="btn ghost" id="copy">Copy text</button><a class="btn ghost" href="' + card + '" download>Download card</a><a class="btn ghost" href="/rescue">Something already went wrong?</a></div>';
+    $('copy').onclick = async () => { try { await navigator.clipboard.writeText(text + ' ' + link); $('copy').textContent = 'Copied'; } catch (e) { $('copy').textContent = 'Copy failed'; } };
+    $('out').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+})();
+</script>
+</body>
+</html>

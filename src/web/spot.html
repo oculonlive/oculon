@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Spot the Scam · Oculon</title>
+<meta name="description" content="Eight links a day: real phishing sites from a live blocklist mixed with real official sign-in pages. Can you tell them apart?">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Spot the Scam: eight links, one a day"><meta property="og:description" content="Real phishing sites from a live blocklist mixed with real official sign-in pages. Scam or legit?"><meta property="og:url" content="https://oculon.live/spot"><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--red:#ff5d6c;--amb:#ffb84d;--grn:#3ddc97;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(16px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none;white-space:nowrap}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}header nav a:hover{color:#fff}
+main{max-width:860px;margin:0 auto;padding:64px clamp(16px,4vw,40px) 120px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.3}
+footer{position:relative;z-index:1}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);display:flex;gap:14px;flex-wrap:wrap}
+h1{margin:14px 0 10px;font-size:clamp(40px,6vw,68px);font-weight:300;letter-spacing:-.04em;line-height:1.02}
+h1 span{color:var(--y)}
+.lead{font-size:18px;line-height:1.7;color:var(--soft);font-weight:300;max-width:720px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:26px 0 10px}
+.bar span{font:12px var(--mono);color:var(--mut);border:1px solid #1f2a2d;padding:7px 10px}
+.bar b{color:#fff;font-weight:400}
+.dots{display:flex;gap:6px;margin:0 0 14px}
+.dots i{flex:1;height:6px;background:#1f2a2d}
+.dots i.ok{background:var(--grn)}.dots i.no{background:var(--red)}.dots i.cur{background:var(--y)}
+.card{border:1px solid rgba(0,240,255,.4);background:rgba(0,14,18,.86);backdrop-filter:blur(8px);padding:clamp(18px,4vw,30px)}
+.card .n{font:12px var(--mono);letter-spacing:.14em;color:var(--mut);text-transform:uppercase}
+.url{margin:16px 0 22px;font:700 clamp(16px,3.6vw,24px) var(--mono);color:#fff;word-break:break-all;line-height:1.5;user-select:all;-webkit-user-select:all}
+.q{font-size:16px;color:var(--soft);margin:0 0 14px}
+.btns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.btn{font:700 15px var(--mono);letter-spacing:.08em;background:var(--y);color:#000;border:0;padding:16px;cursor:pointer;text-transform:uppercase;text-decoration:none;text-align:center}
+.btn.scam{background:var(--red)}.btn.legit{background:var(--grn)}
+.btn.ghost{background:transparent;color:var(--y);border:1px solid rgba(0,240,255,.5);font-size:13px;padding:12px 14px}
+.btn:disabled{opacity:.4;cursor:default}
+.verdict{margin-top:18px;border-top:1px solid #1f2a2d;padding-top:16px}
+.verdict h3{margin:0 0 8px;font:700 16px var(--mono);letter-spacing:.06em}
+.verdict h3.ok{color:var(--grn)}.verdict h3.no{color:var(--red)}
+.verdict ul{margin:8px 0 0;padding-left:20px}.verdict li{font-size:15px;line-height:1.6}
+.verdict .real{font:13px var(--mono);margin-top:8px;color:var(--mut);word-break:break-all}
+.verdict .real a{color:var(--y)}
+.next{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+.final{text-align:center}
+.final .big{font:700 clamp(56px,12vw,96px)/1 var(--mono);color:var(--y);margin:10px 0}
+.final .share{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.review{margin-top:24px;text-align:left;border:1px solid #1f2a2d}
+.review div{display:grid;grid-template-columns:70px minmax(0,1fr);gap:10px;padding:10px 14px;border-bottom:1px solid #141c1e;font:13px var(--mono);align-items:start}
+.review div:last-child{border-bottom:0}
+.review code{word-break:break-all;color:#e8eef0}
+.tag{font:700 11px var(--mono);padding:3px 6px;border:1px solid;text-align:center}
+.t-scam{color:var(--red);border-color:rgba(255,93,108,.5)}.t-legit{color:var(--grn);border-color:rgba(61,220,151,.5)}
+.err{color:var(--red);font:14px var(--mono)}
+h2{margin:56px 0 12px;font-size:26px;font-weight:400;padding-top:24px;border-top:1px solid var(--line)}
+p,li{font-size:17px;line-height:1.75;color:var(--soft);font-weight:300}
+.note{font-size:13px;color:var(--mut)}
+code{font:.9em var(--mono)}
+footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:860px;margin:0 auto;padding:26px clamp(16px,4vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
+@media (max-width:600px){header nav{gap:14px}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/checkup">Checkup</a><a href="/rescue">Rescue</a><a href="/app">App</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+  <div class="lbl"><span>Spot the Scam</span><span id="date"></span></div>
+  <h1>Scam or <span>legit?</span></h1>
+  <p class="lead">Eight links, a new round every day at 00:00 UTC. The scams are real phishing sites from a live blocklist; the rest are real official sign-in pages. Read the address and decide.</p>
+  <div class="bar"><span>Score <b id="score">0</b></span><span>Streak <b id="streak">0</b> day(s)</span><span>Best <b id="best">0</b>/8</span></div>
+  <div class="dots" id="dots"></div>
+  <div id="game"><div class="card"><p class="note">Loading today's round</p></div></div>
+
+  <h2>How to read a link</h2>
+  <ul>
+    <li><b>Read the domain from the right.</b> In <code>connect.secure.wellsfargo.com</code> the domain is <code>wellsfargo.com</code>; everything before it is a subdomain the owner controls.</li>
+    <li><b>A brand name anywhere else proves nothing.</b> <code>metamask-claim.example</code> belongs to whoever owns <code>example</code>.</li>
+    <li><b>Free site builders</b> such as pages.dev or vercel.app host real projects too, but a wallet or bank will not ask you to sign in there.</li>
+    <li><b>The padlock and https</b> only mean the connection is encrypted. Most phishing sites have them.</li>
+  </ul>
+  <p class="note">Scam links are defanged (<code>hxxps</code>, <code>[.]</code>) and never clickable: do not type them into a browser. Scams come from the ScamSniffer blocklist; legitimate pages come from a fixed list of official addresses. JSON at <code>/api/spot</code>.</p>
+</main>
+<footer><div class="in"><span>&copy; <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/checkup">Checkup</a> · <a href="/rescue">Rescue</a> · <a href="/guard">Wallet Guard</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#1a0006', hi: '#00c8e0', intensity: 0.6, scale: 0.3 }); }
+document.getElementById('year').textContent = new Date().getFullYear();
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const KEY = 'oculon.spot';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } };
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) { /* private mode: no streak kept */ } };
+  const st = load();
+  st.rounds = st.rounds || {};
+  const qd = new URLSearchParams(location.search).get('date');
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(qd || '') ? qd : new Date().toISOString().slice(0, 10);
+  let round = null;
+  const mine = () => (st.rounds[date] = st.rounds[date] || { guesses: [] });
+
+  function dayBefore(d) { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() - 1); return t.toISOString().slice(0, 10); }
+  function streak() {
+    let d = new Date().toISOString().slice(0, 10), n = 0;
+    if (!(st.rounds[d] && st.rounds[d].done)) d = dayBefore(d);
+    while (st.rounds[d] && st.rounds[d].done) { n++; d = dayBefore(d); }
+    return n;
+  }
+  function stats() {
+    const g = mine().guesses;
+    $('score').textContent = g.filter((x, i) => x === round.items[i].answer).length;
+    $('streak').textContent = streak();
+    $('best').textContent = Object.values(st.rounds).reduce((m, r) => Math.max(m, r.score || 0), 0);
+    $('dots').innerHTML = round.items.map((it, i) => '<i class="' + (i < g.length ? (g[i] === it.answer ? 'ok' : 'no') : i === g.length ? 'cur' : '') + '"></i>').join('');
+  }
+
+  function showCard() {
+    const g = mine().guesses;
+    stats();
+    if (g.length >= round.items.length) return showFinal();
+    const it = round.items[g.length];
+    $('game').innerHTML = '<div class="card"><div class="n">Link ' + it.n + ' of ' + round.items.length + '</div><div class="url" aria-label="Address">' + esc(it.display) + '</div><p class="q">Would you sign in here?</p><div class="btns"><button class="btn scam" data-g="scam">Scam</button><button class="btn legit" data-g="legit">Legit</button></div><div id="v"></div></div>';
+    $('game').querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', () => guess(b.dataset.g)));
+  }
+
+  function guess(g) {
+    const r = mine();
+    const it = round.items[r.guesses.length];
+    r.guesses.push(g);
+    save();
+    stats();
+    const ok = g === it.answer;
+    $('game').querySelectorAll('[data-g]').forEach((b) => { b.disabled = true; });
+    const real = it.answer === 'legit' && it.url ? '<div class="real">Real address: <a href="' + esc(it.url) + '" target="_blank" rel="noopener">' + esc(it.url) + '</a></div>' : '<div class="real">Source: ' + esc(it.source) + '. Do not visit it.</div>';
+    $('v').innerHTML = '<div class="verdict"><h3 class="' + (ok ? 'ok' : 'no') + '">' + (ok ? 'Right' : 'Not quite') + ': it is ' + (it.answer === 'scam' ? 'a scam' : 'legit') + '</h3><p style="margin:0">' + esc(it.explanation) + '</p>'
+      + (it.signs.length > 1 ? '<ul>' + it.signs.slice(1).map((s) => '<li>' + esc(s) + '</li>').join('') + '</ul>' : '') + real
+      + '<div class="next"><button class="btn ghost" id="nx">' + (r.guesses.length >= round.items.length ? 'See my score' : 'Next link') + '</button></div></div>';
+    $('nx').addEventListener('click', showCard);
+    $('nx').focus();
+  }
+
+  function showFinal() {
+    const r = mine();
+    const score = r.guesses.filter((x, i) => x === round.items[i].answer).length;
+    if (!r.done) { r.done = true; r.score = score; save(); }
+    stats();
+    const text = 'Spot the Scam ' + date + ': ' + score + '/' + round.items.length;
+    const link = location.origin + '/spot';
+    $('game').innerHTML = '<div class="card final"><div class="n">Round ' + esc(date) + '</div><div class="big">' + score + '/' + round.items.length + '</div><p>' + (score === round.items.length ? 'Perfect round.' : score >= 6 ? 'Sharp eyes.' : 'The address is the only thing a scammer cannot fake. Read it from the right.') + ' A new round comes at 00:00 UTC.</p>'
+      + '<div class="share"><a class="btn" style="font-size:13px;padding:12px 14px" target="_blank" rel="noopener" href="https://x.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(link) + '">Share on X</a><button class="btn ghost" id="cp">Copy result</button></div>'
+      + '<div class="review">' + round.items.map((it, i) => '<div><span class="tag t-' + it.answer + '">' + it.answer.toUpperCase() + '</span><span><code>' + esc(it.display) + '</code><br><span style="color:' + (r.guesses[i] === it.answer ? 'var(--grn)' : 'var(--red)') + '">you said ' + esc(r.guesses[i]) + '</span></span></div>').join('') + '</div></div>';
+    $('cp').addEventListener('click', async () => { try { await navigator.clipboard.writeText(text + ' ' + link); $('cp').textContent = 'Copied'; } catch (e) { $('cp').textContent = 'Copy failed'; } });
+  }
+
+  (async () => {
+    $('date').textContent = date + ' UTC';
+    try {
+      const res = await fetch('/api/spot?date=' + date);
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || ('HTTP ' + res.status));
+      round = j.result;
+      if (!round.available) { $('game').innerHTML = '<div class="card"><p class="err">' + esc(round.reason) + '</p></div>'; return; }
+      const r = mine();
+      if (r.guesses.length > round.items.length) r.guesses = r.guesses.slice(0, round.items.length);
+      showCard();
+    } catch (e) { $('game').innerHTML = '<div class="card"><p class="err">Could not load the round: ' + esc(e.message) + '</p></div>'; }
+  })();
+})();
+</script>
+</body>
+</html>

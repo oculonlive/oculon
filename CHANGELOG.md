@@ -2,6 +2,34 @@
 
 All notable changes are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## 0.4.0
+
+API keys and fifteen new tools.
+
+API keys
+- One key for the REST API, the SDK, the CLI and the remote MCP server, made at console.oculon.live (or `/console` on any install) after a wallet signature. No email, no payment. A key is shown once and stored only as a SHA-256 hash; a wallet can have five.
+- Free key: the everyday checks and public feeds, 200 calls a day. Holder key: every service, 5,000 calls a day, for a wallet holding 5,000,000 OCULON. The balance is read again every six hours; a wallet below the line keeps a working key on the free tier.
+- Calls without a key from outside Oculon's own pages keep working on the free services, 50 a day per address (500 for the Oculon Shield extension). Oculon's own pages are not limited. The gate is on when `OCULON_API_KEYS=1` in public mode.
+- `/api/key` shows a key's tier and what is left today; `/api/catalog` lists every endpoint and MCP tool with its tier. Responses carry `x-ratelimit-limit`, `x-ratelimit-remaining` and `x-oculon-tier`.
+- SDK: `new OculonClient({ apiKey })` calls the hosted API. CLI: `oculon api <path> name=value` and `oculon api key`.
+
+New tools
+- Screenshot Check (`/screenshot`): a screenshot of a chat, SMS, email, ad or page is read by a free Gemini model, and the scam check judges the text and every link in it.
+- I Got Scammed (`/rescue`): a checklist for the next 10 minutes, today and this week, for eleven situations, with official reporting links by country.
+- Is It Down (`/down`): official status pages of about 30 services, plus a labelled one-location probe for services without one.
+- Scam Inbox (`/inbox`): forward a suspicious email to check@oculon.live and the verdict comes back by email (Cloudflare Email Worker in `edge/inbox`).
+- Discord Sentinel (`/discord`): a bot that removes malicious links, warns on suspicious ones, flags members imitating the staff, and answers `/check`.
+- Brand Shield (`/brandshield`): domains imitating a brand, from lookalikes, new certificates, DNS and the URL check.
+- Oculon Wire (`/today`): the strongest stored signals of the day as six lines, a card image and a ready post.
+- Scam Trends (`/trends`): counts of what people checked this week. Nothing that was checked is shown; small groups are hidden.
+- Live Wall (`/wall`): world signals on one live screen, with a kiosk mode.
+- Spot the Scam (`/spot`): a daily game of eight links, real blocklisted phishing domains against real official pages.
+- Terms Reader (`/terms-reader`): the clauses in terms or a contract worth reading twice, each quoted.
+- Prove It (`/prove`): timestamp a file on Bitcoin with OpenTimestamps; only its hash leaves the browser.
+- Security Checkup (`/checkup`): a five-minute score from A to F with the top fixes.
+- Charity Check (`/charity`): US nonprofits by name or EIN from IRS data.
+- Oculon Embed (`/embed`): a link checker any website can add with one script tag.
+
 ## 0.3.0
 
 Rug Radar, Wallet Guard and the Oculon Shield browser extension.

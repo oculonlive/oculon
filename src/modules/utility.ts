@@ -350,6 +350,18 @@ export async function balanceOf(address: string): Promise<bigint> {
   return BigInt(hex);
 }
 
+/** Checks a sign-in message from createNonce and its signature, uses the nonce up, and returns the signing wallet. */
+export function signInWallet(message: string, signature: string): string {
+  const nonce = /Nonce: ([0-9a-f]{24})/.exec(message)?.[1];
+  const entry = nonce ? nonces.get(nonce) : undefined;
+  if (!nonce || !entry || entry.exp < Date.now()) throw new Error('this sign-in request expired; start again');
+  if (!/^[^\n]+ wants you to sign in with your wallet:\n/.test(message)) throw new Error('not a sign-in message');
+  const signer = recoverPersonalSigner(message, signature);
+  if (!signer || signer !== entry.address || !message.includes(entry.address)) throw new Error('the signature does not match the wallet address');
+  nonces.delete(nonce);
+  return signer;
+}
+
 export interface HolderSession { key: string | null; address: string; balance: string; holder: boolean; expiresAt: string | null; needs: string }
 
 export async function verifyHolder(ctx: Ctx, owner: string, message: string, signature: string): Promise<HolderSession> {

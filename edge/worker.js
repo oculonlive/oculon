@@ -1,5 +1,5 @@
 /**
- * Oculon edge Worker: serves app.<domain>, docs.<domain> and mcp.<domain> (remote MCP) from the same Oculon server.
+ * Oculon edge Worker: serves app.<domain>, docs.<domain>, mcp.<domain> (remote MCP) and console.<domain> (API keys) from the same Oculon server.
  *
  * The hosting plan gives the server one custom domain, so this Worker answers the two subdomains and
  * forwards each request to ORIGIN with the site name ("app" or "docs") and the visitor's address in
@@ -10,7 +10,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const site = url.hostname.split('.')[0];
-    if (site !== 'app' && site !== 'docs' && site !== 'mcp') return new Response('Not found', { status: 404 });
+    if (site !== 'app' && site !== 'docs' && site !== 'mcp' && site !== 'console') return new Response('Not found', { status: 404 });
 
     const target = new URL(url.pathname + url.search, env.ORIGIN);
     const headers = new Headers(request.headers);

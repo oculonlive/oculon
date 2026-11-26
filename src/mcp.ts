@@ -2,6 +2,7 @@
  * Oculon MCP server over stdio (JSON-RPC 2.0, one message per line). No dependencies.
  * Lets Claude and other MCP clients call every Oculon module as a tool.
  */
+import { trendsPostText } from './modules/trends.js';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
@@ -14,7 +15,7 @@ import { DOC_MAX_BYTES } from './modules/doc.js';
 import { briefOf, verdictOf } from './core/verdict.js';
 import { CARD_HTML, CARD_URI, CARD_URI_OPENAI, MCP_APP_MIME, SKYBRIDGE_MIME, type CardData } from './web/card.js';
 
-export const SERVER_INFO = { name: 'oculon', version: '0.3.0' };
+export const SERVER_INFO = { name: 'oculon', version: '0.4.0' };
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
 type Json = Record<string, unknown>;
@@ -350,6 +351,72 @@ export const TOOLS: Tool[] = [
     run: async (o, a) => compact(await o.phoneCheck(String(a.number), a.country ? { country: String(a.country) } : {})),
   },
   {
+    name: 'oculon_prove',
+    description: 'Timestamp a file on Bitcoin for free through OpenTimestamps. Pass the SHA-256 of the file in hex; the file itself is never sent. Returns a pending proof (usually confirmed within a few hours) and the path of its standard .ots file. The same hash again returns the existing proof. It proves the file existed by the block time, not who made it or that it is true.',
+    inputSchema: schema({ sha256: str('SHA-256 of the file, 64 hex characters'), label: str('Optional public label, up to 80 characters') }, ['sha256']),
+    run: async (o, a) => compact(await o.proveSubmit(String(a.sha256), a.label ? String(a.label) : undefined)),
+  },
+  {
+    name: 'oculon_prove_status',
+    description: "Look up a Bitcoin timestamp made with oculon_prove or on oculon.live/prove by the file's SHA-256: pending, or confirmed in Bitcoin block N at time T. To verify a file was timestamped, hash it and look the hash up.",
+    inputSchema: schema({ sha256: str('SHA-256 of the file, 64 hex characters') }, ['sha256']),
+    run: async (o, a) => compact(await o.proveStatus(String(a.sha256))),
+  },
+  {
+    name: 'oculon_is_it_down',
+    description: 'Is a popular service down right now? Reads official status pages (GitHub, Discord, Reddit, OpenAI, Claude, Cloudflare, Zoom, Slack, Coinbase and ~25 more): overall state, components with problems and open incidents. For X, Google, YouTube, Instagram, Facebook, WhatsApp, Telegram, TikTok, Spotify, Netflix and Amazon, which publish no status feed, it makes one HTTPS probe from the Oculon server and labels it "our probe from one location", never as an official outage. Without a service it returns the whole board, problems first.',
+    inputSchema: schema({ service: str('Optional: service id, name or domain, e.g. "github", "discord", "x"') }, []),
+    run: async (o, a) => compact(await o.downStatus(a.service ? String(a.service) : undefined)),
+  },
+  {
+    name: 'oculon_charity_check',
+    description: 'Check a US-registered nonprofit before donating, by name or EIN (ProPublica Nonprofit Explorer, IRS data): matches with city, state, NTEE category and 501(c) subsection; for the chosen organisation the ruling year, deductibility and latest Form 990 filings with revenue, expenses and assets. Warns on no filings in 3 years, a revocation shown in the record, non-501(c)(3) status, and names very close to a well-known charity with a different EIN. Covers US nonprofits only.',
+    inputSchema: schema({ q: str('Charity name or EIN, e.g. "red cross" or "53-0196605"'), ein: str('Optional: EIN of the match to open') }, ['q']),
+    run: async (o, a) => compact(await o.charityCheck(String(a.q), a.ein ? { ein: String(a.ein) } : {})),
+  },
+  {
+    name: 'oculon_brand_shield',
+    description: "Which domains are imitating this brand right now? Combines lookalike domains that exist in DNS, certificates from the last 90 days whose names contain the brand (Certificate Transparency via crt.sh) and are not the brand's own, DNS resolution, and the URL check on the most suspicious live ones. Each domain gets a score with reasons (brand plus login/secure/verify/airdrop/claim words, risky TLD, certificate age, resolves, mail servers, flagged by the URL check). Says so when crt.sh is slow or fails. Can take up to two minutes.",
+    inputSchema: schema({ domain: str("The brand's own domain, e.g. \"example.com\"") }, ['domain']),
+    run: async (o, a) => compact(await o.brandShield(String(a.domain))),
+  },
+  {
+    name: 'oculon_wire',
+    description: 'Oculon Wire: the strongest signals Oculon stored in the last 24 hours, at most six, one per desk first (internet, air and sea, hazards, cyber, markets, space). Each line is a stored signal with its source names and time; nothing is generated. Pass a UTC date (YYYY-MM-DD) for a past day.',
+    inputSchema: schema({ date: str('Optional UTC day, YYYY-MM-DD; default: the 24 hours ending now') }, []),
+    run: async (o, a) => { const d = o.wire(a.date ? String(a.date) : undefined); return { ...d, post: o.wirePost(a.date ? String(a.date) : undefined) }; },
+  },
+  {
+    name: 'oculon_scam_trends',
+    description: 'Scam Trends: what people checked with this Oculon server in the last 7 days, as counts only: checks by kind, verdict split, most common scam patterns and link warning signs, most impersonated brands, top-level domains of flagged links, with the week before for change. No checked input is ever returned; groups under 3 checks are left out, and a small week is reported as too little data.',
+    inputSchema: schema({ days: num('Optional window in days, 1-30 (default 7)') }, []),
+    run: async (o, a) => { const t = o.trends(Math.min(30, Math.max(1, Number(a.days ?? 7) || 7))); return { ...t, post: trendsPostText(t) }; },
+  },
+  {
+    name: 'oculon_rescue',
+    description: 'What to do after a scam: a merged checklist for the next 10 minutes, today and this week, for one or more situations (link, password, code, seed, signed, card, bank, crypto, remote, id, takeover), plus official reporting links for a country (US, GB, CA, AU, NZ, IE, FR, NL, ES, SG, EU, OTHER). Fixed guidance; links were checked when written.',
+    inputSchema: schema({ situation: str('Comma-separated situations, e.g. "seed,signed"; empty for the catalog'), country: str('Optional country code, e.g. "GB"') }, []),
+    run: async (o, a) => compact(await o.rescuePlan(a.situation ? String(a.situation) : undefined, a.country ? String(a.country) : undefined)),
+  },
+  {
+    name: 'oculon_checkup',
+    description: 'Score a personal security checkup 0-100 with a grade A-F and the top fixes. Give results already measured (password found in breach lists yes/no and count, email domain spoofing verdict, number of breaches for the email domain, risky wallet approvals) and habit answers: passwordManager yes|no, twoFactor key|app|sms|none, uniquePasswords all|most|few, simLock yes|unsure|no, updates auto|sometimes|rarely, backups yes|sometimes|no. Never send a password.',
+    inputSchema: { type: 'object', properties: {
+      password: { type: 'object', properties: { pwned: { type: 'boolean' }, count: { type: 'number' } } },
+      emailDomain: { type: 'object', properties: { verdict: { type: 'string', enum: ['spoofable', 'partly protected', 'protected'] } } },
+      domainBreaches: { type: 'number' },
+      wallet: { type: 'object', properties: { riskyApprovals: { type: 'number' } } },
+      habits: { type: 'object', properties: { passwordManager: { type: 'string' }, twoFactor: { type: 'string' }, uniquePasswords: { type: 'string' }, simLock: { type: 'string' }, updates: { type: 'string' }, backups: { type: 'string' } } },
+    }, required: [] },
+    run: async (o, a) => compact(await o.checkup(a as never)),
+  },
+  {
+    name: 'oculon_spot_the_scam',
+    description: "Today's Spot the Scam round: 8 defanged links, the same for everyone on a UTC date, mixing real recently blocklisted phishing domains (ScamSniffer) with real official sign-in pages, each with the answer and a code-derived explanation. If the feed is down no round is built.",
+    inputSchema: schema({ date: str('Optional UTC day, YYYY-MM-DD (not in the future)') }, []),
+    run: async (o, a) => compact(await o.spotRound(a.date ? String(a.date) : undefined)),
+  },
+  {
     name: 'oculon_iban_check',
     description: 'Check an IBAN before paying an invoice, fully offline: country, length, ISO 13616 mod-97 check digits and the bank code. Pass the supplier country to flag an account held in another country, a common sign of invoice fraud. A valid IBAN does not prove who owns the account.',
     inputSchema: schema({ iban: str('The IBAN, spaces allowed'), country: str('Optional: the supplier\'s ISO country code, e.g. "NL"') }, ['iban']),
@@ -417,6 +484,21 @@ export const TOOLS: Tool[] = [
     description: 'Follow where money went from an address (for example a scammer or a drained wallet): the largest outgoing flows priced in USD, hop by hop, until an exchange (where funds can be frozen), a mixer, a bridge, a contract or a sanctioned address. Labels from the open eth-labels dataset, transaction hashes for a report. Chains: eth, arbitrum, polygon.',
     inputSchema: schema({ address: str('Start address (0x...)'), chain: str('eth, arbitrum or polygon (default eth)'), hops: num('Hops to follow, 1-4 (default 3)') }, ['address']),
     run: async (o, a) => compact(await o.traceFunds(String(a.address), { ...(a.chain ? { chain: String(a.chain) } : {}), ...(a.hops ? { hops: Number(a.hops) } : {}) })),
+  },
+  {
+    name: 'oculon_screenshot_check',
+    description: 'Is the message in this screenshot a scam? A free vision model (Gemini) transcribes the visible text verbatim and lists links, handles, phone numbers, amounts and brands, and names the screen kind (chat, email, SMS, web page, ad, social post). The verdict comes from the scam check run in code on that text: scam patterns, every link through Safe Browsing, URLhaus, urlscan.io and domain age, and the sender. PNG, JPEG or WebP, max 8 MB. Needs GEMINI_API_KEY.',
+    inputSchema: schema({ data: str('The screenshot as base64 (PNG, JPEG or WebP, max 8 MB)'), url: str('Or an https URL of the image'), name: str('File name, for display') }),
+    run: async (o, a) => {
+      const file = await docBytes(o, a);
+      return compact(await o.screenshotCheck(file, a.name ? String(a.name) : 'screenshot'));
+    },
+  },
+  {
+    name: 'oculon_terms_read',
+    description: 'Read terms of service, a privacy policy or a subscription, rental or employment contract and flag the clauses worth reading twice: automatic renewal, cancellation fees and no refunds, forced arbitration and class action or jury waivers, selling or sharing personal data, location, biometric and contacts collection, broad licences to user content, terms changed unilaterally, termination without notice, liability and warranty waivers, early termination penalties and non-compete, far-away jurisdiction, data kept after deletion. Rule-based: every finding quotes the exact sentence and has a severity (high, medium, low). Give pasted text (max 60,000 characters) or a URL. Not legal advice.',
+    inputSchema: schema({ text: str('The terms or contract text (max 60,000 characters)'), url: str('Or the URL of the terms page') }),
+    run: async (o, a) => compact(await o.termsRead(a.text ? { text: String(a.text).slice(0, 60_000) } : { url: String(a.url ?? '') })),
   },
   {
     name: 'oculon_image_check',
@@ -870,7 +952,7 @@ interface Request {
 
 /** Tools that change the shared watchlist, fences or plugins; not offered to anonymous remote clients. */
 // Tools that change the shared watchlist, plus the password check: a password should never travel to a public server.
-const REMOTE_HIDDEN = new Set(['oculon_watch_add', 'oculon_fence_add', 'oculon_watch_run', 'oculon_case_new', 'oculon_stamp_proofs', 'oculon_resolve_forecasts', 'oculon_auto_forecast', 'oculon_forecast', 'oculon_password_check']);
+const REMOTE_HIDDEN = new Set(['oculon_watch_add', 'oculon_fence_add', 'oculon_watch_run', 'oculon_case_new', 'oculon_stamp_proofs', 'oculon_resolve_forecasts', 'oculon_auto_forecast', 'oculon_forecast', 'oculon_password_check', 'oculon_prove']);
 
 /** Tools this build offers: on-chain tools are left out unless OCULON_ONCHAIN=1. */
 export function activeTools(): Tool[] {

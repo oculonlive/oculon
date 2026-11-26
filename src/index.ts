@@ -72,6 +72,17 @@ import { companyCheck } from './modules/company.js';
 import { breaches, passwordCheck, pwnedRange } from './modules/breach.js';
 import { phoneCheck } from './modules/phone.js';
 import { ibanCheck } from './modules/iban.js';
+import { checkup, type CheckupInput } from './modules/checkup.js';
+import { rescuePlan } from './modules/rescue.js';
+import { spotRound } from './modules/spot.js';
+import { wireCardPng, wirePostText, wireToday, type WireDigest } from './modules/wire.js';
+import { scamTrends, trendsPostText, type ScamTrends } from './modules/trends.js';
+import { downStatus } from './modules/down.js';
+import { charityCheck } from './modules/charity.js';
+import { brandShield } from './modules/brandshield.js';
+import { screenshotCheck } from './modules/screenshot.js';
+import { termsRead } from './modules/terms.js';
+import { proveOts, proveStatus, proveSubmit, proveUpgrade } from './modules/prove.js';
 import { headerCheck } from './modules/headers.js';
 import { docCheck } from './modules/doc.js';
 import { checkHistory, getCheck, recordCheck } from './modules/checks.js';
@@ -428,6 +439,66 @@ export class Oculon {
     return phoneCheck(this.ctx, number, opts);
   }
   /** IBAN check, offline: country, length, mod-97 check digits, bank code, and a warning when the account country differs from the supplier's. */
+  /** Prove It: timestamp a file's SHA-256 on Bitcoin through OpenTimestamps. The same hash twice returns the existing proof. */
+  proveSubmit(sha256: string, label?: string) {
+    return proveSubmit(this.ctx, sha256, label);
+  }
+  /** Prove It: a proof by hash (pending, or confirmed in Bitcoin block N). A pending proof due for a check is checked now. */
+  proveStatus(sha256: string, opts: { refresh?: boolean } = {}) {
+    return proveStatus(this.ctx, sha256, opts);
+  }
+  /** Prove It: ask the calendars about due pending proofs, a limited number per pass. */
+  proveUpgrade(opts: { limit?: number } = {}) {
+    return proveUpgrade(this.ctx, opts);
+  }
+  /** Prove It: the proof as a standard detached .ots file, or null for an unknown hash. */
+  proveOts(sha256: string) {
+    return proveOts(this.ctx, sha256);
+  }
+  /** Is it down? Official status pages of ~30 services plus a labelled one-location probe for X, Google, YouTube, Instagram, WhatsApp, Telegram... */
+  downStatus(service?: string) {
+    return downStatus(this.ctx, service);
+  }
+  /** US nonprofit check by name or EIN (ProPublica Nonprofit Explorer, IRS data). */
+  charityCheck(q: string, opts: { ein?: string } = {}) {
+    return charityCheck(this.ctx, q, opts);
+  }
+  /** Domains imitating a brand: lookalikes, new certificates naming it, DNS, URL check on the top live ones. */
+  brandShield(domain: string) {
+    return brandShield(this.ctx, domain);
+  }
+  /** Oculon Wire: the strongest stored signals of the last 24 hours (or of a UTC day), at most six, one per desk first. */
+  wire(date?: string): WireDigest {
+    return wireToday(this.ctx, date);
+  }
+  /** The wire as one X post (plain text, no emoji, under 600 characters, ends with oculon.live/today). */
+  wirePost(date?: string): string {
+    return wirePostText(wireToday(this.ctx, date));
+  }
+  /** The wire as a 1200x675 PNG card. */
+  wireCard(date?: string): Buffer {
+    return wireCardPng(wireToday(this.ctx, date));
+  }
+  /** Scam Trends: counts and categories of the checks recorded in the last `days` (default 7) and the period before. Nothing that was checked is returned. */
+  trends(days = 7): ScamTrends {
+    return scamTrends(this.ctx, days);
+  }
+  /** Weekly "Scam of the week" post, or null when there is too little data to say anything honest. */
+  trendsPost(days = 7): string | null {
+    return trendsPostText(scamTrends(this.ctx, days));
+  }
+  /** "I got scammed" rescue: merged checklist (next 10 minutes, today, this week) and official reporting links by country. */
+  rescuePlan(situation?: string | string[], country?: string) {
+    return rescuePlan(this.ctx, situation, country);
+  }
+  /** Security Checkup: 0-100 score, grade A-F and the top fixes, from browser-collected results and six habit answers. */
+  checkup(input: CheckupInput) {
+    return checkup(this.ctx, input);
+  }
+  /** Spot the Scam: the day's 8 links (real blocklisted phishing domains and real official pages), answers included. */
+  spotRound(date?: string) {
+    return spotRound(this.ctx, date);
+  }
   ibanCheck(iban: string, opts: { country?: string } = {}) {
     return ibanCheck(this.ctx, iban, opts);
   }
@@ -436,6 +507,14 @@ export class Oculon {
     return headerCheck(this.ctx, rawHeaders);
   }
   /** Was this invoice, bank statement or screenshot edited? PDF, JPEG or PNG bytes; IBANs in the text are checked. */
+  /** Is the message in this screenshot a scam? Gemini transcribes the image; the scam check judges the text. PNG, JPEG or WebP, max 8 MB. */
+  screenshotCheck(file: Buffer, name?: string) {
+    return screenshotCheck(this.ctx, file, name);
+  }
+  /** Which clauses in these terms or this contract are worth reading twice? Pasted text (max 60,000 chars) or a URL; rule-based, every finding quotes the sentence. */
+  termsRead(input: { text?: string; url?: string }) {
+    return termsRead(this.ctx, input);
+  }
   docCheck(file: Buffer, name?: string) {
     return docCheck(this.ctx, file, name);
   }
@@ -708,3 +787,4 @@ export function summarizeProvenance(provenance: Provenance[]): { sources: Record
 
 export type { ModuleResult, Provenance, Signal, Prediction, Scoreboard, Entity, Neighbor };
 export type { Evidence, Status } from './core/types.js';
+export { OculonClient, OculonApiError, type OculonClientOptions, type KeyStatus } from './client.js';

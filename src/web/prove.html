@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Prove It · Oculon</title>
+<meta name="description" content="Timestamp any file on Bitcoin for free. The file never leaves your browser: only its SHA-256 hash is sent to OpenTimestamps.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Prove It: show a file existed, anchored on Bitcoin"><meta property="og:description" content="Drop a file, get a Bitcoin-anchored OpenTimestamps proof. The file never leaves your browser."><meta property="og:url" content="https://oculon.live/prove"><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--red:#ff5d6c;--amb:#ffb84d;--grn:#3ddc97;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(16px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}header nav a:hover{color:#fff}
+main{max-width:900px;margin:0 auto;padding:64px clamp(16px,4vw,40px) 120px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.3}
+footer{position:relative;z-index:1}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:10px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--amb)}
+h1{margin:14px 0 10px;font-size:clamp(42px,6vw,72px);font-weight:300;letter-spacing:-.04em;line-height:1.02}
+h1 span{color:var(--y)}
+.lead{font-size:18px;line-height:1.7;color:var(--soft);font-weight:300;max-width:720px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:34px 0 14px}
+.bar button{font:700 12px var(--mono);letter-spacing:.08em;background:transparent;color:var(--soft);border:1px solid #2a3437;padding:9px 12px;cursor:pointer;text-transform:uppercase}
+.bar button.on{border-color:var(--y);color:var(--y);background:rgba(0,240,255,.07)}
+.panel{border:1px solid #1f2a2d;background:rgba(4,8,9,.88);padding:18px}
+.drop{display:block;border:1px dashed #2f4a50;padding:34px 16px;text-align:center;cursor:pointer;color:var(--soft);font-size:16px;line-height:1.6}
+.drop:hover,.drop.over{border-color:var(--y);background:rgba(0,240,255,.04)}
+.drop b{color:#fff}.drop em{display:block;font:12px var(--mono);font-style:normal;color:var(--mut);margin-top:6px}
+.drop input{display:none}
+.or{font:12px var(--mono);color:var(--mut);margin:14px 0 8px;text-transform:uppercase;letter-spacing:.12em}
+textarea,input[type=text]{width:100%;min-width:0;background:#05090a;border:1px solid #2a3437;color:#fff;font:14px var(--mono);padding:11px 12px}
+textarea{min-height:90px;resize:vertical}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+.row input{flex:1 1 220px}
+.btn{font:700 13px var(--mono);letter-spacing:.06em;background:var(--y);color:#001418;border:0;padding:12px 16px;cursor:pointer;text-transform:uppercase}
+.btn[disabled]{opacity:.45;cursor:default}
+.ghost{font:700 12px var(--mono);letter-spacing:.06em;color:var(--y);border:1px solid rgba(0,240,255,.35);padding:9px 11px;text-decoration:none;background:transparent;cursor:pointer;display:inline-block}
+.hash{margin-top:14px;font:13px var(--mono);color:var(--mut);word-break:break-all}.hash b{color:var(--y);font-weight:400}
+.msg{margin-top:12px;font:13px var(--mono);color:var(--mut)}.msg.err{color:var(--red)}
+.card{margin-top:18px;border:1px solid #1f2a2d;background:rgba(4,8,9,.92);padding:18px}
+.pill{display:inline-block;font:700 11px var(--mono);letter-spacing:.08em;padding:5px 8px;border:1px solid}
+.s-PENDING{color:var(--amb);border-color:rgba(255,184,77,.5);background:rgba(255,184,77,.07)}
+.s-CONFIRMED{color:var(--grn);border-color:rgba(61,220,151,.45);background:rgba(61,220,151,.06)}
+.s-NONE{color:var(--mut);border-color:#333}
+.card h3{margin:12px 0 6px;font-size:22px;font-weight:400;line-height:1.35}
+.card p{margin:8px 0}
+.facts{display:grid;grid-template-columns:120px minmax(0,1fr);gap:8px 14px;margin:14px 0;font:13px var(--mono);color:var(--mut)}
+.facts b{color:#e8eef0;font-weight:400;word-break:break-all}
+.links{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+h2{margin:56px 0 12px;font-size:26px;font-weight:400;padding-top:24px;border-top:1px solid var(--line)}
+p,li{font-size:17px;line-height:1.75;color:var(--soft);font-weight:300}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cols div{border:1px solid #1f2a2d;background:rgba(4,8,9,.85);padding:16px}
+.cols b{display:block;font:400 11px var(--mono);letter-spacing:.14em;color:var(--mut);text-transform:uppercase;margin-bottom:6px}
+.cols .yes b{color:var(--grn)}.cols .no b{color:var(--red)}
+.cols p{margin:0;font-size:16px}
+code{font:13px var(--mono);color:var(--y);word-break:break-all}
+.note{font-size:13px;color:var(--mut)}
+.hide{display:none}
+footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:1100px;margin:0 auto;padding:26px clamp(16px,4vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
+@media (max-width:720px){.cols{grid-template-columns:1fr}.facts{grid-template-columns:1fr;gap:2px}.facts span{margin-top:8px}header nav{gap:14px}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/thetoken">Token</a><a href="/app">App</a><a href="/docs">Docs</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+  <div class="lbl"><i class="dot"></i>Free · Anchored on Bitcoin</div>
+  <h1>Prove <span>It</span></h1>
+  <p class="lead">Show that a file existed by a certain time: a contract, a design, a manuscript, a screenshot. Your browser computes the file's SHA-256 hash and only that hash is sent. It is timestamped through OpenTimestamps and anchored in a Bitcoin block, so anyone can check it later without trusting Oculon.</p>
+
+  <div class="bar" id="modes"><button class="on" data-m="stamp">Timestamp a file</button><button data-m="verify">Verify a file</button></div>
+
+  <div class="panel">
+    <label class="drop" id="drop"><input type="file" id="file"><b id="dropText">Drop a file here, or tap to choose one</b><em>The file stays on your device. Only its hash is sent.</em></label>
+    <div id="textBox">
+      <div class="or">or paste text</div>
+      <textarea id="text" placeholder="Paste text to timestamp. Every character counts: a changed space gives a different hash." spellcheck="false"></textarea>
+    </div>
+    <div class="hash" id="hash"></div>
+    <div class="row" id="stampRow">
+      <input type="text" id="label" maxlength="80" placeholder="Label (optional, public, up to 80 characters)" autocomplete="off">
+      <button class="btn" id="go" disabled>Timestamp</button>
+    </div>
+    <div class="row hide" id="verifyRow"><button class="btn" id="look" disabled>Look up</button></div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div id="out"></div>
+
+  <h2>What this proves, and what it does not</h2>
+  <div class="cols">
+    <div class="yes"><b>It proves</b><p>These exact bytes existed no later than the time of the Bitcoin block named in the proof. Change a single byte and the hash no longer matches.</p></div>
+    <div class="no"><b>What it does not prove</b><p>Who made the file, who submitted it, that its contents are true, or that it was created at that moment. Only that it existed by then.</p></div>
+  </div>
+  <ul>
+    <li><b>Pending first.</b> The OpenTimestamps calendars collect hashes and write them into Bitcoin about once per block. A new proof is usually confirmed within a few hours; Oculon checks every half hour.</li>
+    <li><b>Keep the file and the proof.</b> The proof only works with the exact original file. Download the <code>.ots</code> file once it is confirmed and keep it with the original.</li>
+    <li><b>Check it without us.</b> Run <code>ots verify -d &lt;hash&gt; proof.ots</code> with the OpenTimestamps client, or drop the file and the proof on opentimestamps.org.</li>
+    <li><b>Labels are public.</b> Anyone with the hash can see the label you gave it. Leave it empty for anything private.</li>
+  </ul>
+  <p class="note">Free and keyless: OpenTimestamps public calendars and the Blockstream block explorer. Same file twice returns the same proof. JSON at <code>/api/prove?hash=</code>.</p>
+</main>
+<footer><div class="in"><span>© <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/docs">Docs</a> · <a href="/app">App</a> · <a href="/thetoken">Token</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#00141a', hi: '#00c8e0', intensity: 0.6, scale: 0.3 }); }
+document.getElementById('year').textContent = new Date().getFullYear();
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const when = (iso) => { try { return new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }); } catch (e) { return iso; } };
+  let mode = 'stamp', hash = null, source = '', poll = null;
+
+  function msg(t, err) { $('msg').textContent = t || ''; $('msg').className = 'msg' + (err ? ' err' : ''); }
+  function setHash(h, from) {
+    hash = h; source = from || '';
+    $('hash').innerHTML = h ? 'SHA-256' + (from ? ' of ' + esc(from) : '') + ': <b>' + h + '</b>' : '';
+    $('go').disabled = !h; $('look').disabled = !h;
+  }
+  async function sha256(buf) {
+    if (!window.crypto || !crypto.subtle) throw new Error('This browser cannot hash files here (it needs a secure https page).');
+    const d = await crypto.subtle.digest('SHA-256', buf);
+    return Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  async function hashFile(f) {
+    if (!f) return;
+    if (f.size > 1.5e9) { msg('That file is too large to hash in the browser (over 1.5 GB).', true); return; }
+    msg('Hashing ' + f.name + ' on your device...');
+    $('dropText').textContent = f.name;
+    $('text').value = '';
+    try { setHash(await sha256(await f.arrayBuffer()), f.name); msg(''); if (mode === 'verify') lookup(); }
+    catch (e) { msg(e.message || 'Could not read that file.', true); }
+  }
+  let tt = null;
+  $('text').addEventListener('input', () => {
+    clearTimeout(tt);
+    tt = setTimeout(async () => {
+      const v = $('text').value;
+      if (!v) { setHash(null); return; }
+      $('dropText').textContent = 'Drop a file here, or tap to choose one';
+      try { setHash(await sha256(new TextEncoder().encode(v)), 'the pasted text'); } catch (e) { msg(e.message, true); }
+    }, 250);
+  });
+  $('file').addEventListener('change', (e) => hashFile(e.target.files[0]));
+  const drop = $('drop');
+  ['dragenter', 'dragover'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', (e) => hashFile(e.dataTransfer && e.dataTransfer.files[0]));
+
+  $('modes').addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    mode = b.getAttribute('data-m');
+    document.querySelectorAll('#modes button').forEach((x) => x.classList.toggle('on', x === b));
+    $('stampRow').classList.toggle('hide', mode !== 'stamp');
+    $('verifyRow').classList.toggle('hide', mode !== 'verify');
+    $('textBox').classList.toggle('hide', false);
+    $('out').innerHTML = ''; msg('');
+    $('dropText').textContent = mode === 'verify' ? 'Drop the file to verify, or tap to choose it' : 'Drop a file here, or tap to choose one';
+  });
+
+  function card(r) {
+    const p = r.proof;
+    if (!p) {
+      return '<div class="card"><i class="pill s-NONE">NO PROOF</i><h3>No proof for this file on Oculon.</h3><p>Either it was never timestamped here, or the file is not the exact same one: a single changed byte gives a different hash.' + (mode === 'verify' ? ' If you have the <code>.ots</code> file, check it at opentimestamps.org.' : '') + '</p></div>';
+    }
+    const link = location.origin + p.permalink;
+    const head = p.status === 'CONFIRMED'
+      ? '<i class="pill s-CONFIRMED">CONFIRMED</i><h3>Anchored in Bitcoin block ' + p.bitcoin.height.toLocaleString('en-US') + ' at ' + esc(when(p.bitcoin.time)) + '.</h3><p>This file existed no later than that time.</p>'
+      : '<i class="pill s-PENDING">PENDING</i><h3>Submitted to OpenTimestamps. Waiting for a Bitcoin block.</h3><p>Usually confirmed within a few hours. Keep this page or the link below; it updates on its own.</p>';
+    return '<div class="card">' + head
+      + (r.existing ? '<p class="note">This file had already been timestamped; this is the existing proof.</p>' : '')
+      + '<div class="facts"><span>Hash</span><b>' + esc(p.hash) + '</b>'
+      + (p.label ? '<span>Label</span><b>' + esc(p.label) + '</b>' : '')
+      + '<span>Submitted</span><b>' + esc(when(p.createdAt)) + '</b>'
+      + (p.bitcoin ? '<span>Block</span><b><a href="' + esc(p.bitcoin.url) + '" target="_blank" rel="noopener">' + esc(p.bitcoin.blockHash.slice(0, 20)) + '...</a></b>' : '')
+      + '<span>Calendars</span><b>' + esc(p.calendars.map((c) => c.replace(/^https:\/\//, '')).join(', ')) + '</b>'
+      + (p.lastCheckedAt && p.status === 'PENDING' ? '<span>Last check</span><b>' + esc(when(p.lastCheckedAt)) + '</b>' : '')
+      + '</div><div class="links"><a class="ghost" href="' + esc(p.ots) + '" download>Download .ots</a><button class="ghost" id="copy" data-l="' + esc(link) + '">Copy permalink</button><a class="ghost" href="' + esc(p.permalink) + '">Permalink</a></div>'
+      + (p.status === 'PENDING' ? '<p class="note">The .ots file works now and becomes complete once confirmed; download it again after confirmation.</p>' : '')
+      + '</div>';
+  }
+  function show(r) {
+    $('out').innerHTML = card(r);
+    clearInterval(poll);
+    if (r.proof && r.proof.status === 'PENDING') poll = setInterval(() => refresh(r.proof.hash), 60000);
+  }
+  async function refresh(h) {
+    try {
+      const res = await fetch('/api/prove?hash=' + h);
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'lookup failed');
+      show(j.result);
+    } catch (e) { /* keep what is shown */ }
+  }
+  async function lookup() {
+    if (!hash) return;
+    msg('Looking up...');
+    try {
+      const res = await fetch('/api/prove?hash=' + hash);
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || 'lookup failed');
+      msg(''); show(j.result);
+    } catch (e) { msg(e.message || 'Could not reach the server.', true); }
+  }
+  $('look').addEventListener('click', lookup);
+  $('go').addEventListener('click', async () => {
+    if (!hash) return;
+    $('go').disabled = true; msg('Submitting the hash to OpenTimestamps...');
+    try {
+      const res = await fetch('/api/prove', { method: 'POST', headers: { 'content-type': 'application/json', 'x-oculon': '1' }, body: JSON.stringify({ sha256: hash, label: $('label').value.trim() }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || ('the server answered ' + res.status));
+      msg('');
+      show(j.result);
+      history.replaceState(null, '', '/prove?hash=' + hash);
+    } catch (e) { msg(e.message || 'Could not reach the server.', true); }
+    finally { $('go').disabled = !hash; }
+  });
+  $('out').addEventListener('click', async (e) => {
+    const b = e.target.closest('#copy'); if (!b) return;
+    try { await navigator.clipboard.writeText(b.getAttribute('data-l')); b.textContent = 'Copied'; } catch (err) { prompt('Copy this link', b.getAttribute('data-l')); }
+  });
+
+  const q = new URLSearchParams(location.search).get('hash');
+  if (q && /^[0-9a-fA-F]{64}$/.test(q)) { setHash(q.toLowerCase(), ''); lookup(); }
+})();
+</script>
+</body>
+</html>

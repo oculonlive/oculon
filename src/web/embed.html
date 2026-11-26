@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
+<title>Oculon Embed · Oculon</title>
+<meta name="description" content="One script tag gives any website a link checker, or warns visitors before they follow a dangerous outbound link. Free, no dependencies.">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Oculon"><meta property="og:title" content="Oculon Embed: link checks for any website"><meta property="og:description" content="A Check a link box, or a warning before visitors follow a dangerous outbound link. One script tag, free."><meta property="og:url" content="https://oculon.live/embed"><meta property="og:image" content="https://oculon.live/assets/og.png?v=2"><meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+html,body{overflow-x:clip;max-width:100%}
+:root{--line:#222;--soft:#cfcfcf;--mut:#9a9a9a;--y:#00f0ff;--red:#ff5d6c;--amb:#ffb84d;--grn:#3ddc97;--sans:'Space Grotesk',system-ui,sans-serif;--mono:'Space Mono',ui-monospace,Consolas,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:#000;color:#fff;font-family:var(--sans);-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.lm{display:inline-block;width:22px;height:22px;vertical-align:-4px;margin-right:12px}
+header{position:sticky;top:0;z-index:5;background:#000;border-bottom:1px solid var(--line)}
+header .in{display:flex;align-items:center;justify-content:space-between;padding:18px clamp(16px,3vw,40px);gap:20px}
+.logo{font-size:17px;font-weight:600;letter-spacing:.4em;text-decoration:none}
+header nav{display:flex;gap:24px;font-size:14px}header nav a{text-decoration:none;color:var(--soft)}header nav a:hover{color:#fff}
+main{max-width:960px;margin:0 auto;padding:64px clamp(16px,4vw,40px) 120px;position:relative;z-index:1}
+#liquidbg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.3}
+footer{position:relative;z-index:1}
+.lbl{font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:10px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--grn)}
+h1{margin:14px 0 10px;font-size:clamp(42px,6vw,72px);font-weight:300;letter-spacing:-.04em;line-height:1.02}
+h1 span{color:var(--y)}
+.lead{font-size:18px;line-height:1.7;color:var(--soft);font-weight:300;max-width:720px}
+h2{margin:56px 0 12px;font-size:26px;font-weight:400;padding-top:24px;border-top:1px solid var(--line)}
+h3{margin:22px 0 8px;font-size:19px;font-weight:500}
+p,li{font-size:17px;line-height:1.75;color:var(--soft);font-weight:300}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:30px}
+.panel{border:1px solid #1f2a2d;background:rgba(4,8,9,.88);padding:18px;min-width:0}
+.panel b.k{display:block;font:400 11px var(--mono);letter-spacing:.14em;color:var(--mut);text-transform:uppercase;margin-bottom:10px}
+.panel p{font-size:15px;margin:6px 0 12px}
+.demo a{display:block;font:14px var(--mono);color:var(--y);margin:8px 0;word-break:break-all}
+.demo em{display:block;font:12px var(--sans);font-style:normal;color:var(--mut);margin:-4px 0 10px}
+pre{margin:0;background:#05090a;border:1px solid #2a3437;padding:14px;overflow-x:auto;font:13px/1.6 var(--mono);color:#e6fbff;white-space:pre-wrap;word-break:break-all}
+.snip{position:relative;margin:10px 0 18px}
+.snip button{position:absolute;top:8px;right:8px;font:700 11px var(--mono);letter-spacing:.06em;color:var(--y);border:1px solid rgba(0,240,255,.35);background:#05090a;padding:6px 8px;cursor:pointer;text-transform:uppercase}
+.snip pre{padding-right:78px}
+.tbl{border:1px solid #1f2a2d;background:rgba(4,8,9,.88)}
+.tr{display:grid;grid-template-columns:190px 160px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid #141c1e;font-size:15px;color:var(--soft);line-height:1.55}
+.tr:last-child{border-bottom:0}
+.th{font:400 11px var(--mono);letter-spacing:.12em;color:var(--mut);text-transform:uppercase}
+.tr code{font:13px var(--mono);color:var(--y);word-break:break-all}
+code{font:13px var(--mono);color:var(--y);word-break:break-all}
+.note{font-size:13px;color:var(--mut)}
+footer{border-top:1px solid var(--line);background:rgba(0,0,0,.6)}footer .in{max-width:1100px;margin:0 auto;padding:26px clamp(16px,4vw,40px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:#5e5e5e}footer a{color:var(--mut)}
+@media (max-width:760px){.grid{grid-template-columns:1fr}.tr{grid-template-columns:1fr;gap:2px}.th{display:none}header nav{gap:14px}}
+</style>
+</head>
+<body>
+<header><div class="in"><a class="logo" href="/"><img class="lm" src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><nav><a href="/thetoken">Token</a><a href="/app">App</a><a href="/docs">Docs</a></nav></div></header>
+<canvas id="liquidbg" aria-hidden="true"></canvas>
+<main>
+  <div class="lbl"><i class="dot"></i>Free · One script tag</div>
+  <h1>Oculon <span>Embed</span></h1>
+  <p class="lead">Give your visitors a link checker, or warn them before they follow a dangerous link off your site. One script tag, no dependencies, no cookies, and it never blocks a link when Oculon cannot be reached.</p>
+
+  <div class="grid">
+    <div class="panel">
+      <b class="k">Live preview · box</b>
+      <p>Paste any link or domain. The check runs on Oculon's link checker: Safe Browsing, URLhaus, urlscan.io, domain age and look-alike signs.</p>
+      <div id="oculon-check"></div>
+      <script src="/embed.js" data-oculon-mode="box" async></script>
+    </div>
+    <div class="panel demo" id="demo-links">
+      <b class="k">Live preview · links</b>
+      <p>Links in this panel are watched. Click one: a clean destination opens as usual; a malicious or suspicious one shows a warning first.</p>
+      <a href="https://example.com/" target="_blank" rel="noopener">https://example.com/</a><em>A plain, well-known domain.</em>
+      <a href="https://en.wikipedia.org/wiki/Phishing" target="_blank" rel="noopener">https://en.wikipedia.org/wiki/Phishing</a><em>A long-standing site.</em>
+      <a href="https://testsafebrowsing.appspot.com/s/phishing.html" target="_blank" rel="noopener">https://testsafebrowsing.appspot.com/s/phishing.html</a><em>Google's Safe Browsing test page: harmless, but listed as phishing on purpose so tools like this can be tested. It is flagged when the server has a Safe Browsing key.</em>
+      <script src="/embed.js" data-oculon-mode="links" data-oculon-scope="#demo-links" async></script>
+    </div>
+  </div>
+
+  <h2>Add it to your site</h2>
+  <h3>A "Check a link" box</h3>
+  <p>Paste this where the box should appear. Or put <code>&lt;div id="oculon-check"&gt;&lt;/div&gt;</code> anywhere on the page and the script fills it.</p>
+  <div class="snip"><pre id="s1">&lt;script src="https://oculon.live/embed.js" data-oculon-mode="box" async&gt;&lt;/script&gt;</pre><button data-c="s1">Copy</button></div>
+  <h3>Warn before dangerous outbound links</h3>
+  <p>Add this once, anywhere on the page. Links to your own site and its subdomains are never checked.</p>
+  <div class="snip"><pre id="s2">&lt;script src="https://oculon.live/embed.js" data-oculon-mode="links" async&gt;&lt;/script&gt;</pre><button data-c="s2">Copy</button></div>
+  <h3>Only the links in a comment section, with a light box</h3>
+  <div class="snip"><pre id="s3">&lt;script src="https://oculon.live/embed.js" data-oculon-mode="links" data-oculon-scope="#comments" data-oculon-warn="malicious" async&gt;&lt;/script&gt;
+&lt;script src="https://oculon.live/embed.js" data-oculon-mode="box" data-oculon-theme="light" async&gt;&lt;/script&gt;</pre><button data-c="s3">Copy</button></div>
+
+  <h2>Options</h2>
+  <div class="tbl">
+    <div class="tr th"><span>Attribute</span><span>Default</span><span>What it does</span></div>
+    <div class="tr"><code>data-oculon-mode</code><span>box</span><span><code>box</code> shows a link checker; <code>links</code> checks outbound links when they are clicked.</span></div>
+    <div class="tr"><code>data-oculon-target</code><span>oculon-check</span><span>Id of the element the box goes into. Without one, the box appears where the script tag is.</span></div>
+    <div class="tr"><code>data-oculon-warn</code><span>suspicious</span><span>Which results show a warning in links mode: <code>suspicious</code> warns on suspicious and malicious, <code>malicious</code> only on malicious.</span></div>
+    <div class="tr"><code>data-oculon-scope</code><span>whole page</span><span>A CSS selector. Only links inside it are checked, for example <code>#comments</code>.</span></div>
+    <div class="tr"><code>data-oculon-allow</code><span>none</span><span>Comma-separated hosts that are never checked, such as your partners. Your own site is always skipped.</span></div>
+    <div class="tr"><code>data-oculon-max</code><span>20</span><span>Most checks per page view (1 to 50). After that, links go through unchecked.</span></div>
+    <div class="tr"><code>data-oculon-theme</code><span>dark</span><span><code>dark</code> or <code>light</code>.</span></div>
+    <div class="tr"><code>data-oculon-key</code><span>none</span><span>An Oculon API key, sent as <code>Authorization: Bearer</code>. Not needed today; reserved for higher limits later.</span></div>
+    <div class="tr"><code>data-oculon-api</code><span>script origin</span><span>The Oculon server to ask. Leave it out for oculon.live; set it when you run your own Oculon.</span></div>
+  </div>
+
+  <h2>How it behaves</h2>
+  <ul>
+    <li><b>Never in the way.</b> In links mode a click waits at most a few seconds for the check. If Oculon is slow, down or rate limited, the link opens as if the script were not there.</li>
+    <li><b>Most clicks are instant.</b> A link is checked when the visitor hovers or focuses it, so the answer is usually ready before the click. Results are kept for 30 minutes in the tab's session storage.</li>
+    <li><b>Gentle on the API.</b> One check per link, a limit per page view, and repeated clicks reuse the first answer. The public API allows a few checks per minute per visitor.</li>
+    <li><b>Isolated.</b> The box and the warning live in a shadow DOM, so your styles do not break them and theirs do not leak into your page.</li>
+    <li><b>What is sent.</b> Only the link being checked goes to Oculon. No cookies, no page content, no visitor data. Modifier clicks (open in a new tab) are not stopped; they are checked in the background for next time.</li>
+    <li><b>What a result means.</b> "No known threats" means the sources had nothing on the link at that moment. It is not a promise that a page is safe.</li>
+  </ul>
+  <p class="note">Free. The script is about 17 KB unminified and loads with <code>async</code>, so it never delays your page.</p>
+</main>
+<footer><div class="in"><span>© <span id="year"></span> Oculon contributors · MIT</span><span><a href="/">Home</a> · <a href="/docs">Docs</a> · <a href="/app">App</a> · <a href="/thetoken">Token</a></span></div></footer>
+<script src="/assets/fx.js"></script>
+<script>
+if (window.OculonFX) { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#00140c', hi: '#00c8e0', intensity: 0.6, scale: 0.3 }); }
+document.getElementById('year').textContent = new Date().getFullYear();
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('button[data-c]');
+  if (!b) return;
+  const text = document.getElementById(b.getAttribute('data-c')).textContent;
+  try { await navigator.clipboard.writeText(text); b.textContent = 'Copied'; setTimeout(() => { b.textContent = 'Copy'; }, 1500); } catch (err) { prompt('Copy this snippet', text); }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Cloudflare Email Worker for the Oculon Scam Inbox (check@oculon.live).
+# Deploy:  npx wrangler deploy --config edge/inbox/wrangler.toml
+# Secret:  npx wrangler secret put INBOX_SECRET --config edge/inbox/wrangler.toml  (same value as OCULON_INBOX_SECRET on the server)
+# Then in the Cloudflare dashboard: Email > Email Routing > Routing rules > Custom address check@ > Send to a Worker > oculon-inbox.
+name = "oculon-inbox"
+main = "worker.js"
+compatibility_date = "2025-06-01"
+workers_dev = false
+
+[vars]
+ORIGIN = "https://oculon.live"
+INBOX_ADDRESS = "check@oculon.live"

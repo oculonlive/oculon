@@ -198,8 +198,21 @@ ${c.bold('Everyday checks')}
   oculon breaches [domain]             newest data breaches, or every breach of one domain (HIBP)
   oculon company <name|LEI|EU VAT>     is this supplier real? VAT check (VIES), LEI register (GLEIF)
   oculon iban <IBAN> [--country NL]    is this IBAN valid, and is the account in the supplier's country?
+  oculon prove <file> [--label "text"]   timestamp a file on Bitcoin (OpenTimestamps); only its hash is sent
+  oculon prove status|ots <file|hash>    is it confirmed yet? / write the .ots proof (--out proof.ots)
+  oculon down [service]                is it down? official status pages, problems first
+  oculon charity <name|EIN> [--ein N]  is this US charity registered? filings and warnings
+  oculon brandshield <domain>          domains imitating your brand, ranked with reasons
+  oculon wire [--date 2026-11-26] [--post] [--png file.png]   the day in six lines from stored signals
+  oculon trends [--days 7] [--post]    counts of the checks people ran this week
+  oculon rescue [situations] [--country GB]   what to do after a scam: link, password, code, seed, signed, card, bank, crypto, remote, id, takeover
+  oculon spot [--date YYYY-MM-DD]      today's Spot the Scam round, with answers
+  oculon api key                       hosted API: your key's tier and calls left today (needs OCULON_API_KEY)
+  oculon api <path> [name=value ...]   hosted API: call any endpoint with your key, e.g. oculon api /api/url url=example.com
   oculon headers < headers.txt         raw email headers: SPF, DKIM, DMARC, path, origin, spoofing signs
   oculon address <crypto address>      chain, OFAC sanctions, balance and activity, no keys needed
+  oculon screenshot <image.png|.jpg|.webp>   is the message in this screenshot a scam? reads the text, checks links
+  oculon terms <url|file.txt>          which clauses in these terms or this contract are worth reading twice?
   oculon doc <file.pdf|.docx|.xlsx|.png|.jpg>   was this invoice or statement edited? macros, IBANs, editors
   oculon photo <image>                 made by AI, edited, or a camera photo? C2PA credentials, generator traces
   oculon qr <image>                    read a QR code and check where it leads (link, crypto, bank, Wi-Fi)
@@ -827,6 +840,127 @@ export const COMMANDS: Record<string, Cmd> = {
       printSources(r);
     });
   },
+  async prove(o, a) {
+    const sub = a.pos[1];
+    if (sub === 'upgrade') {
+      const r = await o.proveUpgrade({ limit: 50 });
+      return out(`${r.checked} checked, ${r.confirmed} confirmed, ${r.pending} still pending`);
+    }
+    const target = a.pos.slice(sub === 'status' || sub === 'ots' ? 2 : 1).join(' ').trim();
+    if (!target) throw new UsageError('usage: oculon prove <file|sha256> [--label "text"] | oculon prove status <file|sha256> | oculon prove ots <file|sha256> [--out proof.ots] | oculon prove upgrade');
+    const { createHash } = await import('node:crypto');
+    const hash = /^[0-9a-fA-F]{64}$/.test(target) && !existsSync(target) ? target.toLowerCase() : createHash('sha256').update(readFileSync(target)).digest('hex');
+    if (sub === 'ots') {
+      const file = o.proveOts(hash);
+      if (!file) throw new UsageError(`no proof for ${hash}; run: oculon prove ${target}`);
+      const dest = typeof a.flags.out === 'string' ? a.flags.out : `${hash.slice(0, 16)}.ots`;
+      const { writeFileSync } = await import('node:fs');
+      writeFileSync(dest, file);
+      return out(`wrote ${dest}  ${c.dim(`check it with: ots verify -d ${hash} ${dest}`)}`);
+    }
+    const r = sub === 'status' ? await o.proveStatus(hash) : await o.proveSubmit(hash, typeof a.flags.label === 'string' ? a.flags.label : undefined);
+    emit(a, r, () => {
+      const p = r.result.proof;
+      if (!p) return out(c.yellow(`No proof for ${hash}. A changed byte gives a different hash.`));
+      out(`${p.status === 'CONFIRMED' ? c.green('CONFIRMED') : c.yellow('PENDING')}  ${p.hash}${p.label ? c.dim(`  ${p.label}`) : ''}`);
+      if (p.bitcoin) out(`  Bitcoin block ${p.bitcoin.height} at ${p.bitcoin.time}`);
+      else out(c.dim('  usually confirmed within a few hours; run `oculon prove status <file>` again later'));
+      if (r.result.existing) out(c.dim('  this hash was already timestamped; this is the existing proof'));
+      out(c.dim(`  Proves: ${r.result.proves}`));
+      out(c.dim(`  Does not prove: ${r.result.doesNotProve}`));
+    });
+  },
+  async down(o, a) {
+    const q = a.pos.slice(1).join(' ').trim();
+    const r = await o.downStatus(q || undefined);
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = (s: string) => (s === 'outage' ? c.red : s === 'degraded' ? c.yellow : s === 'operational' ? c.green : c.dim);
+      out(`${c.bold('Is it down')}  ${c.red(`${d.counts.outage} outage`)}  ${c.yellow(`${d.counts.degraded} degraded`)}  ${c.dim(`${d.counts.unknown} unknown · ${d.counts.operational} operational`)}`);
+      for (const s of d.services) {
+        out(`  ${tone(s.state)(s.state.toUpperCase().padEnd(12))} ${s.name.padEnd(28)} ${c.dim(s.official ? 'status page' : 'our probe')}  ${s.summary}`);
+        if (q || s.state !== 'operational') for (const i of s.incidents.slice(0, 3)) out(c.dim(`      ${i.title} · ${i.status}${i.updated ? ` · ${i.updated.slice(0, 16).replace('T', ' ')} UTC` : ''}`));
+      }
+      out(c.dim(`  ${d.note}`));
+      printSources(r);
+    });
+  },
+  async charity(o, a) {
+    const q = a.pos.slice(1).join(' ').trim();
+    const ein = typeof a.flags.ein === 'string' ? a.flags.ein : undefined;
+    if (!q && !ein) throw new UsageError('usage: oculon charity <name or EIN> [--ein 53-0196605]');
+    const r = await o.charityCheck(q, ein ? { ein } : {});
+    emit(a, r, () => {
+      const d = r.result;
+      const g = d.organization;
+      if (g) {
+        out(`${c.bold(g.name)}  ${c.dim(`EIN ${g.ein} · ${[g.city, g.state].filter(Boolean).join(', ')}`)}`);
+        out(`  ${[g.subsection, g.rulingYear ? `exempt since ${g.rulingYear}` : null, g.deductibility, g.ntee?.category].filter(Boolean).join(' · ')}`);
+        for (const f of d.filings.slice(0, 4)) out(`  ${String(f.year ?? '-').padEnd(6)} ${f.form.padEnd(7)} revenue ${f.revenue ?? '-'}  expenses ${f.expenses ?? '-'}  assets ${f.assets ?? '-'}`);
+        out(c.dim(`  programme spending: ${d.programmeSpending.note}`));
+      }
+      if (d.kind === 'name') for (const m of d.matches.slice(0, 8)) out(c.dim(`  ${m.ein}  ${m.name}  ${[m.city, m.state].filter(Boolean).join(', ')}  ${m.subsection ?? ''}`));
+      for (const w of d.warnings) out(c.yellow(`  ! ${w}`));
+      out(c.dim(`  ${d.coverage}`));
+      printSources(r);
+    });
+  },
+  async brandshield(o, a) {
+    const q = String(a.pos[1] ?? '').trim();
+    if (!q) throw new UsageError('usage: oculon brandshield <domain>');
+    const r = await o.brandShield(q);
+    emit(a, r, () => {
+      const d = r.result;
+      out(`${c.bold(d.domain)}  ${c.red(`${d.counts.high} high`)}  ${c.yellow(`${d.counts.medium} medium`)}  ${c.dim(`${d.counts.resolving} live · ${d.counts.certNames} certificate names`)}`);
+      if (d.certificates.status !== 'ok') out(c.yellow(`  ! ${d.certificates.note}`));
+      for (const h of d.hits.slice(0, 20)) out(`  ${String(h.score).padStart(3)} ${(h.level === 'high' ? c.red : h.level === 'medium' ? c.yellow : c.dim)(h.domain.padEnd(36))} ${c.dim(h.reasons.slice(0, 3).join('; '))}`);
+      out(c.dim(`  ${d.note}`));
+      printSources(r);
+    });
+  },
+  async wire(o, a) {
+    const date = typeof a.flags.date === 'string' ? a.flags.date : undefined;
+    const d = o.wire(date);
+    if (typeof a.flags.png === 'string') { const { writeFileSync } = await import('node:fs'); writeFileSync(a.flags.png, o.wireCard(date)); out(`card written to ${a.flags.png}`); return; }
+    if (a.flags.post) { out(o.wirePost(date)); return; }
+    emit(a, d, () => {
+      out(c.bold(`Oculon Wire, ${d.day}`) + c.dim(`  ${d.considered} desk signals in the window`));
+      for (const i of d.items) out(`  ${c.cyan(i.label.padEnd(12))} [${i.score}] ${i.headline} ${c.dim(`${i.at.slice(11, 16)} UTC · ${i.sources.join(', ')}`)}`);
+      if (d.note) out(c.dim(`  ${d.note}`));
+    });
+  },
+  async trends(o, a) {
+    const t = o.trends(Number(a.flags.days ?? 7) || 7);
+    if (a.flags.post) { out(o.trendsPost(Number(a.flags.days ?? 7) || 7) ?? 'Too little data for a post this week.'); return; }
+    emit(a, t, () => {
+      out(c.bold(`Scam Trends: ${t.total} checks`) + c.dim(` (week before: ${t.previousTotal})`));
+      if (t.note) out(c.yellow(`  ${t.note}`));
+      for (const k of t.byKind) out(`  ${k.label.padEnd(22)} ${k.checks}`);
+      for (const p of t.patterns) out(`  sign  ${p.name} (${p.checks})`);
+      for (const b of t.brands) out(`  brand ${b.name} (${b.checks})`);
+      for (const x of t.tlds) out(`  tld   .${x.name} (${x.checks})`);
+    });
+  },
+  async rescue(o, a) {
+    const q = a.pos.slice(1).join(',').replace(/\s+/g, '');
+    const r = await o.rescuePlan(q || undefined, typeof a.flags.country === 'string' ? a.flags.country : undefined);
+    emit(a, r, () => {
+      const d = r.result;
+      if (!d.selected.length) { out('Situations: ' + d.situations.map((s) => s.id).join(', ')); out('Countries:  ' + d.countries.map((x) => x.code).join(', ')); return; }
+      for (const g of d.checklist) { if (!g.steps.length) continue; out(c.bold(g.label)); for (const s of g.steps) out(`  [ ] ${s.text}${s.tool ? c.dim(` (${s.tool.href})`) : ''}`); }
+      if (d.reports.length) { out(c.bold('Report it')); for (const x of d.reports) out(`  ${x.name}: ${x.url}${x.phone ? c.dim(` · ${x.phone}`) : ''}`); }
+      if (d.countryNote) out(c.dim(`  ${d.countryNote}`));
+    });
+  },
+  async spot(o, a) {
+    const r = await o.spotRound(typeof a.flags.date === 'string' ? a.flags.date : undefined);
+    emit(a, r, () => {
+      const d = r.result;
+      if (!d.available) { out(c.red(d.reason ?? 'no round')); return; }
+      out(c.bold(`Spot the Scam ${d.date}`));
+      for (const i of d.items) out(`  ${i.n}. ${i.display}  ${i.answer === 'scam' ? c.red('SCAM') : c.green('LEGIT')}  ${c.dim(i.explanation)}`);
+    });
+  },
   async iban(o, a) {
     const q = a.pos.slice(1).join(' ').trim();
     if (!q) throw new UsageError('usage: oculon iban <IBAN> [--country NL]');
@@ -854,6 +988,50 @@ export const COMMANDS: Record<string, Cmd> = {
       if (d.origin.ip) out(`  sent from ${d.origin.ip}${d.origin.country ? ` · ${d.origin.country}` : ''}${d.origin.isp ? ` · ${d.origin.isp}` : ''}`);
       for (const f of d.flags) out(c.yellow(`  ! ${f}`));
       for (const x of d.advice) out(`  → ${x}`);
+      printSources(r);
+    });
+  },
+  async screenshot(o, a) {
+    const file = a.pos.slice(1).join(' ').trim();
+    if (!file) throw new UsageError('usage: oculon screenshot <image.png|image.jpg|image.webp>');
+    if (!existsSync(file)) throw new UsageError(`no such file: ${file}`);
+    const bytes = readFileSync(file);
+    const { createHash } = await import('node:crypto');
+    const name = file.split(/[\\/]/).pop()!;
+    const { value: r, check } = await o.recordCheck('screenshot', createHash('sha256').update(bytes).digest('hex'), () => o.screenshotCheck(bytes, name), { label: name });
+    emit(a, { ...r, check } as typeof r, () => {
+      const d = r.result;
+      const tone = d.verdict === 'likely scam' ? c.red : d.verdict === 'suspicious' ? c.yellow : d.verdict ? c.green : c.dim;
+      out(`${c.bold(d.name)}  ${tone((d.verdict ?? (d.read ? 'nothing to check' : 'could not read')).toUpperCase())}${d.risk != null ? c.dim(` risk ${d.risk}/100`) : ''}${d.screen ? c.dim(` · ${d.screen}`) : ''}`);
+      for (const x of d.reasons) out(c.yellow(`  ! ${x}`));
+      for (const l of d.items.links) out(`  link ${l.defanged}`);
+      if (d.items.phones.length) out(c.dim(`  phones: ${d.items.phones.join(', ')}`));
+      if (d.items.amounts.length) out(c.dim(`  amounts: ${d.items.amounts.join(', ')}`));
+      for (const n of d.notes) out(c.dim(`  ${n}`));
+      if (d.explanation) out(`  ${d.explanation}`);
+      for (const x of d.advice) out(`  → ${x}`);
+      printSources(r);
+    });
+  },
+  async terms(o, a) {
+    const q = a.pos.slice(1).join(' ').trim();
+    let input: { text?: string; url?: string };
+    if (q && existsSync(q)) input = { text: readFileSync(q, 'utf8') };
+    else if (q) input = { url: q };
+    else if (!process.stdin.isTTY) input = { text: readFileSync(0, 'utf8') };
+    else throw new UsageError('usage: oculon terms <url|file.txt>   (or pipe the text in: oculon terms < terms.txt)');
+    const r = await o.termsRead(input);
+    emit(a, r, () => {
+      const d = r.result;
+      const tone = d.rating === 'many red flags' ? c.red : d.rating === 'some red flags' ? c.yellow : c.green;
+      out(`${c.bold(d.title ?? d.url ?? 'pasted text')}  ${tone(d.rating.toUpperCase())}  ${c.dim(`${d.counts.high} high · ${d.counts.medium} medium · ${d.counts.low} low · ${d.chars} chars`)}`);
+      if (d.summary) out(`  ${d.summary}`);
+      for (const f of d.findings) {
+        const t = f.severity === 'high' ? c.red : f.severity === 'medium' ? c.yellow : c.dim;
+        out(`  ${t(`[${f.n}] ${f.severity.toUpperCase()}`)} ${f.label}: ${f.why}`);
+        out(c.dim(`      "${f.quote.length > 240 ? `${f.quote.slice(0, 240)}...` : f.quote}"`));
+      }
+      for (const n of d.notes) out(c.dim(`  ${n}`));
       printSources(r);
     });
   },
@@ -2260,6 +2438,27 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     });
     await bot.start();
     return 0;
+  }
+
+  // The hosted API with an Oculon API key: no local sources or keys needed.
+  if (cmd === 'api') {
+    const { OculonClient, OculonApiError } = await import('../client.js');
+    const oc = new OculonClient();
+    const target = a.pos[1];
+    if (!target) { out('usage: oculon api key | oculon api <path> [name=value ...]  (set OCULON_API_KEY; keys at https://console.oculon.live)'); return 2; }
+    if (!process.env.OCULON_API_KEY) out(c.dim('No OCULON_API_KEY set: calling without a key (free services, small daily limit). Get a key at https://console.oculon.live'));
+    try {
+      const params: Record<string, string> = {};
+      for (const kv of a.pos.slice(2)) { const i = kv.indexOf('='); if (i > 0) params[kv.slice(0, i)] = kv.slice(i + 1); }
+      for (const [k, v] of Object.entries(a.flags)) if (k !== 'json' && typeof v === 'string') params[k] = v;
+      const r = target === 'key' ? await oc.key() : await oc.get(target, params);
+      out(JSON.stringify(r, null, 2));
+      if (oc.remaining !== null && !a.flags.json) out(c.dim(`${oc.remaining} calls left today`));
+      return 0;
+    } catch (e) {
+      out(c.red(e instanceof OculonApiError ? `${e.status}: ${e.message}` : (e as Error).message));
+      return 1;
+    }
   }
 
   if (ONCHAIN_COMMANDS.has(cmd) && !onchainEnabled()) {
