@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.oculonlive/oculon",
   "title": "Oculon",
-  "description": "OSINT checks with sources: scams, links, screenshots, wallets, outages, CVEs, research. Optional API key for more.",
+  "description": "OSINT checks with sources: scams, links, screenshots, wallets, outages, CVEs, research.",
   "repository": {
     "url": "https://github.com/oculonlive/oculon",
     "source": "github"
