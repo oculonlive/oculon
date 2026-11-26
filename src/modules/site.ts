@@ -155,7 +155,13 @@ export async function siteCheck(ctx: Ctx, input: string, opts: { browser?: boole
   if (scan.data?.malicious) phishing.push([`Cloudflare's browser scan marks it malicious${scan.data.categories.length ? ` (${scan.data.categories.join(', ')})` : ''}`, 60]);
   let reports: AbuseReports | null = null;
   try { const ca = await chainabuse(ctx, 'domain', domain); if (ca.prov) provenance.push(ca.prov); reports = ca.data; } catch {}
-  if (reports?.count) phishing.push([`${reports.count} scam report${reports.count > 1 ? 's' : ''} about ${domain} filed by victims on Chainabuse${reports.categories.length ? ` (${reports.categories.join(', ')})` : ''}`, reports.trusted || reports.count >= 3 ? 40 : 15]);
+  // The official domain of a known brand or app is not phishing it, and its wallet code is the real app's.
+  const official = Object.entries(BRANDS).find(([, own]) => own.some((d) => domain === d || domain.endsWith(`.${d}`)))?.[0] ?? null;
+  const notes: string[] = [];
+  const reportText = reports?.count ? `${reports.count} scam report${reports.count > 1 ? 's' : ''} about ${domain} filed by victims on Chainabuse${reports.categories.length ? ` (${reports.categories.join(', ')})` : ''}` : '';
+  // Reports on a real brand's domain are almost always about scammers posing as it, so they are not held against it.
+  if (reportText && official) notes.push(`${reportText}; on an official domain these are usually about impostors using its name.`);
+  else if (reportText) phishing.push([reportText, reports!.trusted || reports!.count >= 3 ? 40 : 15]);
   // Reputation of the final address.
   let reputation: SiteReport['reputation'] = null;
   try {
@@ -165,10 +171,7 @@ export async function siteCheck(ctx: Ctx, input: string, opts: { browser?: boole
   } catch {}
   if (apexOf(u.hostname) !== domain) phishing.push([`the link redirects to another domain (${apexOf(u.hostname)} -> ${domain})`, 10]);
 
-  // The official domain of a known brand or app is not phishing it, and its wallet code is the real app's.
-  const official = Object.entries(BRANDS).find(([, own]) => own.some((d) => domain === d || domain.endsWith(`.${d}`)))?.[0] ?? null;
-  const notes: string[] = [];
-  if (official) { notes.push(`${domain} is the official domain of ${official}.`); drainer.splice(0, drainer.length, ...drainer.filter(([r]) => STRONG.test(r))); }
+  if (official) { notes.unshift(`${domain} is the official domain of ${official}.`); drainer.splice(0, drainer.length, ...drainer.filter(([r]) => STRONG.test(r))); }
   const sum = (xs: [string, number][]) => xs.reduce((s, [, w]) => s + w, 0);
   const strong = drainer.some(([r]) => STRONG.test(r));
   const dRisk = strong ? sum(drainer) : Math.min(25, sum(drainer)), pRisk = sum(phishing);
