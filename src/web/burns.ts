@@ -5,7 +5,15 @@
  */
 
 export interface Burn { tx: string; time: string; amount: string }
-export interface BurnInfo { total: string; percent: string | null; burns: Burn[]; checkedAt: string }
+/** `supply` is what is left after burns, as a plain decimal number (for supply APIs such as CoinGecko's). */
+export interface BurnInfo { total: string; percent: string | null; burns: Burn[]; checkedAt: string; supply?: string }
+
+/** A raw amount as a plain decimal number without separators, trailing zeros dropped. */
+export function plainUnits(raw: bigint, decimals: number): string {
+  const base = 10n ** BigInt(decimals);
+  const frac = (raw % base).toString().padStart(decimals, '0').replace(/0+$/, '');
+  return `${raw / base}${frac ? `.${frac}` : ''}`;
+}
 
 const TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 const DEAD = '0x000000000000000000000000000000000000dead';
@@ -59,5 +67,6 @@ export async function readBurns(rpc: Rpc, token: string, fromBlock: number, now 
     percent: supply > 0n ? `${(Number((totalRaw * 1_000_000n) / supply) / 10_000).toFixed(2)}%` : null,
     burns,
     checkedAt: now.toISOString(),
+    supply: plainUnits(supply - totalRaw, decimals),
   };
 }

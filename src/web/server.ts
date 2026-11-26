@@ -1008,6 +1008,15 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       }
       return send(res, 200, renderPage(pageHtml, siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
     }
+    // Supply APIs for listing sites: the supply left after burns, as plain text. No vesting or locks, so total and circulating are the same.
+    if (/^\/api\/supply\/(total|circulating)\/?$/.test(url.pathname)) {
+      let info: Partial<TokenInfo> = {};
+      try { info = JSON.parse(readFileSync(join(HERE, 'token.json'), 'utf8')) as Partial<TokenInfo>; } catch { /* no file */ }
+      const b = await tokenBurns(info);
+      if (!b?.supply) return send(res, 503, 'supply unavailable', 'text/plain; charset=utf-8');
+      res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=300', 'access-control-allow-origin': '*' });
+      return res.end(b.supply);
+    }
     if (/^\/thetoken\/?$/.test(url.pathname) && sub !== 'docs') {
       let info: Partial<TokenInfo> = {};
       try { info = JSON.parse(readFileSync(join(HERE, 'token.json'), 'utf8')) as Partial<TokenInfo>; } catch { /* no file: nothing official */ }

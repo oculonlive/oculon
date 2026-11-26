@@ -58,6 +58,7 @@ test('burns: read from transfer logs, newest first, total from the dead balance 
   assert.equal(b.burns[0]!.amount, '6,000,000.05');
   assert.equal(b.total, '11,000,000');
   assert.equal(b.percent, '1.10%');
+  assert.equal(b.supply, '989000000', 'launch supply minus everything burned, plain number');
   const html = burnBlock(b, { txBase: 'https://robin.etherscan.io' });
   assert.match(html, /href="https:\/\/robin\.etherscan\.io\/tx\/0xbb"/);
   assert.match(html, /11,000,000<\/span><em>1\.10% of supply/);
