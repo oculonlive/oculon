@@ -2,17 +2,25 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.oculonlive/oculon",
   "title": "Oculon",
-  "description": "OSINT checks with sources: scams, links, claims, recalls, travel risk, CVEs, outages, research.",
+  "description": "OSINT checks with sources: scams, links, screenshots, wallets, outages, CVEs, research. Optional API key for more.",
   "repository": {
     "url": "https://github.com/oculonlive/oculon",
     "source": "github"
   },
   "websiteUrl": "https://oculon.live",
-  "version": "0.2.0",
+  "version": "0.4.0",
   "remotes": [
     {
       "type": "streamable-http",
-      "url": "https://mcp.oculon.live"
+      "url": "https://mcp.oculon.live",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Optional: Bearer ocl_... key from console.oculon.live (free key 200 calls/day, holder key every tool)",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
     }
   ]
 }
