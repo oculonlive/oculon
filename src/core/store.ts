@@ -1,5 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { oculonHome } from './paths.js';
 
@@ -212,6 +212,36 @@ export class Store {
     const removed = Number(this.db.prepare("DELETE FROM cache WHERE fetched_at < ? AND key NOT LIKE 'derived:%'").run(now - days * 86_400_000).changes);
     if (vacuum) this.db.exec('VACUUM');
     return { removed };
+  }
+
+  /** Size of the database file, its write-ahead log and the largest tables, in bytes. */
+  storageReport(): { file: number; free: number; wal: number; tables: { name: string; bytes: number }[] } {
+    const one = (sql: string) => Number(Object.values(this.db.prepare(sql).get() as Record<string, number>)[0] ?? 0);
+    const pageSize = one('PRAGMA page_size');
+    const file = one('PRAGMA page_count') * pageSize, free = one('PRAGMA freelist_count') * pageSize;
+    let wal = 0;
+    try { const f = (this.db.prepare("SELECT file FROM pragma_database_list WHERE name = 'main'").get() as { file: string } | undefined)?.file; if (f) wal = statSync(`${f}-wal`).size; } catch { /* no WAL file */ }
+    let tables: { name: string; bytes: number }[] = [];
+    try { tables = (this.db.prepare('SELECT name, sum(pgsize) AS bytes FROM dbstat GROUP BY name ORDER BY bytes DESC LIMIT 8').all() as { name: string; bytes: number }[]).map((r) => ({ name: r.name, bytes: Number(r.bytes) })); } catch { /* dbstat not compiled in */ }
+    return { file, free, wal, tables };
+  }
+
+  /**
+   * Keeps the file small on a volume with a hard limit: folds the write-ahead log back into the file, drops raw
+   * API responses older than `cacheDays` and old observations, then compacts when `vacuum` is set.
+   */
+  relieve(cacheDays = 3, obsDays = 60, vacuum = false, now = Date.now()): { cache: number; observations: number } {
+    try { this.db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* busy: next time */ }
+    const cache = Number(this.db.prepare("DELETE FROM cache WHERE fetched_at < ? AND key NOT LIKE 'derived:%'").run(now - cacheDays * 86_400_000).changes)
+      // Large responses (imagery, full lists) are the bulk of the file; a day old is old enough for them.
+      + Number(this.db.prepare("DELETE FROM cache WHERE fetched_at < ? AND length(body) > 100000 AND key NOT LIKE 'derived:%'").run(now - 86_400_000).changes);
+    const observations = Number(this.db.prepare('DELETE FROM observations WHERE observed_at < ?').run(now - obsDays * 86_400_000).changes);
+    try { this.db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* busy */ }
+    if (vacuum) {
+      try { this.db.exec('VACUUM'); } catch { /* not enough room to rebuild: freed pages are still reused */ }
+      try { this.db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* busy */ }
+    }
+    return { cache, observations };
   }
 
   close(): void {

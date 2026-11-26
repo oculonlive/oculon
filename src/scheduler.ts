@@ -114,7 +114,7 @@ export function startScheduler(o: Oculon, opts: SchedulerOptions = {}): { stop: 
         markToday('report');
       }
       if (!doneToday('prune')) {
-        await task('prune cache', async () => void o.ctx.store.pruneCache(14));
+        await task('prune cache', async () => void o.ctx.store.relieve(7, 60));
         markToday('prune');
       }
       if (!doneToday('cases')) {

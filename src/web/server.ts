@@ -655,6 +655,18 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     log(`purged on-chain data: ${Object.entries(removed).map(([k, n]) => `${k} ${n}`).join(', ')}`);
   }
 
+  // The hosted volume has a hard size limit: report what the database holds, then fold the log back and drop old
+  // raw responses before serving, and again every few hours.
+  if (publicMode) {
+    const mb = (n: number) => `${(n / 1048576).toFixed(1)}MB`;
+    const report = (when: string) => { try { const r = oculon.ctx.store.storageReport(); log(`storage ${when}: file ${mb(r.file)} (free ${mb(r.free)}), wal ${mb(r.wal)}; ${r.tables.map((t) => `${t.name} ${mb(t.bytes)}`).join(', ')}`); } catch (e) { log(`storage report failed: ${(e as Error).message}`); } };
+    report('before');
+    try { const x = oculon.ctx.store.relieve(7, 60, true); log(`storage relieved: ${x.cache} cached responses, ${x.observations} observations removed`); } catch (e) { log(`storage relieve failed: ${(e as Error).message}`); }
+    report('after');
+    const relieveTimer = setInterval(() => { try { oculon.ctx.store.relieve(7, 60); } catch { /* next time */ } }, 6 * 3600_000);
+    relieveTimer.unref();
+  }
+
   // OCULON_DOMAIN (e.g. oculon.live) turns on subdomain links and redirects for app.* and docs.*.
   const siteDomain = (opts.domain ?? process.env.OCULON_DOMAIN ?? '').trim().toLowerCase() || null;
   // A Cloudflare Worker serves app.<domain> and docs.<domain> by forwarding to this server with the site name
