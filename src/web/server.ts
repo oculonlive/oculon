@@ -661,6 +661,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     const mb = (n: number) => `${(n / 1048576).toFixed(1)}MB`;
     const report = (when: string) => { try { const r = oculon.ctx.store.storageReport(); log(`storage ${when}: file ${mb(r.file)} (free ${mb(r.free)}), wal ${mb(r.wal)}; ${r.tables.map((t) => `${t.name} ${mb(t.bytes)}`).join(', ')}`); } catch (e) { log(`storage report failed: ${(e as Error).message}`); } };
     report('before');
+    try { log(`storage checkpoint: ${JSON.stringify(oculon.ctx.store.db.prepare('PRAGMA wal_checkpoint(TRUNCATE)').get())}`); } catch (e) { log(`storage checkpoint failed: ${(e as Error).message}`); }
     try { const x = oculon.ctx.store.relieve(7, 60, true); log(`storage relieved: ${x.cache} cached responses, ${x.observations} observations removed`); } catch (e) { log(`storage relieve failed: ${(e as Error).message}`); }
     report('after');
     const relieveTimer = setInterval(() => { try { oculon.ctx.store.relieve(7, 60); } catch { /* next time */ } }, 6 * 3600_000);
