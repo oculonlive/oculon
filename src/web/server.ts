@@ -1179,6 +1179,8 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     }
     // Pages: landing at /, dashboard at /app, docs at /docs. On app.* and docs.* hosts the root serves that page.
     const sub = hostName.split('.')[0];
+    // The developer console: console.<domain>, or /console on any host.
+    if ((sub === 'console' && url.pathname === '/') || /^\/console\/?$/.test(url.pathname)) return send(res, 200, renderPage(readFileSync(join(HERE, 'console.html'), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
     // Docs sections have their own addresses: docs.<domain>/install, or /docs/install on a single host.
     const docsSection = (sub === 'docs' ? /^\/([a-z0-9][a-z0-9-]{0,60})\/?$/ : /^\/docs\/([a-z0-9][a-z0-9-]{0,60})\/?$/).exec(url.pathname)?.[1];
     if (docsSection && !['api', 'assets', 'app', 'report', 'r', 'proof', 'ask', 'thetoken'].includes(docsSection)) {
@@ -1229,8 +1231,6 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
         return send(res, statusFor(e), JSON.stringify({ error: (e as Error).message }), 'application/json');
       }
     }
-    // The developer console: console.<domain>, or /console on any host.
-    if ((sub === 'console' && url.pathname === '/') || /^\/console\/?$/.test(url.pathname)) return send(res, 200, renderPage(readFileSync(join(HERE, 'console.html'), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
     const toolPage = /^\/(rugradar|guard|inbox|discord|prove|embed|screenshot|terms-reader|rescue|checkup|spot|down|charity|brandshield|today|trends|wall)\/?$/.exec(url.pathname)?.[1];
     if (toolPage && sub !== 'docs' && existsSync(join(HERE, `${toolPage.replace('-', '')}.html`))) {
       return send(res, 200, renderPage(readFileSync(join(HERE, `${toolPage.replace('-', '')}.html`), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
