@@ -572,6 +572,15 @@ export function burnBlock(b: BurnInfo | null, t: Partial<TokenInfo>): string {
     + `<p class="bnote">Read live from the chain: transfers to the dead and zero addresses. Updated ${esc(when(b.checkedAt))}.</p></div>`;
 }
 
+/** One footer line on the home page naming the official contract, so the site itself states it (from token.json). */
+export function tokenFooter(t: Partial<TokenInfo>): string {
+  const ca = (t.ca ?? '').trim();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(ca)) return '';
+  const ticker = (t.ticker ?? '').replace(/[^A-Za-z0-9]/g, '');
+  const chain = (t.chain ?? '').replace(/[&<>"']/g, '');
+  return `<p style="margin:6px 0 0;font:12px ui-monospace,Consolas,monospace;color:#7d8f93;word-break:break-all">${ticker ? `$${ticker} ` : ''}contract${chain ? ` (${chain})` : ''}: <a href="/thetoken" style="color:#9fb0b4">${ca}</a></p>`;
+}
+
 /** The address block on /thetoken, from src/web/token.json. An empty address says no token is official yet. */
 export function tokenBlock(t: Partial<TokenInfo>): string {
   const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
@@ -978,7 +987,13 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
         res.writeHead(301, { location: `https://${page}.${siteDomain}/${url.search}`, 'cache-control': 'no-store' });
         return res.end();
       }
-      return send(res, 200, renderPage(readFileSync(join(HERE, PAGE_FILES[page]), 'utf8'), siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
+      let pageHtml = readFileSync(join(HERE, PAGE_FILES[page]), 'utf8');
+      if (pageHtml.includes('{{TOKEN_CA}}')) {
+        let info: Partial<TokenInfo> = {};
+        try { info = JSON.parse(readFileSync(join(HERE, 'token.json'), 'utf8')) as Partial<TokenInfo>; } catch { /* no file: nothing official */ }
+        pageHtml = pageHtml.replace('{{TOKEN_CA}}', () => tokenFooter(info));
+      }
+      return send(res, 200, renderPage(pageHtml, siteDomain && hostName.endsWith(siteDomain) ? siteDomain : null), 'text/html; charset=utf-8');
     }
     if (/^\/thetoken\/?$/.test(url.pathname) && sub !== 'docs') {
       let info: Partial<TokenInfo> = {};

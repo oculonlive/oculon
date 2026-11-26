@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { test } from 'node:test';
 import { Oculon } from '../src/index.js';
-import { burnBlock, createWebServer, tokenBlock } from '../src/web/server.js';
+import { burnBlock, createWebServer, tokenBlock, tokenFooter } from '../src/web/server.js';
 import { readBurns } from '../src/web/burns.js';
 import { mockFetch, NOW } from './helpers.js';
 
@@ -24,6 +24,15 @@ const official = JSON.parse(readFileSync(new URL('../src/web/token.json', import
 test('README and token.json name the same address', () => {
   if (!official.ca) return;
   assert.ok(readFileSync(new URL('../README.md', import.meta.url), 'utf8').includes(official.ca));
+});
+
+test('home page footer names the official contract', () => {
+  assert.equal(tokenFooter({}), '');
+  assert.equal(tokenFooter({ ca: '0xabc<script>' }), '');
+  if (!official.ca) return;
+  const f = tokenFooter(official);
+  assert.ok(f.includes(official.ca) && f.includes('href="/thetoken"'));
+  assert.ok(readFileSync(new URL('../src/web/landing.html', import.meta.url), 'utf8').includes('{{TOKEN_CA}}'));
 });
 
 test('burns: read from transfer logs, newest first, total from the dead balance plus zero-address burns', async () => {
