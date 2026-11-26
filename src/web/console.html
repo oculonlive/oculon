@@ -21,11 +21,22 @@ header{position:sticky;top:0;z-index:5;background:rgba(0,0,0,.86);backdrop-filte
 header .in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:18px;padding:14px clamp(16px,3vw,32px)}
 .logo{display:flex;align-items:center;gap:12px;font-size:16px;font-weight:600;letter-spacing:.38em;text-decoration:none;white-space:nowrap}
 .logo img{width:22px;height:22px}
-.tag{font:700 10px var(--mono);letter-spacing:.16em;color:#001418;background:var(--y);padding:3px 6px;border-radius:3px}
-header nav{margin-left:auto;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
-header nav::-webkit-scrollbar{display:none}
-header nav a{text-decoration:none;color:var(--soft);font-size:14px;padding:8px 10px;border-radius:6px;white-space:nowrap}
+.logo em{font-style:normal;font-weight:400;letter-spacing:.02em;font-size:17px;color:var(--y);margin-left:-2px;padding-left:12px;border-left:1px solid #2a3437}
+header .logo{margin-right:auto}
+header nav{display:flex;gap:2px}
+header nav a{text-decoration:none;color:var(--soft);font-size:14px;padding:8px 11px;border-radius:6px;white-space:nowrap}
 header nav a:hover{color:#fff;background:rgba(255,255,255,.05)}
+.hbtn{margin-left:6px}
+.burger{display:grid;place-content:center;gap:5px;width:42px;height:42px;border:1px solid #26343a;background:transparent;border-radius:8px;cursor:pointer;margin-left:4px;flex:none}
+.burger i{display:block;width:18px;height:2px;background:#fff;border-radius:2px;transition:transform .2s,opacity .2s}
+.burger[aria-expanded="true"] i:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.burger[aria-expanded="true"] i:nth-child(2){opacity:0}
+.burger[aria-expanded="true"] i:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.menu{border-top:1px solid var(--line);background:rgba(0,0,0,.96);max-height:calc(100vh - 71px);overflow-y:auto}
+.menu .mi{max-width:1180px;margin:0 auto;padding:26px clamp(16px,3vw,32px) 34px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:24px}
+.menu h6,footer h6{margin:0 0 12px;font:700 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--y)}
+.menu a{display:block;text-decoration:none;color:var(--soft);font-size:15px;padding:7px 0}
+.menu a:hover,footer a:hover{color:#fff}
 main{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 clamp(16px,3vw,32px) 110px}
 .hero{padding:72px 0 28px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);gap:40px;align-items:center}
 .eyebrow{display:inline-flex;align-items:center;gap:10px;font:12px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--y);border:1px solid rgba(0,240,255,.3);background:rgba(0,240,255,.06);padding:7px 11px;border-radius:999px}
@@ -102,15 +113,29 @@ tr:last-child td{border-bottom:0}
 .out{max-height:420px;overflow:auto;margin:12px 0 0;border:1px solid var(--bd);border-radius:10px;background:rgba(3,7,8,.94);padding:16px;font:12px/1.6 var(--mono);color:#dff;white-space:pre}
 .hide{display:none!important}
 .split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
-footer{position:relative;z-index:1;border-top:1px solid var(--line)}footer .in{max-width:1180px;margin:0 auto;padding:26px clamp(16px,3vw,32px);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font:12px var(--mono);color:var(--mut)}footer a{color:var(--soft)}
+footer{position:relative;z-index:1;border-top:1px solid var(--line);background:rgba(0,0,0,.72)}
+footer .fin{max-width:1180px;margin:0 auto;padding:56px clamp(16px,3vw,32px) 40px;display:grid;grid-template-columns:minmax(0,1.6fr) repeat(5,minmax(0,1fr));gap:28px}
+footer .fbrand p{color:var(--mut);font-size:14px;line-height:1.6;margin:16px 0 18px;max-width:280px}
+footer .soc{display:flex;flex-wrap:wrap;gap:8px}
+footer .soc a{font:12px var(--mono);color:var(--soft);border:1px solid #26343a;padding:7px 10px;border-radius:6px;text-decoration:none}
+footer .fcol a{display:block;text-decoration:none;color:var(--soft);font-size:14px;padding:5px 0}
+footer .fbar{max-width:1180px;margin:0 auto;padding:20px clamp(16px,3vw,32px) 28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font:12px var(--mono);color:var(--mut)}
+@media (max-width:1000px){header nav{display:none}footer .fin{grid-template-columns:repeat(3,minmax(0,1fr))}footer .fbrand{grid-column:1/-1}.menu .mi{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media (max-width:900px){.hero{grid-template-columns:1fr;padding-top:44px;gap:28px}.tiers,.steps,.split{grid-template-columns:1fr}.who{grid-template-columns:1fr 1fr}.who .row{grid-column:1/-1}}
-@media (max-width:560px){header nav a.x{display:none}.tier .n{font-size:34px}.lead{font-size:16px}}
+@media (max-width:560px){.hbtn{display:none}.logo{letter-spacing:.3em}.logo em{font-size:15px;padding-left:10px}.tier .n{font-size:34px}.lead{font-size:16px}.menu .mi,footer .fin{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
 <body>
 <canvas id="liquidbg" aria-hidden="true"></canvas>
-<header><div class="in"><a class="logo" data-main href="/"><img src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><span class="tag">API</span><nav><a href="#keys">Keys</a><a href="#start">Quickstart</a><a class="x" href="#catalog">Services</a><a class="x" href="#play">Playground</a><a data-main href="/docs">Docs</a></nav></div></header>
-<main>
+<header><div class="in"><a class="logo" href="#top"><img src="/assets/logo.svg" alt="" width="22" height="22">OCULON<em>Console</em></a><nav><a href="#keys">Keys</a><a href="#start">Quickstart</a><a href="#catalog">Services</a><a href="#play">Playground</a><a data-main href="/docs">Docs</a></nav><a class="btn s hbtn" href="#keys">Get a key</a><button class="burger" id="burger" aria-label="Menu" aria-expanded="false" aria-controls="menu"><i></i><i></i><i></i></button></div>
+<div class="menu" id="menu" hidden><div class="mi">
+  <div class="mcol"><h6>Console</h6><a href="#keys">Your keys</a><a href="#start">Quickstart</a><a href="#catalog">Services</a><a href="#play">Playground</a></div>
+  <div class="mcol"><h6>Protect</h6><a data-main href="/screenshot">Screenshot Check</a><a data-main href="/rescue">I Got Scammed</a><a data-main href="/checkup">Security Checkup</a><a data-main href="/guard">Wallet Guard</a><a data-main href="/brandshield">Brand Shield</a><a data-main href="/terms-reader">Terms Reader</a></div>
+  <div class="mcol"><h6>Watch</h6><a data-main href="/rugradar">Rug Radar</a><a data-main href="/down">Is It Down</a><a data-main href="/today">Oculon Wire</a><a data-main href="/trends">Scam Trends</a><a data-main href="/wall">Live Wall</a><a data-main href="/spot">Spot the Scam</a></div>
+  <div class="mcol"><h6>Developers</h6><a data-main href="/docs">Documentation</a><a href="https://mcp.oculon.live">Remote MCP</a><a data-main href="/openapi.json">OpenAPI</a><a data-main href="/llms.txt">llms.txt</a><a href="https://www.npmjs.com/package/oculon" rel="noopener">npm</a><a href="https://github.com/oculonlive/oculon" rel="noopener">GitHub</a></div>
+  <div class="mcol"><h6>Oculon</h6><a data-main href="/">Home</a><a data-main href="/app">Web app</a><a data-main href="/thetoken">$OCULON</a><a data-main href="/status">Source status</a><a href="https://x.com/oculonlive" rel="noopener">X</a><a href="https://t.me/oculonportal" rel="noopener">Telegram</a></div>
+</div></div></header>
+<main id="top">
   <section class="hero">
     <div>
       <span class="eyebrow"><i></i>Oculon API · live</span>
@@ -196,7 +221,17 @@ footer{position:relative;z-index:1;border-top:1px solid var(--line)}footer .in{m
     </div>
   </section>
 </main>
-<footer><div class="in"><span>© <span id="year"></span> Oculon contributors · MIT</span><span><a data-main href="/">Home</a> · <a data-main href="/docs">Docs</a> · <a data-main href="/thetoken">Token</a> · <a data-main href="/terms">Terms</a></span></div></footer>
+<footer>
+  <div class="fin">
+    <div class="fbrand"><a class="logo" data-main href="/"><img src="/assets/logo.svg" alt="" width="22" height="22">OCULON</a><p>Check before you trust. Every answer sourced, from more than 50 public data sources.</p><div class="soc"><a href="https://x.com/oculonlive" rel="noopener">X</a><a href="https://t.me/oculonportal" rel="noopener">Telegram</a><a href="https://github.com/oculonlive/oculon" rel="noopener">GitHub</a><a href="https://www.npmjs.com/package/oculon" rel="noopener">npm</a></div></div>
+    <div class="fcol"><h6>Console</h6><a href="#keys">API keys</a><a href="#start">Quickstart</a><a href="#catalog">Services</a><a href="#play">Playground</a><a data-main href="/api/catalog">Catalog JSON</a></div>
+    <div class="fcol"><h6>Protect</h6><a data-main href="/screenshot">Screenshot Check</a><a data-main href="/rescue">I Got Scammed</a><a data-main href="/checkup">Security Checkup</a><a data-main href="/guard">Wallet Guard</a><a data-main href="/brandshield">Brand Shield</a><a data-main href="/terms-reader">Terms Reader</a><a data-main href="/charity">Charity Check</a><a data-main href="/prove">Prove It</a></div>
+    <div class="fcol"><h6>Watch</h6><a data-main href="/rugradar">Rug Radar</a><a data-main href="/down">Is It Down</a><a data-main href="/today">Oculon Wire</a><a data-main href="/trends">Scam Trends</a><a data-main href="/wall">Live Wall</a><a data-main href="/spot">Spot the Scam</a></div>
+    <div class="fcol"><h6>Developers</h6><a data-main href="/docs">Documentation</a><a href="https://mcp.oculon.live">Remote MCP</a><a data-main href="/openapi.json">OpenAPI</a><a data-main href="/llms.txt">llms.txt</a><a data-main href="/embed">Embed</a><a href="https://github.com/oculonlive/oculon/tree/main/extension" rel="noopener">Browser extension</a><a data-main href="/discord">Discord bot</a></div>
+    <div class="fcol"><h6>Oculon</h6><a data-main href="/">Home</a><a data-main href="/app">Web app</a><a data-main href="/thetoken">$OCULON</a><a data-main href="/utility">Token utility</a><a data-main href="/status">Source status</a><a data-main href="/privacy">Privacy</a><a data-main href="/terms">Terms</a></div>
+  </div>
+  <div class="fbar"><span>© <span id="year"></span> Oculon contributors · MIT licensed, open source</span><span>Free key: 200 calls a day · Holder key: 5,000 calls a day</span></div>
+</footer>
 <script src="/assets/fx.js"></script>
 <script>
 if (window.OculonFX) { try { OculonFX.liquid(document.getElementById('liquidbg'), { base: '#000000', mid: '#001a1f', hi: '#00c8e0', intensity: 0.6, scale: 0.3 }); } catch (e) {} }
@@ -209,6 +244,11 @@ const main = host.startsWith('console.') ? location.protocol + '//' + host.slice
 // Only site-relative links point back to the main domain; links the server already made absolute stay as they are.
 if (main) document.querySelectorAll('a[data-main]').forEach((a) => { const h = a.getAttribute('href') || ''; if (h.startsWith('/')) a.href = main + h; });
 const apiBase = main || location.origin;
+const burger = $('burger'), menu = $('menu');
+const setMenu = (open) => { burger.setAttribute('aria-expanded', String(open)); menu.hidden = !open; };
+burger.onclick = () => setMenu(menu.hidden);
+menu.addEventListener('click', (e) => { if (e.target.closest('a')) setMenu(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); });
 const mcpUrl = main ? location.protocol + '//mcp.' + host.slice(8) : location.origin + '/mcp';
 const fmt = (n) => Number(n).toLocaleString('en-US');
 const post = async (p, body) => { const r = await fetch(p, { method: 'POST', credentials: 'same-origin', headers: { 'content-type': 'application/json', 'x-oculon': '1' }, body: JSON.stringify(body || {}) }); const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status)); return j; };
