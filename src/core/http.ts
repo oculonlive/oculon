@@ -220,6 +220,29 @@ export class Http {
     return { data: null, prov: prov(o.source, url, 'ERROR', Date.now(), lastErr) };
   }
 
+  /**
+   * Uncached GET of a web page that keeps what a page check needs: the final URL after redirects, the status,
+   * the response headers and the body (capped at `maxBytes`). Not retried: a page that fails is reported as is.
+   */
+  async getPage(url: string, o: { source: string; headers?: Record<string, string>; timeoutMs?: number; maxBytes?: number }): Promise<{ data: { status: number; finalUrl: string; headers: Record<string, string>; body: Buffer } | null; prov: Provenance }> {
+    const doFetch = this.cfg.fetch ?? fetch;
+    const t0 = Date.now();
+    try {
+      if (this.cfg.throttle !== false) await throttle(new URL(url).host);
+      const res = await doFetch(url, { headers: { 'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36', accept: 'text/html,application/xhtml+xml,*/*', ...o.headers }, redirect: 'follow', signal: AbortSignal.timeout(o.timeoutMs ?? 20_000) });
+      const buf = Buffer.from(await res.arrayBuffer());
+      const headers: Record<string, string> = {};
+      res.headers.forEach((v, k) => { headers[k] = v; });
+      const data = { status: res.status, finalUrl: res.url || url, headers, body: buf.subarray(0, o.maxBytes ?? 3_000_000) };
+      const st: Status = res.ok ? 'LIVE' : res.status === 404 ? 'UNAVAILABLE' : 'ERROR';
+      this.note(o.source, url, st, Date.now() - t0, res.ok ? undefined : `HTTP ${res.status}`);
+      return { data, prov: prov(o.source, url, st, Date.now(), res.ok ? undefined : `HTTP ${res.status}`) };
+    } catch (e) {
+      this.note(o.source, url, 'ERROR', Date.now() - t0, errMsg(e));
+      return { data: null, prov: prov(o.source, url, 'ERROR', Date.now(), errMsg(e)) };
+    }
+  }
+
   /** Record a finished call: the running check's replay log, and (for live calls) the /status stats. */
   private note(source: string, url: string, status: Status, ms: number, note?: string, via?: string, live = true): void {
     let host = '';

@@ -31,7 +31,7 @@ export interface BotOptions {
 
 interface Update {
   update_id: number;
-  message?: { chat: { id: number; type: string }; text?: string; caption?: string; from?: { username?: string } };
+  message?: { chat: { id: number; type: string }; text?: string; caption?: string; from?: { username?: string }; photo?: { file_id: string; file_size?: number }[]; document?: { file_id: string; file_name?: string; mime_type?: string; file_size?: number } };
   callback_query?: { id: string; data?: string; from: { id: number }; message?: { chat: { id: number }; message_id: number } };
 }
 
@@ -47,9 +47,9 @@ export function formatSignal(s: Signal): string {
 }
 
 /** Commands anyone may use when the bot is public. Everything else stays with the allowlisted chats. */
-export const PUBLIC_COMMANDS = new Set(['/start', '/help', '/scam', '/url', '/factcheck', '/recall', '/email', '/travel', '/airport', '/country', '/papers', '/audit', '/monitor', '/monitors', '/unmonitor', '/cve', '/vulns', '/hazards', '/blackout', '/cloud', '/space', '/air', '/radar', '/signals', '/alerts', '/ask', '/ip', '/hash', '/ransomware', '/company', '/breaches', '/phone', '/satellite', '/iban', '/lookalike', '/honeypot', '/address', '/headers']);
+export const PUBLIC_COMMANDS = new Set(['/start', '/help', '/scam', '/url', '/factcheck', '/recall', '/email', '/travel', '/airport', '/country', '/papers', '/audit', '/monitor', '/monitors', '/unmonitor', '/cve', '/vulns', '/hazards', '/blackout', '/cloud', '/space', '/air', '/radar', '/signals', '/alerts', '/ask', '/ip', '/hash', '/ransomware', '/company', '/breaches', '/phone', '/satellite', '/iban', '/lookalike', '/honeypot', '/address', '/headers', '/approvals', '/contract', '/poison', '/trace', '/repo', '/check', '/sig', '/qr', '/photo', '/doc', '/where', '/site', '/tx', '/creator', '/archive', '/invite', '/job', '/stock']);
 /** Commands that start many upstream calls or an LLM get a tighter budget. */
-const HEAVY = new Set(['/factcheck', '/papers', '/travel', '/country', '/ask', '/scam', '/audit', '/radar', '/ip', '/hash', '/company', '/lookalike', '/honeypot', '/address']);
+const HEAVY = new Set(['/factcheck', '/papers', '/travel', '/country', '/ask', '/scam', '/audit', '/radar', '/ip', '/hash', '/company', '/lookalike', '/honeypot', '/address', '/approvals', '/contract', '/poison', '/trace', '/repo', '/check', '/sig', '/site', '/tx', '/creator', '/archive', '/invite', '/job']);
 
 export const PUBLIC_HELP = [
   '<b>Oculon</b>: check anything, every answer sourced.',
@@ -72,6 +72,22 @@ export const PUBLIC_HELP = [
   '/lookalike &lt;domain&gt; — lookalike domains and new certificates for a brand',
   '/honeypot &lt;token&gt; [eth|bsc|base] — can this token be sold?',
   '/address &lt;crypto address&gt; — sanctions, balance and activity',
+  '/approvals &lt;wallet&gt; — who can take your tokens? risky approvals flagged',
+  '/contract &lt;token&gt; [chain] — what the owner can still do: mint, blacklist, taxes, upgrades',
+  '/sig &lt;request&gt; — what does this signature request really allow?',
+  '/poison &lt;wallet&gt; — lookalike addresses planted in your history',
+  '/trace &lt;address&gt; — follow the money to exchanges and mixers',
+  '/repo &lt;owner/name&gt; — is this GitHub repo safe to run?',
+  '/check &lt;domain or 0x address&gt; — full report, every check on one page',
+  '/site &lt;link&gt; — wallet drainer or phishing page?',
+  '/tx &lt;hash&gt; — what happened in this transaction?',
+  '/creator &lt;token&gt; — who made this token, and how many of their tokens are dead?',
+  '/job &lt;message&gt; — is this job offer a scam?',
+  '/invite &lt;t.me or discord.gg link&gt; — what is behind this invite?',
+  '/archive &lt;link&gt; — save a page as evidence',
+  '/stock [TSLA or 0x...] — Robinhood Stock Token price, dividends, or is this one fake?',
+  'Send an .eml email or an .apk app as a file to check it; a photo as a file with /where for its place, time and weather',
+  'Send a photo or file: QR codes are read and checked, images checked for AI or edits, PDF and Office files for editing and macros',
   '/company &lt;name, LEI or EU VAT&gt; — is this supplier real?',
   '/breaches [domain] — newest data breaches, or one domain',
   '/ip &lt;address or domain&gt; — abuse reports, scanners, Tor, threat reports',
@@ -103,6 +119,7 @@ export const HELP = [
   '/recall &lt;VIN, "2018 Honda Accord" or product&gt; — vehicle and product recalls',
   '/email &lt;domain&gt; — can someone spoof email from this domain?',
   '/phone · /company · /iban · /headers · /breaches · /ip · /hash · /lookalike · /honeypot · /address · /ransomware · /satellite — caller, supplier, email, breach, crypto and threat checks',
+  '/approvals · /contract · /sig · /poison · /trace · /repo · /check · /site · /tx · /creator · /job · /invite · /archive — wallet safety, pages, repos and full reports; send a photo or file for QR, image and document checks',
   '/airport &lt;JFK|EGLL&gt; — airport weather, delays and ground stops',
   '/country &lt;name&gt; — economy, leaders, currency, travel advice, headlines',
   '/papers &lt;topic&gt; — research brief: most cited and newest papers',
@@ -488,6 +505,56 @@ export class TelegramBot {
         const d = (await o.lookalikes(arg)).result;
         return { html: `<b>${esc(d.domain)}</b>: <b>${d.risk.toUpperCase()} RISK</b>, ${d.live.length} of ${d.checked} lookalikes exist${d.live.slice(0, 10).map((l) => `\n${esc(l.domain)} · ${esc(l.kind)}${l.mx ? ' · mail' : ''}`).join('')}${d.certs.length ? `\n\nNew certificates: ${d.certs.slice(0, 5).map((c) => esc(c.name)).join(', ')}` : ''}` };
       }
+      case '/qr':
+      case '/photo':
+      case '/where':
+      case '/doc':
+        return { html: `Send the ${cmd === '/doc' ? 'PDF, Word or Excel file' : 'image'} to this chat${cmd === '/photo' ? ' as a file (paperclip, File), so its metadata is kept' : ''}, with ${cmd} as the caption.` };
+      case '/stock': {
+        const d = (await o.stockToken(arg)).result;
+        return { html: `<b>${esc(d.symbol ?? 'Robinhood Stock Tokens')}</b>: <b>${esc(d.verdict.toUpperCase())}</b>${d.reasons.slice(0, 6).map((x) => `\n• ${esc(x)}`).join('')}${d.advice[0] ? `\n${esc(d.advice[0])}` : ''}` };
+      }
+      case '/site':
+      case '/tx':
+      case '/creator':
+      case '/archive':
+      case '/invite':
+      case '/job':
+      case '/approvals':
+      case '/contract':
+      case '/poison':
+      case '/trace':
+      case '/repo':
+      case '/check':
+      case '/sig': {
+        if (!arg) return needArg(cmd === '/site' || cmd === '/archive' ? 'https://example.com' : cmd === '/tx' ? '0x... (transaction hash)' : cmd === '/invite' ? 't.me/name or discord.gg/code' : cmd === '/job' ? 'the job message' : cmd === '/repo' ? 'owner/name' : cmd === '/check' ? 'example.com or 0x...' : cmd === '/sig' ? '0x095ea7b3... (calldata) or typed data JSON' : '0x... [eth|arbitrum|polygon]');
+        const [first, chain] = arg.split(/\s+/) as [string, string?];
+        const opt = chain && /^(eth|base|bsc|bnb|arbitrum|polygon)$/i.test(chain) ? { chain } : {};
+        const kind = { '/approvals': 'approvals', '/contract': 'contract', '/poison': 'poisoning', '/trace': 'trace', '/site': 'site', '/tx': 'tx', '/creator': 'creator', '/archive': 'archive', '/invite': 'invite', '/job': 'job', '/repo': 'repo', '/check': /^0x[0-9a-f]{40}$/i.test(first) ? 'walletreport' : 'domainreport', '/sig': 'signature' }[cmd]!;
+        const target = cmd === '/sig' || cmd === '/job' ? arg : first;
+        const run = (): Promise<{ result: { verdict: string; risk: number; reasons: string[]; advice: string[] } }> => {
+          switch (kind) {
+            case 'approvals': return o.approvalsCheck(first, opt);
+            case 'contract': return o.contractRisk(first, opt);
+            case 'poisoning': return o.poisoningCheck(first, opt);
+            case 'trace': return o.traceFunds(first, opt);
+            case 'repo': return o.repoCheck(first);
+            case 'site': return o.siteCheck(first);
+            case 'tx': return o.explainTx(first, opt);
+            case 'creator': return o.creatorCheck(first, opt);
+            case 'archive': return o.archivePage(first);
+            case 'invite': return o.inviteCheck(first);
+            case 'job': return o.jobCheck(arg);
+            case 'walletreport': return o.walletReport(first, opt);
+            case 'domainreport': return o.domainReport(first);
+            default: return o.signatureCheck(arg);
+          }
+        };
+        const r = await o.recordCheck(kind, target, run as never, cmd === '/sig' ? { label: `signature request: ${arg.slice(0, 60)}` } : cmd === '/job' ? { label: `job offer: ${arg.slice(0, 60)}` } : {});
+        const d = (r.value as { result: { verdict: string; risk: number; reasons: string[]; advice: string[]; allows?: string[]; parts?: { part: string; verdict: string | null; error: string | null }[] } }).result;
+        const extra = d.allows?.length ? d.allows.slice(0, 4).map((x) => `\n• ${esc(x)}`).join('') : d.parts?.length ? d.parts.map((p) => `\n• ${esc(p.part)}: ${esc(p.error ? 'not checked' : p.verdict ?? 'done')}`).join('') : '';
+        return { html: `<b>${esc(cmd === '/sig' ? 'Signature request' : cmd === '/job' ? 'Job offer' : first)}</b>: <b>${esc(d.verdict.toUpperCase())}</b> · risk ${d.risk}/100${extra}${d.reasons.slice(0, 6).map((x) => `\n! ${esc(x)}`).join('')}\n${esc(d.advice[0] ?? '')}\nReplay and PDF: https://app.oculon.live/replay/${r.check.id}` };
+      }
       case '/honeypot': {
         if (!arg) return needArg('0x6982508145454Ce325dDbE47a25d4ec3d2311933 eth');
         const [addr, chain] = arg.split(/\s+/);
@@ -832,6 +899,7 @@ export class TelegramBot {
     if (u.callback_query) return this.handleCallback(u.callback_query);
     const m = u.message;
     const body = (m?.text ?? m?.caption ?? '').trim();
+    if (m && (m.photo?.length || m.document) && (m.chat.type === 'private' || /^\/(qr|photo|doc|where)\b/i.test(body))) return this.handleFile(m);
     if (!m || !body) return;
     const chatId = String(m.chat.id);
     const owner = this.allowed(chatId);
@@ -861,6 +929,76 @@ export class TelegramBot {
       if (r.photo) await this.sendPhoto(chatId, r.photo.file, r.photo.caption);
       if (r.document) await this.sendDocument(chatId, r.document.file, r.document.caption);
       if (r.html) await this.send(chatId, r.html);
+    } catch (e) {
+      await this.send(chatId, `Error: ${esc((e as Error).message)}`).catch(() => {});
+    }
+  }
+
+  /**
+   * A file sent to the bot: a QR code, a photo to check for AI or edits, or a document to check for editing.
+   * The caption picks the check (/qr, /photo, /doc); without one, documents go to the document check and
+   * images are read for a QR code first. Telegram re-compresses photos and drops their metadata, so the
+   * AI and edit check needs the image sent as a file.
+   */
+  async handleFile(m: NonNullable<Update['message']>): Promise<void> {
+    const chatId = String(m.chat.id);
+    const owner = this.allowed(chatId);
+    if (!owner && !this.isPublic) return;
+    if (!owner && !this.rateOk(chatId, true)) { await this.send(chatId, 'You have reached the hourly limit. Try again a bit later, or use https://app.oculon.live'); return; }
+    const o = this.oculon;
+    const want = /^\/(qr|photo|doc|where)\b/i.exec((m.caption ?? '').trim())?.[1]?.toLowerCase();
+    const pic = m.photo?.length ? m.photo[m.photo.length - 1]! : null;
+    const fileId = pic?.file_id ?? m.document!.file_id;
+    const size = pic?.file_size ?? m.document?.file_size ?? 0;
+    if (size > 20 * 1024 * 1024) { await this.send(chatId, 'That file is larger than 20 MB (the most Telegram lets bots download).'); return; }
+    try {
+      const info = await this.call<{ file_path?: string }>('getFile', { file_id: fileId });
+      if (!info.file_path) throw new Error('could not download the file');
+      const res = await this.doFetch(`https://api.telegram.org/file/bot${this.opts.token}/${info.file_path}`, { signal: AbortSignal.timeout(30_000) });
+      const file = Buffer.from(await res.arrayBuffer());
+      const name = m.document?.file_name ?? 'photo.jpg';
+      const isImage = Boolean(pic) || /^image\//.test(m.document?.mime_type ?? '') || /\.(png|jpe?g|webp)$/i.test(name);
+      this.log(`file from ${owner ? chatId : 'public'}: ${want ?? (isImage ? 'image' : 'doc')}`);
+      const { createHash } = await import('node:crypto');
+      const hash = createHash('sha256').update(file).digest('hex');
+      const line = (v: string, risk: number, pts: string[], adv: string | undefined, id: string) =>
+        `<b>${esc(v.toUpperCase())}</b> · risk ${risk}/100${pts.slice(0, 5).map((p) => `\n! ${esc(p)}`).join('')}${adv ? `\n${esc(adv)}` : ''}\nReplay: https://app.oculon.live/replay/${id}`;
+      if (/\.eml$/i.test(name) || m.document?.mime_type === 'message/rfc822') {
+        const r = await o.recordCheck('eml', hash, () => o.emlCheck(file, name), { label: name });
+        const d = r.value.result;
+        await this.send(chatId, `<b>${esc(d.subject ?? name)}</b>\n${line(d.verdict, d.risk, d.reasons, d.advice[0], r.check.id)}`);
+        return;
+      }
+      if (/\.apk$/i.test(name) || m.document?.mime_type === 'application/vnd.android.package-archive') {
+        const r = await o.recordCheck('apk', hash, () => o.apkCheck(file, name), { label: name });
+        const d = r.value.result;
+        await this.send(chatId, `<b>${esc(d.package ?? name)}</b>\n${line(d.verdict, d.risk, d.reasons, d.advice[0], r.check.id)}`);
+        return;
+      }
+      if (want === 'where') {
+        const r = await o.recordCheck('where', hash, () => o.whereCheck(file, name), { label: name });
+        const d = r.value.result;
+        await this.send(chatId, `<b>Photo location</b>${d.gps ? `\n${esc(d.gps.map)}` : ''}\n${line(d.verdict, d.risk, [...d.reasons, ...d.notes], d.advice[0], r.check.id)}${pic ? '\n\nTelegram strips the location from photos: send it as a file.' : ''}`);
+        return;
+      }
+      if (want === 'doc' || (!want && !isImage)) {
+        const r = await o.recordCheck('doc', hash, () => o.docCheck(file, name), { label: name });
+        const d = r.value.result;
+        await this.send(chatId, `<b>${esc(name)}</b>\n${line(d.verdict, d.risk, d.flags, d.advice[0], r.check.id)}`);
+        return;
+      }
+      if (want !== 'photo') {
+        const r = await o.recordCheck('qr', hash, () => o.qrCheck(file, name), { label: name });
+        const d = r.value.result;
+        if (d.found || want === 'qr') {
+          await this.send(chatId, `<b>QR code</b>${d.content ? `: <code>${esc(d.content.slice(0, 300))}</code>` : ''}\n${line(d.verdict, d.risk, d.reasons, d.advice[0], r.check.id)}`);
+          return;
+        }
+      }
+      const r = await o.recordCheck('image', hash, () => o.imageCheck(file, name), { label: name });
+      const d = r.value.result;
+      const note = pic ? '\n\nTelegram strips metadata from photos. For the AI and edit check, send the image as a file (paperclip, File).' : '';
+      await this.send(chatId, `<b>Image</b>\n${line(d.verdict, d.risk, [...d.reasons, ...d.notes], d.advice[0], r.check.id)}${note}`);
     } catch (e) {
       await this.send(chatId, `Error: ${esc((e as Error).message)}`).catch(() => {});
     }
@@ -909,11 +1047,11 @@ export class TelegramBot {
     const me = await this.call<{ username: string }>('getMe', {});
     this.log(`bot @${me.username} running; ${this.opts.allowedChats.length} allowed chat(s)`);
     if (this.isPublic) {
-      await this.call('setMyCommands', { commands: ['scam', 'url', 'factcheck', 'recall', 'email', 'phone', 'company', 'iban', 'headers', 'breaches', 'ip', 'hash', 'lookalike', 'honeypot', 'address', 'ransomware', 'travel', 'airport', 'country', 'papers', 'audit', 'monitor', 'monitors', 'unmonitor', 'cve', 'hazards', 'blackout', 'alerts', 'help'].map((c) => ({ command: c, description: `Oculon ${c}` })) }).catch(() => {});
+      await this.call('setMyCommands', { commands: ['scam', 'url', 'factcheck', 'recall', 'email', 'phone', 'company', 'iban', 'headers', 'breaches', 'ip', 'hash', 'lookalike', 'honeypot', 'address', 'approvals', 'contract', 'sig', 'poison', 'trace', 'repo', 'check', 'site', 'tx', 'creator', 'job', 'invite', 'archive', 'ransomware', 'travel', 'airport', 'country', 'papers', 'audit', 'monitor', 'monitors', 'unmonitor', 'cve', 'hazards', 'blackout', 'alerts', 'help'].map((c) => ({ command: c, description: `Oculon ${c}` })) }).catch(() => {});
     }
     for (const chat of this.opts.allowedChats) await this.call('setMyCommands', {
       scope: { type: 'chat', chat_id: Number(chat) },
-      commands: ['ask', 'scam', 'monitors', 'unmonitor', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'recall', 'email', 'phone', 'company', 'iban', 'headers', 'breaches', 'ip', 'hash', 'lookalike', 'honeypot', 'address', 'ransomware', 'satellite', 'airport', 'country', 'papers', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
+      commands: ['ask', 'scam', 'monitors', 'unmonitor', 'url', 'factcheck', 'travel', 'audit', 'monitor', 'recall', 'email', 'phone', 'company', 'iban', 'headers', 'breaches', 'ip', 'hash', 'lookalike', 'honeypot', 'address', 'approvals', 'contract', 'sig', 'poison', 'trace', 'repo', 'check', 'site', 'tx', 'creator', 'job', 'invite', 'archive', 'ransomware', 'satellite', 'airport', 'country', 'papers', 'case', 'brief', 'report', 'narratives', 'health', 'impact', 'contradict', 'sanctions', 'watch', 'fence', 'markets', 'launches', 'rewind', 'deployer', 'scoops', 'rh', 'ships', 'radar', 'signals', 'dossier', 'hype', 'footprint', 'plane', 'mil', 'events', 'lights', 'image', 'wallet', 'token', 'space', 'air', 'score', 'cloud', 'bgp', 'vulns', 'cve', 'regs', 'defi', 'squawk', 'filings', 'fires', 'sentinel', 'radar_image', 'darkships', 'vessel', 'blackout', 'hazards', 'podcast', 'exposure', 'social', 'calendar', 'connect', 'live', 'feedback', 'alerts'].filter((c) => onchainEnabled() || !/^(deployer|rh|wallet|token|defi|protocol)$/.test(c)).map((c) => ({ command: c, description: `Oculon ${c}` })),
     }).catch(() => {});
     if (this.opts.watchMinutes && this.opts.watchMinutes > 0) {
       this.scheduler = startScheduler(this.oculon, {

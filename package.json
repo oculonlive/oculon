@@ -1,7 +1,7 @@
 {
   "name": "oculon",
-  "version": "0.1.7",
-  "description": "OSINT engine you can run, script and plug into agents: 80+ live tools for scams, links, IPs, malware, outages, CVEs and research, each result with its sources. CLI, SDK, MCP server and web app. Zero dependencies.",
+  "version": "0.2.0",
+  "description": "OSINT engine you can run, script and plug into agents: 100+ live tools for scams, links, wallets, QR codes, AI images, IPs, malware, outages, CVEs and research, each result with its sources. CLI, SDK, MCP server and web app. Zero dependencies.",
   "keywords": [
     "osint",
     "open-source-intelligence",

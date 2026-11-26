@@ -93,6 +93,11 @@ export const DAILY_BUDGET: Record<string, number> = {
   gleif: 3000,
   vies: 1000,
   celestrak: 200, // asks for at most one fetch of the same data per two hours
+  chainabuse: 24, // 750 per month on the free key
+  'hybrid-analysis': 180, // free key: 200 per day
+  'wayback-save': 1000, // logged-in Save Page Now: 30,000 a day; kept well under
+  'cf-urlscan': 150,
+  alchemy: 20_000,
 };
 
 const envName = (source: string) => `OCULON_QUOTA_${source.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;

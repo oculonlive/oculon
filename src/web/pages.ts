@@ -102,9 +102,9 @@ function firstSentence(d: string): string {
 /** /llms.txt: a short guide for AI agents (llmstxt.org format). */
 export function llmsTxt(tools: ToolDoc[], base: string, mcpUrl: string): string {
   const groups: [string, RegExp][] = [
-    ['Everyday checks', /scam|url_check|doc_check|iban|email_headers|lookalike|phone|password|breaches|company|email_security|recall|travel|fact_check/],
+    ['Everyday checks', /scam|url_check|doc_check|image_check|qr_check|repo_check|domain_report|site_check|email_file|apk_check|job_check|photo_location|archive|invite_check|iban|email_headers|lookalike|phone|password|breaches|company|email_security|recall|travel|fact_check/],
     ['Threat intel', /ip_check|hash|ransomware|vulns|cve|package|exposure|bgp|blackout|cloud/],
-    ['Crypto', /token|wallet|honeypot|address_check|robinhood|defi|protocol|sanctions/],
+    ['Crypto', /token|wallet|honeypot|approvals|tx_explain|token_creator|stock_token|contract_risk|signature|poisoning|trace_funds|address_check|robinhood|defi|protocol|sanctions/],
   ];
   const line = (t: ToolDoc) => `- [${t.name}](${base}/llms-full.txt#${t.name}): ${firstSentence(t.description)}`;
   const used = new Set<string>();

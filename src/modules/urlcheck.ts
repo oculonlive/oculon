@@ -13,6 +13,7 @@ import { clamp } from '../core/stats.js';
 import { signalId } from '../core/text.js';
 import type { ModuleResult, Provenance, Signal, Sourced } from '../core/types.js';
 import { safeBrowsing } from '../sources/websec.js';
+import { ensurePhishLists, phishDomain } from '../sources/phishlists.js';
 
 export type UrlVerdict = 'malicious' | 'suspicious' | 'no known threats';
 
@@ -173,12 +174,18 @@ export async function urlCheck(ctx: Ctx, input: string): Promise<ModuleResult<Ur
     scanHistory(ctx, host),
   ]);
   const provenance: Provenance[] = [sb.prov, ...haus.prov, who.prov, scans.prov];
+  // Open crypto phishing blocklists (ScamSniffer, MetaMask), stored locally and refreshed daily.
+  let blocklisted: string[] = [];
+  if (!isIp) {
+    try { provenance.push(...(await ensurePhishLists(ctx)).slice(0, 1)); blocklisted = phishDomain(ctx, host).listed; } catch { /* lists are optional */ }
+  }
   const heuristics = urlHeuristics(u);
 
   const reasons: string[] = [];
   let risk = 0;
   const threats = sb.data ? [...new Set(sb.data.map((m) => m.threat.toLowerCase().replace(/_/g, ' ')))] : [];
   if (threats.length) { risk = 100; reasons.push(`Google Safe Browsing flags it: ${threats.join(', ')}`); }
+  if (blocklisted.length) { risk = 100; reasons.push(`listed as phishing or a wallet drainer by the ${blocklisted.join(' and the ')}`); }
   const hu = haus.data?.url;
   if (hu) {
     risk = Math.max(risk, hu.status === 'online' ? 100 : 80);
@@ -210,7 +217,7 @@ export async function urlCheck(ctx: Ctx, input: string): Promise<ModuleResult<Ur
   // Only when the link was given with http:// (a bare domain gets http:// added here).
   if (/^http:\/\//i.test(input.trim()) && !threats.length && !hu) reasons.push('no HTTPS in the link as given');
   risk = clamp(Math.round(risk), 0, 100);
-  const verdict: UrlVerdict = threats.length || hu || hostHit ? 'malicious' : risk >= 40 ? 'suspicious' : 'no known threats';
+  const verdict: UrlVerdict = threats.length || hu || hostHit || blocklisted.length ? 'malicious' : risk >= 40 ? 'suspicious' : 'no known threats';
   if (verdict === 'no known threats' && age != null && age > 365) reasons.push(`the domain is ${Math.floor(age / 365)} year${age >= 730 ? 's' : ''} old`);
 
   const nowIso = ctx.now().toISOString();

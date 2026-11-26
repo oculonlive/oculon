@@ -14,7 +14,7 @@ import { DOC_MAX_BYTES } from './modules/doc.js';
 import { briefOf, verdictOf } from './core/verdict.js';
 import { CARD_HTML, CARD_URI, CARD_URI_OPENAI, MCP_APP_MIME, SKYBRIDGE_MIME, type CardData } from './web/card.js';
 
-export const SERVER_INFO = { name: 'oculon', version: '0.1.7' };
+export const SERVER_INFO = { name: 'oculon', version: '0.2.0' };
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
 type Json = Record<string, unknown>;
@@ -381,12 +381,138 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'oculon_doc_check',
-    description: 'Was this invoice, bank statement or payment screenshot edited? Reads a PDF, JPEG or PNG: the programs that made and saved it (online PDF editors, image editors), creation vs modification date, how many times it was saved, fonts embedded twice, white boxes over text, annotations, dangerous parts (JavaScript, launch actions), and checks every IBAN in its text. Screenshots are read with a free AI vision model when a key is set. A clean result is not proof the document is genuine.',
+    description: 'Was this invoice, bank statement or payment screenshot edited? Reads a PDF, Word, Excel, PowerPoint, JPEG or PNG: macros, remote templates, DDE fields, embedded objects and hidden sheets in Office files, the programs that made and saved it (online PDF editors, image editors), creation vs modification date, how many times it was saved, fonts embedded twice, white boxes over text, annotations, dangerous parts (JavaScript, launch actions), and checks every IBAN in its text. Screenshots are read with a free AI vision model when a key is set. A clean result is not proof the document is genuine.',
     inputSchema: schema({ data: str('The file as base64 (max 10 MB)'), url: str('Or an https URL of the file'), name: str('File name, for display') }),
     run: async (o, a) => {
       const file = await docBytes(o, a);
       return compact(await o.docCheck(file, a.name ? String(a.name) : a.url ? String(a.url).split('/').pop()!.split('?')[0]! : 'document'));
     },
+  },
+  {
+    name: 'oculon_approvals',
+    description: 'Who can take tokens out of this wallet right now: every ERC-20 and NFT approval the wallet signed (Etherscan logs), re-read on chain so revoked ones drop out. Spenders are named (Uniswap, 1inch, OpenSea...) or flagged: plain wallets, unverified contracts and unknown contracts with unlimited access. Spam approval events from fake tokens are filtered. Gives a revoke.cash link. Chains: eth, arbitrum, polygon.',
+    inputSchema: schema({ address: str('Wallet address (0x...)'), chain: str('eth, arbitrum or polygon (default eth)') }, ['address']),
+    run: async (o, a) => compact(await o.approvalsCheck(String(a.address), a.chain ? { chain: String(a.chain) } : {})),
+  },
+  {
+    name: 'oculon_contract_risk',
+    description: 'What the owner of a token contract can still do to holders: mint, blacklist, pause trading, change taxes, limit wallets, change balances, upgrade the code (proxy), self-destruct. Read from verified source (Sourcify, Etherscan) or, for unverified contracts, from selectors in the bytecode. Plus current owner (renounced or not), proxy admin and implementation, holder concentration and locked liquidity (GoPlus), main pool and age (DexScreener). Chains: eth, base, bsc, arbitrum, polygon.',
+    inputSchema: schema({ address: str('Token contract address (0x...)'), chain: str('eth, base, bsc, arbitrum or polygon (default eth)') }, ['address']),
+    run: async (o, a) => compact(await o.contractRisk(String(a.address), a.chain ? { chain: String(a.chain) } : {})),
+  },
+  {
+    name: 'oculon_signature_check',
+    description: 'Decode what a wallet signature request really allows before signing: EIP-712 typed data (ERC-2612 and DAI permits, Uniswap Permit2 allowances and transfers, Seaport orders that give NFTs away for nothing), transaction calldata or a {to, data, value} object (approve, setApprovalForAll, transfers, Permit2 approve, multicall bundles, unknown functions named via signature databases), and raw eth_sign hashes. Spenders are looked up on chain (wallet or contract, verified or not).',
+    inputSchema: schema({ request: str('The request: typed data JSON, 0x calldata, a {to,data,value} JSON, or the message text'), chain: str('Optional chain: eth, base, bsc, arbitrum, polygon'), to: str('Optional: the contract the calldata is sent to (token address for approve)') }, ['request']),
+    run: async (o, a) => compact(await o.signatureCheck(String(a.request), { ...(a.chain ? { chain: String(a.chain) } : {}), ...(a.to ? { to: String(a.to) } : {}) })),
+  },
+  {
+    name: 'oculon_address_poisoning',
+    description: 'Has someone planted lookalike addresses in this wallet\'s history? Finds addresses that share the first and last characters with ones the wallet really paid, zero-value transfers it never signed, and fake USDT/USDC tokens, and says whether funds were already sent to a lookalike. Chains: eth, arbitrum, polygon.',
+    inputSchema: schema({ address: str('Wallet address (0x...)'), chain: str('eth, arbitrum or polygon (default eth)') }, ['address']),
+    run: async (o, a) => compact(await o.poisoningCheck(String(a.address), a.chain ? { chain: String(a.chain) } : {})),
+  },
+  {
+    name: 'oculon_trace_funds',
+    description: 'Follow where money went from an address (for example a scammer or a drained wallet): the largest outgoing flows priced in USD, hop by hop, until an exchange (where funds can be frozen), a mixer, a bridge, a contract or a sanctioned address. Labels from the open eth-labels dataset, transaction hashes for a report. Chains: eth, arbitrum, polygon.',
+    inputSchema: schema({ address: str('Start address (0x...)'), chain: str('eth, arbitrum or polygon (default eth)'), hops: num('Hops to follow, 1-4 (default 3)') }, ['address']),
+    run: async (o, a) => compact(await o.traceFunds(String(a.address), { ...(a.chain ? { chain: String(a.chain) } : {}), ...(a.hops ? { hops: Number(a.hops) } : {}) })),
+  },
+  {
+    name: 'oculon_image_check',
+    description: 'Was this image made by AI, edited, or taken with a camera? Reads C2PA Content Credentials (generator app, actions, AI source type, organizations in the signing certificates), IPTC digital source type, generator settings and prompts left by Stable Diffusion, ComfyUI, NovelAI, InvokeAI and Midjourney, EXIF camera data and editing software. Read locally. Missing metadata proves nothing.',
+    inputSchema: schema({ data: str('The image as base64 (JPEG, PNG or WebP, max 10 MB)'), url: str('Or an https URL of the image'), name: str('File name, for display') }),
+    run: async (o, a) => {
+      const file = await docBytes(o, a);
+      return compact(await o.imageCheck(file, a.name ? String(a.name) : a.url ? String(a.url).split('/').pop()!.split('?')[0]! : 'image'));
+    },
+  },
+  {
+    name: 'oculon_qr_check',
+    description: 'Read the QR code in a photo or screenshot (PNG or baseline JPEG, versions 1-15) and check where it leads: links go through the URL check (Safe Browsing, URLhaus, domain age, lookalikes, shorteners), crypto payment codes and addresses through the address check, SEPA payment codes get their IBAN checked, Wi-Fi, SMS and phone codes are explained. Catches fake parking, parcel and login QR codes (quishing).',
+    inputSchema: schema({ data: str('The image as base64 (max 10 MB)'), url: str('Or an https URL of the image'), name: str('File name, for display') }),
+    run: async (o, a) => {
+      const file = await docBytes(o, a);
+      return compact(await o.qrCheck(file, a.name ? String(a.name) : 'qr image'));
+    },
+  },
+  {
+    name: 'oculon_repo_check',
+    description: 'Is this GitHub repository safe to clone and run? Built for fake job tests and "run our bot" scams: install hooks (npm preinstall/postinstall, setup.py, VS Code tasks that run on folder open), code that downloads and runs code, wallet extension and browser password theft, Discord/Telegram webhooks, obfuscation and code hidden past the edge of the screen, committed program files, owner account age and bought stars. Reads files through the GitHub API; nothing is run.',
+    inputSchema: schema({ repo: str('owner/name or a github.com link') }, ['repo']),
+    run: async (o, a) => compact(await o.repoCheck(String(a.repo))),
+  },
+  {
+    name: 'oculon_domain_report',
+    description: 'One report for a domain, all parts run together: link check of the site, email protection (SPF, DKIM, DMARC), what it exposes to the internet (open ports, CVEs), lookalike domains, and the company behind the name. Each part keeps its verdict and sources; PDF report available through the check id.',
+    inputSchema: schema({ domain: str('The domain, e.g. "example.com"') }, ['domain']),
+    run: async (o, a) => compact(await o.domainReport(String(a.domain))),
+  },
+  {
+    name: 'oculon_wallet_report',
+    description: 'One report for a wallet or token address. Wallet: address check (sanctions, activity), active approvals, address poisoning and where funds went. Token contract: contract risk, sell simulation and address check. PDF report available through the check id.',
+    inputSchema: schema({ address: str('Wallet or token address (0x...)'), chain: str('eth, arbitrum, polygon, base or bsc (default eth)') }, ['address']),
+    run: async (o, a) => compact(await o.walletReport(String(a.address), a.chain ? { chain: String(a.chain) } : {})),
+  },
+  {
+    name: 'oculon_site_check',
+    description: 'Open a web page and look for wallet drainers and phishing: wallet connection code next to permit, Permit2, setApprovalForAll or unlimited approve requests, a receiver address written into the script, token-balance APIs used to rank what to take, known drainer kits, seed phrase and login forms on the wrong domain, forms posting elsewhere, Telegram bot tokens and Discord webhooks in the code, lookalikes of known apps, plus the link check of the final address. Scripts are read, never run.',
+    inputSchema: schema({ url: str('The page link') }, ['url']),
+    run: async (o, a) => compact(await o.siteCheck(String(a.url))),
+  },
+  {
+    name: 'oculon_tx_explain',
+    description: 'Explain a transaction in plain words: who called what, every token and NFT transfer, approvals given or removed, and the fee. Flags tokens taken from a wallet in a transaction it did not send (an earlier approval or permit being used), approvals to plain wallets or unverified contracts, and NFT collections handed over. Spam tokens faking transfers are recognized. Chains: eth, base, arbitrum, bsc, polygon (found automatically).',
+    inputSchema: schema({ hash: str('Transaction hash or explorer link'), chain: str('Optional: eth, base, arbitrum, bsc, polygon') }, ['hash']),
+    run: async (o, a) => compact(await o.explainTx(String(a.hash), a.chain ? { chain: String(a.chain) } : {})),
+  },
+  {
+    name: 'oculon_token_creator',
+    description: 'Who created this token and what is their record: the creator wallet and date, the other contracts it deployed, which of those tokens are dead today (no pool or under $1,000 of liquidity), its wallet age, and who first funded it (exchange or mixer, from eth-labels). Chains: eth, arbitrum, polygon.',
+    inputSchema: schema({ address: str('Token contract address (0x...)'), chain: str('eth, arbitrum or polygon (default eth)') }, ['address']),
+    run: async (o, a) => compact(await o.creatorCheck(String(a.address), a.chain ? { chain: String(a.chain) } : {})),
+  },
+  {
+    name: 'oculon_email_file',
+    description: 'Check a whole email file (.eml): SPF, DKIM, DMARC and spoofing in the headers, the message and every link through the scam check, and each attachment through the document check (PDF, Office), the QR reader and image check (images), or the malware hash lookup. Flags risky attachment types (programs, scripts, HTML, disk images).',
+    inputSchema: schema({ data: str('The file as base64 (max 10 MB)'), url: str('Or an https URL of the file'), name: str('File name, for display') }, []),
+    run: async (o, a) => compact(await o.emlCheck(await docBytes(o, a), a.name ? String(a.name) : 'email.eml')),
+  },
+  {
+    name: 'oculon_apk_check',
+    description: 'Is this Android app (APK) safe to install? Reads its manifest: package, version, every permission, and the ones banking trojans use (reading SMS codes, accessibility services, drawing over other apps, notification access, device admin, installing other apps); the signing certificate (debug keys flagged); and the SHA-256 in malware databases. Nothing is installed or run.',
+    inputSchema: schema({ data: str('The APK as base64 (max 10 MB here; the CLI takes up to 40 MB)'), url: str('Or an https URL of the APK'), name: str('File name') }, []),
+    run: async (o, a) => compact(await o.apkCheck(await docBytes(o, a), a.name ? String(a.name) : 'app.apk')),
+  },
+  {
+    name: 'oculon_job_check',
+    description: 'Is this job offer a scam? Matches the patterns of job scams in the message (fees before you start, paid tasks you top up, crypto pay, pay that does not fit the work, contact only through WhatsApp or Telegram, no interview, early requests for ID or bank details, check-cashing, coding test tasks that ask you to run a repo), checks every link and the sender, and runs the repo check on any GitHub link.',
+    inputSchema: schema({ message: str('The job message or email text') }, ['message']),
+    run: async (o, a) => compact(await o.jobCheck(String(a.message))),
+  },
+  {
+    name: 'oculon_photo_location',
+    description: 'Where and when was this photo taken? GPS position and capture time from its EXIF data, the place name (OpenStreetMap), and the weather and daylight at that place and hour (Open-Meteo, sun position), so claims about a photo can be checked. Flags capture and GPS times that disagree. EXIF can be edited.',
+    inputSchema: schema({ data: str('The file as base64 (max 10 MB)'), url: str('Or an https URL of the file'), name: str('File name, for display') }, []),
+    run: async (o, a) => compact(await o.whereCheck(await docBytes(o, a), a.name ? String(a.name) : 'photo.jpg')),
+  },
+  {
+    name: 'oculon_archive',
+    description: 'Save a web page as evidence: asks the Wayback Machine to save it now and records the page status, final address, title and SHA-256 of what was served. Falls back to the newest existing snapshot when saving fails.',
+    inputSchema: schema({ url: str('The page link') }, ['url']),
+    run: async (o, a) => compact(await o.archivePage(String(a.url))),
+  },
+  {
+    name: 'oculon_invite_check',
+    description: 'What is behind a Telegram (t.me) or Discord (discord.gg) invite before joining: name, members and online, verified badge, Telegram scam or fake labels, server creation date, and the fake support or fake project pattern (brand plus "official", "support", "airdrop" without a verified badge).',
+    inputSchema: schema({ link: str('The invite link') }, ['link']),
+    run: async (o, a) => compact(await o.inviteCheck(String(a.link))),
+  },
+  {
+    name: 'oculon_stock_token',
+    description: 'Robinhood Stock Tokens (tokenized shares on Robinhood Chain), from Robinhood\'s official API. A ticker (TSLA) gives the official contract, ISIN, which sessions trade, the live bid and ask per token (adjusted by the corporate-action multiplier), daily range, volume, supply on chain, and upcoming dividends and splits. An address says whether it is an official Stock Token, and flags tokens that copy a ticker or call themselves Robinhood tokens without being on the list. Empty: the list size and upcoming corporate actions.',
+    inputSchema: schema({ query: str('A ticker (TSLA), a token address (0x...), or empty for the overview') }),
+    run: async (o, a) => compact(await o.stockToken(a.query ? String(a.query) : '')),
   },
   {
     name: 'oculon_replay',
@@ -559,7 +685,7 @@ export const TOOLS: Tool[] = [
   },
   {
     name: 'oculon_watch_add',
-    description: `Add a watchlist target. Kinds: company, domain, plane, topic, lights (place), air (place), port (place, anchored-vessel queue), news (keyword), outage (country), cve (vendor or product), quake ("place|min magnitude"), hazard (country or storm name), url, package ("npm:name" or "pypi:name"), travel (place)${onchainEnabled() ? ', wallet, token (address or address@chain)' : ''}. For plain-language requests use oculon_monitor.`,
+    description: `Add a watchlist target. Kinds: company, domain, plane, topic, lights (place), air (place), port (place, anchored-vessel queue), news (keyword), outage (country), cve (vendor or product), quake ("place|min magnitude"), hazard (country or storm name), url, package ("npm:name" or "pypi:name"), travel (place), approvals (wallet address or address@chain: new approvals), contract (token address or address@chain: owner, upgrade and liquidity changes)${onchainEnabled() ? ', wallet, token (address or address@chain)' : ''}. For plain-language requests use oculon_monitor.`,
     inputSchema: schema({ kind: { type: 'string', enum: availableKinds() }, target: str('What to watch'), label: str('Optional display name') }, ['kind', 'target']),
     run: (o, a) => o.watchAdd(String(a.kind), String(a.target), a.label ? String(a.label) : undefined),
   },
@@ -847,8 +973,8 @@ export class McpServer {
           let check: Awaited<ReturnType<Oculon['recordCheck']>>['check'] | null = null;
           if (ck) {
             // Checks are kept: a check id, a replay log, and what changed since the last check of the same thing.
-            const target = name === 'oculon_doc_check' ? String(args.url ?? '') || createHash('sha256').update(String(args.data ?? '')).digest('hex') : String(args[ck.arg] ?? '');
-            const label = name === 'oculon_doc_check' ? String(args.name ?? args.url ?? 'document').slice(0, 90) : undefined;
+            const target = ck.arg === 'name' ? String(args.url ?? '') || createHash('sha256').update(String(args.data ?? '')).digest('hex') : `${String(args[ck.arg] ?? '')}${args.chain ? `@${String(args.chain).toLowerCase()}` : ''}`;
+            const label = ck.arg === 'name' ? String(args.name ?? args.url ?? 'file').slice(0, 90) : undefined;
             const r = await this.o.recordCheck(ck.kind, target, async () => tool.run(this.o, args), label ? { label } : {});
             out = r.value;
             check = r.check;

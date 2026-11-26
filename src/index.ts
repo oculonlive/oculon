@@ -81,6 +81,25 @@ import { lookalikes } from './modules/lookalike.js';
 import { honeypotCheck } from './modules/honeypot.js';
 import { addressCheck } from './modules/address.js';
 import { satellites } from './modules/satellites.js';
+import { approvalsCheck } from './modules/approvals.js';
+import { contractRisk } from './modules/contract.js';
+import { signatureCheck } from './modules/signature.js';
+import { poisoningCheck } from './modules/poisoning.js';
+import { traceFunds } from './modules/trace.js';
+import { imageCheck } from './modules/image.js';
+import { qrCheck } from './modules/qrcheck.js';
+import { repoCheck } from './modules/repo.js';
+import { domainReport, walletReport } from './modules/report.js';
+import { siteCheck } from './modules/site.js';
+import { explainTx } from './modules/txexplain.js';
+import { deployerCheck } from './modules/deployer.js';
+import { emlCheck } from './modules/eml.js';
+import { apkCheck } from './modules/apk.js';
+import { jobCheck } from './modules/job.js';
+import { whereCheck } from './modules/where.js';
+import { archivePage } from './modules/archive.js';
+import { inviteCheck } from './modules/invite.js';
+import { stockToken } from './modules/stocktoken.js';
 
 export interface OculonOptions extends Pick<ContextOptions, 'dbPath' | 'fetch' | 'throttle' | 'now'> {
   /** Contact string for User-Agents (enables SEC EDGAR). Falls back to OCULON_CONTACT. */
@@ -452,6 +471,86 @@ export class Oculon {
   /** Crypto address without keys: chain from format, OFAC sanctions, balance and activity from free explorers. */
   addressCheck(address: string, opts: { network?: string } = {}) {
     return addressCheck(this.ctx, address, opts);
+  }
+  /** Token and NFT approvals still active on a wallet, with risky spenders flagged (Ethereum, Arbitrum, Polygon). */
+  approvalsCheck(address: string, opts: { chain?: string } = {}) {
+    return approvalsCheck(this.ctx, address, opts);
+  }
+  /** What the owner of a token contract can still do: mint, blacklist, taxes, upgrades, plus holders and liquidity. */
+  contractRisk(address: string, opts: { chain?: string } = {}) {
+    return contractRisk(this.ctx, address, opts);
+  }
+  /** What a wallet signature request really allows: permits, Permit2, Seaport orders, approvals, calldata. */
+  signatureCheck(request: string, opts: { chain?: string; to?: string } = {}) {
+    return signatureCheck(this.ctx, request, opts);
+  }
+  /** Lookalike addresses, zero-value transfers and fake tokens planted in a wallet's history. */
+  poisoningCheck(address: string, opts: { chain?: string } = {}) {
+    return poisoningCheck(this.ctx, address, opts);
+  }
+  /** Follow funds out of an address for a few hops, until exchanges, mixers, bridges or sanctioned addresses. */
+  traceFunds(address: string, opts: { chain?: string; hops?: number; width?: number } = {}) {
+    return traceFunds(this.ctx, address, opts);
+  }
+  /** Was this image made by AI, edited, or taken with a camera? C2PA credentials, IPTC, generator settings, EXIF. */
+  imageCheck(file: Buffer, name?: string) {
+    return imageCheck(this.ctx, file, name);
+  }
+  /** Read the QR code in an image and check where it leads: link, crypto or bank payment, Wi-Fi. */
+  qrCheck(file: Buffer, name?: string) {
+    return qrCheck(this.ctx, file, name);
+  }
+  /** Is this GitHub repo safe to run? Install hooks, remote code, wallet and browser theft, obfuscation, fake stars. */
+  repoCheck(repo: string) {
+    return repoCheck(this.ctx, repo);
+  }
+  /** One report for a domain: link check, email protection, exposure, lookalikes and the company. */
+  domainReport(domain: string) {
+    return domainReport(this.ctx, domain);
+  }
+  /** One report for a wallet or token: address, approvals, poisoning, fund trace, or contract risk and sell test. */
+  walletReport(address: string, opts: { chain?: string } = {}) {
+    return walletReport(this.ctx, address, opts);
+  }
+  /** Open a page and look for wallet drainer code and phishing (forms, brand copies, Telegram exfiltration). */
+  siteCheck(url: string, opts: { browser?: boolean } = {}) {
+    return siteCheck(this.ctx, url, opts);
+  }
+  /** What happened in a transaction: function, token transfers, approvals, tokens taken with an earlier approval. */
+  explainTx(hash: string, opts: { chain?: string } = {}) {
+    return explainTx(this.ctx, hash, opts);
+  }
+  /** Who created a token and how many of their other tokens are dead (Ethereum, Arbitrum, Polygon). */
+  creatorCheck(token: string, opts: { chain?: string } = {}) {
+    return deployerCheck(this.ctx, token, opts);
+  }
+  /** A whole .eml email: headers, message and links, and every attachment through the matching check. */
+  emlCheck(file: Buffer, name?: string) {
+    return emlCheck(this.ctx, file, name);
+  }
+  /** Is this Android app safe to install? Permissions, accessibility and SMS abuse, signer, known malware. */
+  apkCheck(file: Buffer, name?: string) {
+    return apkCheck(this.ctx, file, name);
+  }
+  /** Is this job offer a scam? Fees, paid tasks, crypto pay, chat-only contact, test-task repos. */
+  jobCheck(message: string) {
+    return jobCheck(this.ctx, message);
+  }
+  /** Where and when a photo was taken (EXIF GPS and time), the place, and the weather and daylight at that hour. */
+  whereCheck(file: Buffer, name?: string) {
+    return whereCheck(this.ctx, file, name);
+  }
+  /** Save a page as evidence in the Wayback Machine and record its hash, status and final address. */
+  archivePage(url: string) {
+    return archivePage(this.ctx, url);
+  }
+  /** What is behind a Telegram or Discord invite: members, age, verified badge, scam labels, impersonation. */
+  inviteCheck(link: string) {
+    return inviteCheck(this.ctx, link);
+  }
+  /** Robinhood Stock Tokens: official contract, live price, corporate actions; or whether an address is a fake one. */
+  stockToken(query = '') {
+    return stockToken(this.ctx, query);
   }
   /** Satellites: launches of the last 30 days, or one object's orbit, owner and status (CelesTrak). */
   satellites(query = '') {

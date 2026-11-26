@@ -18,7 +18,7 @@ export interface Verdict {
 
 type Any = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-const BAD = /\b(likely scam|scam|malicious|danger|dangerous|spoof|spoofed|high|critical|not valid|invalid|leaked|likely edited|edited|sanction|sanctioned|honeypot|cannot sell|vulnerable|exploited|unprotected|not protected|fake|fraud)\b/i;
+const BAD = /\b(likely scam|scam|malicious|danger|dangerous|spoof|spoofed|high|critical|not valid|invalid|leaked|likely edited|edited|sanction|sanctioned|honeypot|poisoned|cannot sell|vulnerable|exploited|unprotected|not protected|fake|fraud)\b/i;
 const WARN = /\b(suspicious|caution|medium|moderate|partly|warn|warning|signs of|unknown|unverified|elevated|risky|check)\b/i;
 const OK = /\b(ok|safe|valid|protected|clean|low|no known|not found|none found|no signs|legit|genuine|active|operational|no recalls)\b/i;
 

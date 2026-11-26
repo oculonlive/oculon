@@ -2,6 +2,50 @@
 
 All notable changes are listed here. Versions follow [semantic versioning](https://semver.org).
 
+## 0.2.0
+
+Twenty-two new checks and seven new free sources: wallet safety, pages, files, apps and repos, and one report per target. Still no runtime dependency: the QR reader, the image decoders and the ZIP reader for Office files are written in Oculon itself.
+
+Wallet safety
+- `oculon approvals <wallet>` (`oculon_approvals`, `/api/approvals`): who can take tokens out of a wallet right now. Every ERC-20 and NFT approval it signed is re-read on chain, so revoked and used-up ones drop out. Known routers and marketplaces are named; plain wallets, unverified contracts and unknown contracts with unlimited access are flagged. Fake approval events from spam tokens are filtered. Ethereum, Arbitrum and Polygon.
+- `oculon contract <token>` (`oculon_contract_risk`): what the owner can still do: mint, blacklist, pause trading, change taxes, limit wallets, change balances, upgrade the code, self-destruct. Read from verified source (Sourcify, Etherscan) or from the selectors in the bytecode, plus owner, proxy admin and implementation, holder concentration, locked liquidity and the main pool. Large established tokens (stablecoins, wrapped assets) are capped at "caution" with a note, since those powers are part of their design. Ethereum, Base, BNB Chain, Arbitrum and Polygon.
+- `oculon signature <request>` (`oculon_signature_check`, web app paste): what a signature request really allows before you sign it: ERC-2612 and DAI permits, Permit2 allowances and transfers, Seaport orders that give assets away, approve and setApprovalForAll calldata, multicall bundles, unknown functions, raw eth_sign hashes and messages asking for a seed phrase.
+- `oculon poisoning <wallet>` (`oculon_address_poisoning`): lookalike addresses planted in a wallet's history, zero-value transfers it never signed, fake USDT and USDC, and whether funds already went to a lookalike.
+- `oculon trace <address>` (`oculon_trace_funds`): where money went, hop by hop, priced in USD, until an exchange, a mixer, a bridge, a contract or a sanctioned address, with transaction hashes for a report.
+- `oculon site <link>` (`oculon_site_check`): is this page a wallet drainer or phishing? Receiver addresses written into scripts, permit and Permit2 requests, token-balance APIs, known drainer kits, seed phrase and login forms on the wrong domain, Telegram bot tokens and Discord webhooks, lookalikes of known apps.
+- `oculon tx <hash>` (`oculon_tx_explain`): what happened in a transaction, in plain words, and whether tokens were taken with an earlier approval. Spam tokens faking transfers are recognized.
+- `oculon creator <token>` (`oculon_token_creator`): who made a token, what else they deployed, how much of it is dead, and who funded them.
+- Monitors: `approvals` (new approvals on a wallet) and `contract` (owner changes, code upgrades, liquidity pulls, holder concentration) can be set in plain words, e.g. "watch for a rug pull on 0x...".
+
+Files and repos
+- `oculon photo <image>` (`oculon_image_check`): made by AI, edited, or a camera photo? C2PA Content Credentials, IPTC source type, generator settings and prompts (Stable Diffusion, ComfyUI, NovelAI, InvokeAI, Midjourney), EXIF camera and editing software.
+- `oculon qr <image>` (`oculon_qr_check`): reads the QR code in a photo or screenshot and checks where it leads: links, crypto payment codes, SEPA payment codes, Wi-Fi, SMS and phone codes.
+- `oculon repo <owner/name>` (`oculon_repo_check`): is a GitHub repo safe to run? Install hooks, VS Code tasks that run on folder open, code that downloads and runs code, wallet and browser password theft, webhooks, obfuscation, hidden code, committed programs, account age and bought stars.
+- `oculon eml <file>` (`oculon_email_file`): a whole email checked at once: headers, message, links and every attachment.
+- `oculon apk <file>` (`oculon_apk_check`): is an Android app safe to install? Permissions banking trojans use, accessibility and SMS abuse, the signer, known malware. The binary manifest is parsed in Oculon.
+- `oculon job "<message>"` (`oculon_job_check`): job scam patterns, links, the sender and any repo in the message.
+- `oculon where <photo>` (`oculon_photo_location`): where and when a photo was taken, the place, and the weather and daylight at that hour.
+- `oculon archive <link>` (`oculon_archive`): save a page as evidence in the Wayback Machine, with its hash.
+- `oculon invite <link>` (`oculon_invite_check`): what is behind a Telegram or Discord invite, and whether it poses as a brand or project.
+- The document check now reads Word, Excel and PowerPoint files: VBA and Excel 4.0 macros, remote templates, DDE fields, embedded objects, ActiveX, hidden sheets, author and last editor, and the IBANs in the text.
+
+Reports
+- `oculon check <domain|0x address>` (`oculon_domain_report`, `oculon_wallet_report`): every relevant check on one page, kept as one check with a replay log and a PDF (`--pdf report.pdf`).
+
+New sources (all free)
+- Crypto phishing blocklists in every link check: ScamSniffer (about 358,000 drainer and phishing domains) and MetaMask's eth-phishing-detect list, stored locally and refreshed daily.
+- Cloudflare URL Scanner in the site check: the page is also opened in a real browser, so drainer code that loads later, JavaScript redirects and the rendered page are read, and Cloudflare's verdict is added.
+- Alchemy: poisoning and the fund trace now run on Base and BNB Chain, prices for tokens DexScreener does not know, NFT spam flags in approvals, and a fallback RPC.
+- Blockscout: approvals, poisoning, trace and the token creator on Optimism and Robinhood Chain. The Robinhood Chain address check works again (the shared Blockscout API now needs a key).
+- Hybrid Analysis sandbox verdicts in the hash, APK and email attachment checks. Chainabuse victims' reports in the address and site checks. The logged-in Wayback Machine for the archive check.
+- `oculon stocktoken [TSLA|0x...]` (`oculon_stock_token`): Robinhood Stock Tokens from Robinhood's official API: contract, live price, sessions, supply, dividends and splits, and fake copies of a ticker.
+- Fixed: "seen before" compared checks of the same address on different chains.
+
+Everywhere
+- Telegram bot: `/approvals`, `/contract`, `/sig`, `/poison`, `/trace`, `/repo`, `/check`, `/site`, `/tx`, `/creator`, `/job`, `/invite`, `/archive`, `/stock`, and files: a photo for its QR code, an image as a file for the AI and edit check (or with /where for its place and time), a PDF or Office file for the document check, an .eml email and an .apk app.
+- Web app: new Investigate options for all of the above, with file upload and paste boxes.
+- MCP: 111 tools locally (118 with on-chain on), 109 on the remote server.
+
 ## 0.1.7
 
 A document check, and every check is now kept: replay it, download it as a PDF, see what changed since last time. Results show up as cards inside Claude and ChatGPT.

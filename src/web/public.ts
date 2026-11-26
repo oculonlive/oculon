@@ -59,10 +59,23 @@ export const PUBLIC_API = new Set([
   '/api/lookalike',
   '/api/honeypot',
   '/api/address',
+  '/api/approvals',
+  '/api/contract',
+  '/api/poisoning',
+  '/api/trace',
+  '/api/repo',
+  '/api/report/domain',
+  '/api/report/wallet',
+  '/api/site',
+  '/api/tx',
+  '/api/creator',
+  '/api/archive',
+  '/api/invite',
+  '/api/stocktoken',
 ]);
 
 /** Endpoints that start outside work (a CLI process or several upstream calls) get a tighter budget. */
-const HEAVY = new Set(['/api/console', '/api/rhtoken', '/api/verify', '/api/url', '/api/travel', '/api/audit', '/api/recall', '/api/emailsec', '/api/country', '/api/airport', '/api/scam', '/api/ip', '/api/hash', '/api/company', '/api/phone', '/api/lookalike', '/api/honeypot', '/api/address']);
+const HEAVY = new Set(['/api/console', '/api/rhtoken', '/api/verify', '/api/url', '/api/travel', '/api/audit', '/api/recall', '/api/emailsec', '/api/country', '/api/airport', '/api/scam', '/api/ip', '/api/hash', '/api/company', '/api/phone', '/api/lookalike', '/api/honeypot', '/api/address', '/api/approvals', '/api/contract', '/api/poisoning', '/api/trace', '/api/repo', '/api/report/domain', '/api/report/wallet', '/api/site', '/api/tx', '/api/creator', '/api/archive', '/api/invite']);
 
 /** Signals from these modules describe the owner's own watchlist, cases, fences, votes or raw social streams. */
 const PRIVATE_MODULES = new Set(['meerkat', 'case', 'fence', 'feedback', 'live']);

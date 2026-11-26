@@ -59,7 +59,7 @@ test('doc: a clean PDF, an edited one, a dangerous one', async () => {
   assert.match(bad.result.flags.join(' '), /JavaScript/);
   assert.match(bad.result.flags.join(' '), /Sejda/);
 
-  await assert.rejects(docCheck(ctx, Buffer.from('hello'), 'x.txt'), /not a PDF, JPEG or PNG/);
+  await assert.rejects(docCheck(ctx, Buffer.from('hello'), 'x.txt'), /not a PDF, Word, Excel, PowerPoint, JPEG or PNG/);
   await assert.rejects(docCheck(ctx, Buffer.alloc(0)), /empty/);
 });
 

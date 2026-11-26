@@ -16,6 +16,7 @@ import { key } from '../core/keys.js';
 import { signalId } from '../core/text.js';
 import type { ModuleResult, Provenance, Signal } from '../core/types.js';
 import { checkIban } from './iban.js';
+import { zipEntries, zipRead } from '../core/zip.js';
 
 export interface DocIban {
   iban: string;
@@ -26,7 +27,7 @@ export interface DocIban {
 
 export interface DocResult {
   name: string;
-  type: 'pdf' | 'jpeg' | 'png';
+  type: 'pdf' | 'jpeg' | 'png' | 'docx' | 'xlsx' | 'pptx' | 'office (legacy)';
   bytes: number;
   sha256: string;
   verdict: 'dangerous file' | 'likely edited' | 'signs of editing' | 'no signs of editing found';
@@ -39,6 +40,8 @@ export interface DocResult {
   signed: boolean;
   fonts: string[];
   text: { chars: number; excerpt: string; from: 'text layer' | 'ocr' | 'none' };
+  /** Office files: macros, external links, embedded objects and hidden sheets found in the package. */
+  office?: { macros: boolean; external: string[]; embedded: string[]; hiddenSheets: string[] };
   ibans: DocIban[];
   domains: string[];
   advice: string[];
@@ -56,7 +59,7 @@ interface PdfObj {
   raw: Buffer | null;
 }
 
-function inflate(b: Buffer): Buffer | null {
+export function inflate(b: Buffer): Buffer | null {
   try {
     return inflateSync(b, { finishFlush: zc.Z_SYNC_FLUSH });
   } catch {
@@ -339,7 +342,7 @@ function xmpFields(x: string): Record<string, string> {
   return out;
 }
 
-function jpegMeta(b: Buffer): { meta: Record<string, string> } {
+export function jpegMeta(b: Buffer): { meta: Record<string, string> } {
   const meta: Record<string, string> = {};
   let i = 2;
   while (i + 4 < b.length && b[i] === 0xff) {
@@ -357,7 +360,7 @@ function jpegMeta(b: Buffer): { meta: Record<string, string> } {
   return { meta };
 }
 
-function pngMeta(b: Buffer): { meta: Record<string, string> } {
+export function pngMeta(b: Buffer): { meta: Record<string, string> } {
   const meta: Record<string, string> = {};
   let i = 8;
   while (i + 12 <= b.length) {
@@ -391,7 +394,7 @@ function pngMeta(b: Buffer): { meta: Record<string, string> } {
 
 const ONLINE_EDITORS = /ilovepdf|smallpdf|sejda|pdfescape|pdf ?candy|pdffiller|docfly|pdf2go|soda ?pdf|xodo|pdf24|hipdf|pdfzorro|online2pdf|lightpdf|pdfsimpli/i;
 const DESKTOP_EDITORS = /pdf-xchange editor|foxit (pdf )?editor|phantompdf|nitro|pdfelement|wondershare|master pdf editor|pdf studio|inkscape|libreoffice draw|qoppa|able2extract|acrobat (pro|dc)|adobe acrobat(?! distiller)/i;
-const IMAGE_EDITORS = /photoshop|gimp|canva|illustrator|picsart|snapseed|lightroom|pixlr|paint\.net|fotor|affinity|photopea|corel/i;
+export const IMAGE_EDITORS = /photoshop|gimp|canva|illustrator|picsart|snapseed|lightroom|pixlr|paint\.net|fotor|affinity|photopea|corel/i;
 const WORD_PROCESSORS = /microsoft.{0,10}word|microsoft.{0,10}excel|google docs|libreoffice writer|openoffice|pages|wps (writer|office)/i;
 
 function editorFlag(label: string, v: string, flags: [string, number][]) {
@@ -448,21 +451,95 @@ async function ocr(ctx: Ctx, img: Buffer, mime: string, provenance: Provenance[]
 }
 
 /** Check one document. `name` is only used for display. */
+/* ---------- Office files ---------- */
+
+function officeType(b: Buffer): DocResult['type'] | null {
+  if (b.readUInt32BE(0) === 0xd0cf11e0) return 'office (legacy)';
+  if (b.readUInt32LE(0) !== 0x04034b50) return null;
+  try {
+    const names = zipEntries(b).map((e) => e.name);
+    if (!names.includes('[Content_Types].xml')) return null;
+    return names.some((n) => n.startsWith('word/')) ? 'docx' : names.some((n) => n.startsWith('xl/')) ? 'xlsx' : names.some((n) => n.startsWith('ppt/')) ? 'pptx' : null;
+  } catch { return null; }
+}
+
+const xmlText = (x: string, tag: string) => [...x.matchAll(new RegExp(`<${tag}(?: [^>]*)?>([^<]*)</${tag}>`, 'g'))].map((m) => m[1]!).join(' ');
+const xmlUnescape = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+
+export function officeScan(b: Buffer, type: DocResult['type'], nowMs: number): { flags: [string, number][]; notes: string[]; metadata: Record<string, string>; danger: boolean; text: string; office: NonNullable<DocResult['office']> } {
+  const flags: [string, number][] = [], notes: string[] = [], metadata: Record<string, string> = {};
+  const office = { macros: false, external: [] as string[], embedded: [] as string[], hiddenSheets: [] as string[] };
+  let danger = false;
+  if (type === 'office (legacy)') {
+    const s = b.toString('latin1');
+    office.macros = /_VBA_PROJECT|VBA\0|Attribute VB_Name/.test(s);
+    if (office.macros) { danger = true; flags.push(['contains VBA macros: code that runs when you enable content', 70]); }
+    if (/DDEAUTO|\bDDE\b\s/.test(s)) { danger = true; flags.push(['contains a DDE field that can start programs', 60]); }
+    if (/Excel 4\.0|\bEXEC\(|\bCALL\(/.test(s) && /Macro/.test(s)) { danger = true; flags.push(['contains Excel 4.0 macros', 60]); }
+    notes.push('Old binary Office format (.doc / .xls): only macros and DDE are checked. Ask for a PDF instead.');
+    return { flags, notes, metadata, danger, text: '', office };
+  }
+  const entries = zipEntries(b);
+  const read = (n: string) => { const e = entries.find((x) => x.name === n); return e ? zipRead(b, e)?.toString('utf8') ?? '' : ''; };
+  const names = entries.map((e) => e.name);
+  if (names.some((n) => /vbaProject\.bin$/i.test(n)) || /macroEnabled/i.test(read('[Content_Types].xml'))) { office.macros = true; danger = true; flags.push(['contains VBA macros: code that runs when you enable content. Invoices and statements never need macros', 70]); }
+  if (names.some((n) => n.startsWith('xl/macrosheets/'))) { danger = true; flags.push(['contains Excel 4.0 macro sheets, a common malware trick', 70]); }
+  if (names.some((n) => /\/activeX\//.test(n))) flags.push(['contains ActiveX controls', 25]);
+  for (const n of names.filter((x) => /\/embeddings\//.test(x)).slice(0, 8)) office.embedded.push(n.split('/').pop()!);
+  if (office.embedded.length) flags.push([`embeds ${office.embedded.length} object${office.embedded.length > 1 ? 's' : ''} (${office.embedded.slice(0, 3).join(', ')}): a file or program hidden inside the document`, office.embedded.some((e) => /\.(exe|bin|scr|js|vbs|ps1|bat|hta)$/i.test(e)) ? 40 : 15]);
+  for (const n of names.filter((x) => x.endsWith('.rels'))) {
+    for (const m of read(n).matchAll(/<Relationship\b([^>]*)\/?>/g)) {
+      const attrs = m[1]!;
+      if (!/TargetMode="External"/.test(attrs)) continue;
+      const target = xmlUnescape(/Target="([^"]*)"/.exec(attrs)?.[1] ?? '');
+      const rel = /Type="[^"]*\/([^"/]+)"/.exec(attrs)?.[1] ?? '';
+      if (/attachedTemplate|oleObject|frame|subDocument/i.test(rel)) { danger = true; flags.push([`loads ${rel} from outside the file (${target.slice(0, 80)}): remote template injection, used to run code`, 65]); }
+      if (office.external.length < 12) office.external.push(`${rel}: ${target.slice(0, 120)}`);
+    }
+  }
+  const main = type === 'docx' ? read('word/document.xml') : '';
+  if (/DDEAUTO|instr="\s*DDE\b|<w:instrText[^>]*>\s*DDE/i.test(main)) { danger = true; flags.push(['contains a DDE field that can start programs', 60]); }
+  if (/<w:instrText[^>]*>\s*(INCLUDEPICTURE|INCLUDETEXT|LINK)\b[^<]*https?:/i.test(main)) flags.push(['fields load content from the internet when opened (can reveal that you opened it)', 15]);
+  if (type === 'xlsx') {
+    for (const m of read('xl/workbook.xml').matchAll(/<sheet\b[^>]*name="([^"]*)"[^>]*state="(hidden|veryHidden)"/g)) office.hiddenSheets.push(`${xmlUnescape(m[1]!)} (${m[2]})`);
+    if (office.hiddenSheets.length) flags.push([`${office.hiddenSheets.length} hidden sheet${office.hiddenSheets.length > 1 ? 's' : ''}: ${office.hiddenSheets.slice(0, 3).join(', ')}`, office.hiddenSheets.some((h) => /veryHidden/.test(h)) ? 30 : 10]);
+  }
+  // Metadata.
+  const core = read('docProps/core.xml'), app = read('docProps/app.xml');
+  for (const [tag, label] of [['dc:creator', 'author'], ['cp:lastModifiedBy', 'last saved by'], ['dcterms:created', 'created'], ['dcterms:modified', 'modified'], ['cp:revision', 'revision'], ['dc:title', 'title']] as const) { const v = xmlText(core, tag).trim(); if (v) metadata[label] = xmlUnescape(v).slice(0, 120); }
+  for (const [tag, label] of [['Application', 'application'], ['AppVersion', 'app version'], ['Company', 'company'], ['TotalTime', 'editing minutes']] as const) { const v = xmlText(app, tag).trim(); if (v) metadata[label] = xmlUnescape(v).slice(0, 120); }
+  if (metadata.author && metadata['last saved by'] && metadata.author !== metadata['last saved by']) flags.push([`written by "${metadata.author}" and last saved by "${metadata['last saved by']}"`, 8]);
+  const c = Date.parse(metadata.created ?? ''), mo = Date.parse(metadata.modified ?? '');
+  if (c && mo && mo - c > 86_400_000) flags.push([`modified ${Math.round((mo - c) / 86_400_000)} days after it was created`, 10]);
+  if (c && c > nowMs + 86_400_000) flags.push(['the creation date is in the future', 15]);
+  if (Number(metadata.revision) >= 10) notes.push(`Saved ${metadata.revision} times.`);
+  notes.push('Word and Excel files are easy to change and leave little trace. For payments, ask for a PDF from the issuer and confirm bank details by phone.');
+  // Text.
+  const text = type === 'docx' ? xmlText(main, 'w:t') : type === 'xlsx' ? xmlText(read('xl/sharedStrings.xml'), 't') : names.filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n)).slice(0, 40).map((n) => xmlText(read(n), 'a:t')).join('\n');
+  return { flags, notes, metadata, danger, text: xmlUnescape(text), office };
+}
+
 export async function docCheck(ctx: Ctx, file: Buffer, name = 'document'): Promise<ModuleResult<DocResult>> {
   if (!file.length) throw new Error('the file is empty');
   if (file.length > DOC_MAX_BYTES) throw new Error(`the file is larger than ${DOC_MAX_BYTES / 1024 / 1024} MB`);
   const now = ctx.now();
   const head = file.subarray(0, 1024).toString('latin1');
-  const type: DocResult['type'] | null = head.includes('%PDF-') ? 'pdf' : file[0] === 0xff && file[1] === 0xd8 ? 'jpeg' : file.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ? 'png' : null;
-  if (!type) throw new Error('not a PDF, JPEG or PNG file (expected a document, a screenshot or a photo of one)');
+  const type: DocResult['type'] | null = head.includes('%PDF-') ? 'pdf' : file[0] === 0xff && file[1] === 0xd8 ? 'jpeg' : file.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ? 'png' : officeType(file);
+  if (!type) throw new Error('not a PDF, Word, Excel, PowerPoint, JPEG or PNG file (expected a document, a screenshot or a photo of one)');
   const flags: [string, number][] = [];
   const notes: string[] = [];
   const metadata: Record<string, string> = {};
   const provenance: Provenance[] = [{ source: 'oculon-doc', url: 'local', status: 'LIVE', fetchedAt: now.toISOString(), note: 'read from the file itself, not uploaded anywhere else' }];
   let revisions: number | null = null, signed = false, fonts: string[] = [], text = '', from: DocResult['text']['from'] = 'none';
   let danger = false;
+  let office: DocResult['office'];
 
-  if (type === 'pdf') {
+  if (type === 'docx' || type === 'xlsx' || type === 'pptx' || type === 'office (legacy)') {
+    const o = officeScan(file, type, now.getTime());
+    flags.push(...o.flags); notes.push(...o.notes); Object.assign(metadata, o.metadata);
+    danger = o.danger; text = o.text; if (text) from = 'text layer';
+    office = o.office;
+  } else if (type === 'pdf') {
     const raw = file.toString('latin1');
     const objs = pdfObjects(file);
     const all = objs.map((o) => o.dict).join('\n');
@@ -594,6 +671,7 @@ export async function docCheck(ctx: Ctx, file: Buffer, name = 'document'): Promi
     ibans: found.ibans,
     domains: found.domains,
     advice,
+    ...(office ? { office } : {}),
   };
   const signals: Signal[] = risk >= 50 || danger
     ? [{ id: signalId('doc', result.sha256), module: 'doc', title: `Document ${result.name}: ${verdict}`, score: risk, entity: `doc:${result.sha256.slice(0, 16)}`, evidence: result.flags.slice(0, 4).map((t) => ({ source: 'oculon-doc', text: t })), createdAt: now.toISOString() }]

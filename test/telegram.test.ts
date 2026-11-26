@@ -46,9 +46,10 @@ test('answers commands for allowed chats and advances the update offset', async 
   ]);
   await bot.pollOnce();
   const texts = sent.filter((s) => s.method === 'sendMessage').map((s) => String(s.body.text));
-  assert.match(texts[0]!, /\/dossier &lt;name&gt;/);
-  assert.match(texts[1]!, /0 total/);
-  assert.match(texts[2]!, /Usage: \/dossier Nvidia/);
+  // The help can run over Telegram's message limit and arrive in two parts.
+  assert.ok(texts.some((t) => /\/dossier &lt;name&gt;/.test(t)));
+  assert.ok(texts.some((t) => /0 total/.test(t)));
+  assert.match(texts.at(-1)!, /Usage: \/dossier Nvidia/);
   await bot.pollOnce();
   const last = sent.filter((s) => s.method === 'getUpdates').pop()!;
   assert.equal(last.body.offset, 13);

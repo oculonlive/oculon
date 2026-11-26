@@ -289,6 +289,19 @@ export const ROUTES: Record<string, Handler> = {
   '/api/lookalike': async (q, o) => slim(await o.lookalikes(need(q, 'domain', 120))),
   '/api/honeypot': async (q, o) => slim(await o.honeypotCheck(need(q, 'address', 60), q.get('chain') ? { chain: q.get('chain')!.slice(0, 12) } : {})),
   '/api/address': async (q, o) => slim(await o.addressCheck(need(q, 'address', 120), q.get('network') ? { network: q.get('network')!.slice(0, 20) } : {})),
+  '/api/approvals': async (q, o) => slim(await o.approvalsCheck(need(q, 'address', 60), q.get('chain') ? { chain: q.get('chain')!.slice(0, 12) } : {})),
+  '/api/contract': async (q, o) => slim(await o.contractRisk(need(q, 'address', 60), q.get('chain') ? { chain: q.get('chain')!.slice(0, 12) } : {})),
+  '/api/poisoning': async (q, o) => slim(await o.poisoningCheck(need(q, 'address', 60), q.get('chain') ? { chain: q.get('chain')!.slice(0, 12) } : {})),
+  '/api/trace': async (q, o) => slim(await o.traceFunds(need(q, 'address', 60), { ...(q.get('chain') ? { chain: q.get('chain')!.slice(0, 12) } : {}), ...(q.get('hops') ? { hops: Number(q.get('hops')) || 3 } : {}) })),
+  '/api/repo': async (q, o) => slim(await o.repoCheck(need(q, 'repo', 200))),
+  '/api/report/domain': async (q, o) => slim(await o.domainReport(need(q, 'domain', 120))),
+  '/api/report/wallet': async (q, o) => slim(await o.walletReport(need(q, 'address', 60), q.get('chain') ? { chain: q.get('chain')!.slice(0, 12) } : {})),
+  '/api/site': async (q, o) => slim(await o.siteCheck(need(q, 'url', 2000))),
+  '/api/tx': async (q, o) => slim(await o.explainTx(need(q, 'hash', 200), q.get('chain') ? { chain: q.get('chain')!.slice(0, 12) } : {})),
+  '/api/creator': async (q, o) => slim(await o.creatorCheck(need(q, 'address', 60), q.get('chain') ? { chain: q.get('chain')!.slice(0, 12) } : {})),
+  '/api/archive': async (q, o) => slim(await o.archivePage(need(q, 'url', 2000))),
+  '/api/invite': async (q, o) => slim(await o.inviteCheck(need(q, 'link', 300))),
+  '/api/stocktoken': async (q, o) => slim(await o.stockToken((q.get('q') ?? '').slice(0, 60))),
   '/api/satellites': async (q, o) => slim(await o.satellites((q.get('q') ?? '').slice(0, 60))),
   '/api/papers': async (q, o) => slim(await o.papers(need(q, 'topic', 200), q.get('years') ? { years: Number(q.get('years')) || 3 } : {})),
   '/api/country': async (q, o) => {
@@ -389,6 +402,9 @@ async function readJson(req: IncomingMessage, limit = 10_000): Promise<Record<st
 
 type PostHandler = (body: Record<string, unknown>, o: Oculon) => Promise<unknown> | unknown;
 
+/** File uploads (base64 in a JSON body) and the check each one runs. */
+const UPLOADS: Record<string, 'doc' | 'image' | 'qr' | 'eml' | 'apk' | 'where'> = { '/api/doc': 'doc', '/api/imagecheck': 'image', '/api/qr': 'qr', '/api/eml': 'eml', '/api/apk': 'apk', '/api/where': 'where' };
+
 /** Writes that change what the whole install watches. */
 const OWNER_ONLY = new Set(['/api/monitor', '/api/watch/delete', '/api/fences', '/api/fences/delete', '/api/cases']);
 
@@ -398,6 +414,17 @@ export const POST_ROUTES: Record<string, PostHandler> = {
     const raw = String(b.headers ?? '');
     if (!raw.trim()) throw new HttpError(400, 'missing headers');
     return slim(await o.headerCheck(raw.slice(0, 100_000)));
+  },
+  '/api/job': async (b, o) => {
+    const raw = String(b.message ?? '');
+    if (!raw.trim()) throw new HttpError(400, 'missing message');
+    return slim(await o.jobCheck(raw.slice(0, 30_000)));
+  },
+  // Signature requests (typed data JSON, calldata) can be long too.
+  '/api/signature': async (b, o) => {
+    const raw = String(b.request ?? '');
+    if (!raw.trim()) throw new HttpError(400, 'missing request');
+    return slim(await o.signatureCheck(raw.slice(0, 100_000), { ...(b.chain ? { chain: String(b.chain).slice(0, 12) } : {}), ...(b.to ? { to: String(b.to).slice(0, 60) } : {}) }));
   },
   '/api/fences': (b, o) => {
     const box = Array.isArray(b.box) ? (b.box.map(Number) as [number, number, number, number]) : null;
@@ -827,19 +854,22 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
     if (req.method === 'POST' && OWNER_ONLY.has(url.pathname) && !owner) {
       return send(res, 403, '{"error":"the shared watchlist is managed by the owner; add your own monitors instead"}', 'application/json');
     }
-    if (url.pathname === '/api/doc' && req.method === 'POST') {
+    if (UPLOADS[url.pathname] && req.method === 'POST') {
       if (!sameSite()) return send(res, 403, '{"error":"forbidden"}', 'application/json');
       const ip = (viaEdge && String(req.headers['x-oculon-client-ip'] ?? '').trim()) || clientIp(req);
       if (publicMode && !isAdmin(req, adminToken) && !analystLimit(ip)) return send(res, 429, '{"error":"You have checked a lot this hour. Try again a bit later."}', 'application/json');
       try {
-        const b = await readJson(req, 15_000_000);
+        const b = await readJson(req, UPLOADS[url.pathname] === 'apk' ? 56_000_000 : 15_000_000);
         const b64 = String(b.data ?? '').replace(/^data:[^;]+;base64,/, '');
         if (!b64) throw new HttpError(400, 'choose a file first');
         const file = Buffer.from(b64, 'base64');
         const name = String(b.name ?? 'document').slice(0, 120);
         const { createHash } = await import('node:crypto');
-        const r = await oculon.recordCheck('doc', createHash('sha256').update(file).digest('hex'), () => oculon.docCheck(file, name), { label: name });
-        log('POST /api/doc');
+        const kind = UPLOADS[url.pathname]!;
+        const hash = createHash('sha256').update(file).digest('hex');
+        const run = { doc: () => oculon.docCheck(file, name), image: () => oculon.imageCheck(file, name), qr: () => oculon.qrCheck(file, name), eml: () => oculon.emlCheck(file, name), apk: () => oculon.apkCheck(file, name), where: () => oculon.whereCheck(file, name) }[kind] as () => Promise<ModuleResult<unknown>>;
+        const r = await oculon.recordCheck(kind, hash, run, { label: name });
+        log(`POST ${url.pathname}`);
         return send(res, 200, JSON.stringify({ ...slim(r.value), check: r.check }), 'application/json; charset=utf-8');
       } catch (e) {
         return send(res, e instanceof HttpError ? e.status : 400, JSON.stringify({ error: (e as Error).message }), 'application/json; charset=utf-8');
@@ -856,8 +886,12 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
         return send(res, 403, '{"error":"forbidden"}', 'application/json');
       }
       try {
-        const body = await readJson(req, url.pathname === '/api/headers' ? 200_000 : undefined);
-        const out = url.pathname === '/api/headers'
+        const body = await readJson(req, url.pathname === '/api/headers' || url.pathname === '/api/signature' || url.pathname === '/api/job' ? 200_000 : undefined);
+        const out = url.pathname === '/api/job'
+          ? await oculon.recordCheck('job', String(body.message ?? ''), async () => POST_ROUTES[url.pathname]!(body, oculon), { label: `job offer: ${String(body.message ?? '').trim().slice(0, 60)}` }).then((r) => ({ ...(r.value as object), check: r.check }))
+          : url.pathname === '/api/signature'
+          ? await oculon.recordCheck('signature', String(body.request ?? ''), async () => POST_ROUTES[url.pathname]!(body, oculon), { label: `signature request: ${String(body.request ?? '').trim().slice(0, 60)}` }).then((r) => ({ ...(r.value as object), check: r.check }))
+          : url.pathname === '/api/headers'
           ? await oculon.recordCheck('headers', String(body.headers ?? ''), async () => POST_ROUTES[url.pathname]!(body, oculon), { label: `email headers: ${(/^subject:\s*(.+)$/im.exec(String(body.headers ?? ''))?.[1] ?? 'pasted').slice(0, 70)}` }).then((r) => ({ ...(r.value as object), check: r.check }))
           : await POST_ROUTES[url.pathname]!(body, oculon);
         log(`POST ${url.pathname}`);
@@ -989,7 +1023,7 @@ export function createWebServer(opts: WebOptions = {}): { server: Server; oculon
       if (!onchainEnabled() && ONCHAIN_ROUTES.has(url.pathname)) return send(res, 404, '{"error":"on-chain features are paused"}', 'application/json');
       const ck = CHECK_ROUTES[url.pathname];
       let out = ck && url.searchParams.get(ck.param)?.trim()
-        ? await oculon.recordCheck(ck.kind, url.searchParams.get(ck.param)!.trim(), async () => route(url.searchParams, oculon)).then((r) => (r.value && typeof r.value === 'object' ? { ...(r.value as object), check: r.check } : r.value))
+        ? await oculon.recordCheck(ck.kind, `${url.searchParams.get(ck.param)!.trim()}${url.searchParams.get('chain') ? `@${url.searchParams.get('chain')!.trim().toLowerCase()}` : ''}`, async () => route(url.searchParams, oculon)).then((r) => (r.value && typeof r.value === 'object' ? { ...(r.value as object), check: r.check } : r.value))
         : await route(url.searchParams, oculon);
       if (!onchainEnabled()) out = withoutOnchain(url.pathname, out);
       if (!admin && url.pathname === '/api/signals') out = publicSignals(out as { module: string }[]);

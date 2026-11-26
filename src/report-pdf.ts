@@ -13,6 +13,9 @@ const KIND_LABEL: Record<string, string> = {
   address: 'Crypto address check', phone: 'Phone number check', ip: 'IP address check', hash: 'File hash check', emailsec: 'Email security of a domain',
   company: 'Company check', token: 'Token check', rhtoken: 'Robinhood Chain token check', wallet: 'Wallet check', sanctions: 'Sanctions screening',
   factcheck: 'Fact check', recall: 'Recall check', travel: 'Travel risk', cve: 'Vulnerability', exposure: 'Exposure of a domain', doc: 'Document check',
+  approvals: 'Wallet approvals', contract: 'Token contract risk', signature: 'Signature request', poisoning: 'Address poisoning', trace: 'Fund trace',
+  image: 'Image authenticity', qr: 'QR code check', repo: 'GitHub repository check', domainreport: 'Domain report', walletreport: 'Wallet and token report',
+  site: 'Site check (drainer and phishing)', tx: 'Transaction explained', creator: 'Token creator record', eml: 'Email file check', apk: 'Android app check', job: 'Job offer check', where: 'Photo location and time', archive: 'Page saved as evidence', invite: 'Invite link check', stocktoken: 'Robinhood Stock Token check',
 };
 
 const when = (iso: string) => `${iso.slice(0, 16).replace('T', ' ')} UTC`;

@@ -34,6 +34,8 @@ const KIND_HELP: Record<WatchKind, string> = {
   port: 'ships queuing or military vessels at a port. target: the port',
   wallet: 'activity of a crypto wallet. target: the address',
   token: 'risk verdict and liquidity of a token. target: the contract address',
+  approvals: 'new token or NFT approvals on a wallet (who can take its tokens). target: the wallet address, optionally "address@arbitrum" or "address@polygon"',
+  contract: 'owner changes, code upgrades, liquidity pulls and holder concentration of a token contract (rug-pull watch). target: the contract address, optionally "address@base" etc.',
 };
 
 export const availableKinds = (): WatchKind[] => WATCH_KINDS.filter((k) => onchainEnabled() || !ONCHAIN_WATCH_KINDS.has(k));
@@ -57,6 +59,8 @@ const describe = (kind: WatchKind, target: string): string => {
     case 'port': return `vessel queues at ${target}`;
     case 'wallet': return `activity of wallet ${target}`;
     case 'token': return `risk changes of token ${target}`;
+    case 'approvals': return `new approvals on wallet ${target}`;
+    case 'contract': return `owner, code and liquidity changes of contract ${target}`;
   }
 };
 
@@ -70,6 +74,10 @@ export function parseMonitorPattern(text: string): MonitorRule | null {
   const t = text.trim().replace(/\bthe\s+(?=[A-Z])/g, '');
   const after = (re: RegExp) => { const m = re.exec(t); return m?.[1] ? clean(m[1]) : null; };
   let target: string | null;
+  const evm = /\b(0x[0-9a-fA-F]{40})\b/.exec(t)?.[1];
+  const onChain = /\b(?:on|@)\s*(arbitrum|polygon|base|bsc|bnb)\b/i.exec(t)?.[1]?.toLowerCase();
+  if (evm && /\b(approv|allowance|drain|spend)/i.test(t)) { const tg = onChain ? `${evm}@${onChain}` : evm; return { kind: 'approvals', target: tg, description: describe('approvals', tg) }; }
+  if (evm && /\b(rug|liquidity|owner|upgrade|contract|dev wallet)/i.test(t)) { const tg = onChain ? `${evm}@${onChain}` : evm; return { kind: 'contract', target: tg, description: describe('contract', tg) }; }
   if ((target = after(/\b(https?:\/\/\S+)/i))) return { kind: 'url', target, description: describe('url', target) };
   if ((target = after(/\b((?:npm|pypi):[@\w./-]+)/i))) return { kind: 'package', target: target.toLowerCase(), description: describe('package', target.toLowerCase()) };
   if (/\b(outage|blackout|shutdown|internet (?:is )?down|goes offline|disconnect)/i.test(t) && (target = after(/\b(?:in|for|across)\s+([A-Z][\w .'-]+?)(?:\s*$|[,.!?]|\s+(?:and|or|when|if)\b)/))) return { kind: 'outage', target, description: describe('outage', target) };

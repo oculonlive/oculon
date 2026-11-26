@@ -1,9 +1,11 @@
 /**
  * File hash check: is this file known malware, a known good file, or unknown?
  * MD5, SHA-1 or SHA-256, checked against CIRCL hashlookup (NIST NSRL and other known-software sets),
- * MalwareBazaar and ThreatFox (abuse.ch), AlienVault OTX threat reports and VirusTotal engine verdicts.
+ * MalwareBazaar and ThreatFox (abuse.ch), AlienVault OTX threat reports, VirusTotal engine verdicts, and Hybrid Analysis
+ * sandbox reports (HYBRID_ANALYSIS_KEY, free): what the file did when it was run.
  */
 import type { Ctx } from '../core/context.js';
+import { key } from '../core/keys.js';
 import type { ModuleResult, Provenance } from '../core/types.js';
 import { circlHash, malwareBazaar, otx, threatFox, virusTotal, type BazaarHit, type CirclHit, type OtxPulses, type ThreatFoxHit, type VtStats } from '../sources/threatintel.js';
 
@@ -21,7 +23,21 @@ export interface HashCheck {
   threatfox: ThreatFoxHit[];
   otx: OtxPulses | null;
   virustotal: VtStats | null;
+  /** Hybrid Analysis sandbox: its verdict, threat score 0-100, malware family and behaviour tags. */
+  hybrid: { verdict: string | null; threatScore: number | null; family: string | null; tags: string[]; url: string } | null;
   advice: string[];
+}
+
+interface HaOverview { verdict?: string | null; threat_score?: number | null; vx_family?: string | null; tags?: string[]; last_file_name?: string; type?: string }
+
+/** Hybrid Analysis overview of a SHA-256: null when unknown there or without a key. */
+export async function hybridAnalysis(ctx: Ctx, sha256: string): Promise<{ data: HashCheck['hybrid']; prov: Provenance | null }> {
+  const k = key('HYBRID_ANALYSIS_KEY');
+  if (!k || !/^[a-f0-9]{64}$/.test(sha256)) return { data: null, prov: null };
+  const r = await ctx.http.get<HaOverview>(`https://www.hybrid-analysis.com/api/v2/overview/${sha256}`, { source: 'hybrid-analysis', ttlSec: 86_400, retries: 0, headers: { 'api-key': k, 'user-agent': 'Falcon Sandbox', accept: 'application/json' } });
+  const d = r.data;
+  if (!d || (!d.verdict && d.threat_score == null && !d.vx_family)) return { data: null, prov: { ...r.prov, note: r.prov.note === 'HTTP 404' ? 'not in Hybrid Analysis' : r.prov.note } };
+  return { data: { verdict: d.verdict ?? null, threatScore: d.threat_score ?? null, family: d.vx_family ?? null, tags: (d.tags ?? []).slice(0, 8), url: `https://www.hybrid-analysis.com/sample/${sha256}` }, prov: r.prov };
 }
 
 export function hashAlgorithm(h: string): HashCheck['algorithm'] | null {
@@ -31,7 +47,7 @@ export function hashAlgorithm(h: string): HashCheck['algorithm'] | null {
   return null;
 }
 
-export function judgeHash(x: Pick<HashCheck, 'circl' | 'bazaar' | 'threatfox' | 'otx' | 'virustotal'>): { verdict: HashVerdict; reasons: string[] } {
+export function judgeHash(x: Pick<HashCheck, 'circl' | 'bazaar' | 'threatfox' | 'otx' | 'virustotal'> & { hybrid?: HashCheck['hybrid'] }): { verdict: HashVerdict; reasons: string[] } {
   const reasons: string[] = [];
   const v = x.virustotal;
   let bad = false;
@@ -44,6 +60,10 @@ export function judgeHash(x: Pick<HashCheck, 'circl' | 'bazaar' | 'threatfox' | 
     else if (v.malicious > 0) { warn = true; reasons.push(`${v.malicious} of ${v.engines} VirusTotal engines detect it; a few detections are often false positives`); }
     else if (v.engines) reasons.push(`no detections from ${v.engines} VirusTotal engines`);
   }
+  const h = x.hybrid;
+  if (h?.verdict === 'malicious') { bad = true; reasons.push(`Hybrid Analysis sandbox: malicious${h.family ? ` (${h.family})` : ''}${h.threatScore != null ? `, threat score ${h.threatScore}/100` : ''}`); }
+  else if (h?.verdict === 'suspicious') { warn = true; reasons.push(`Hybrid Analysis sandbox: suspicious${h.threatScore != null ? `, threat score ${h.threatScore}/100` : ''}`); }
+  else if (h?.verdict === 'no specific threat' || h?.verdict === 'whitelisted') reasons.push(`Hybrid Analysis sandbox: ${h.verdict}`);
   if (x.otx && x.otx.count > 0) { warn = true; reasons.push(`mentioned in ${x.otx.count} AlienVault OTX threat report${x.otx.count === 1 ? '' : 's'}`); }
   if (x.circl?.known && !x.circl.knownMalicious) reasons.push(`a known file in ${x.circl.sources.join(', ') || 'the CIRCL known-file sets'}${x.circl.fileName ? ` (${x.circl.fileName})` : ''}`);
   const verdict: HashVerdict = bad ? 'malicious' : warn ? 'suspicious' : x.circl?.known ? 'known good' : 'unknown';
@@ -55,17 +75,18 @@ export async function hashCheck(ctx: Ctx, input: string): Promise<ModuleResult<H
   const hash = input.trim().toLowerCase();
   const algorithm = hashAlgorithm(hash);
   if (!algorithm) throw new Error(`not a file hash: give an MD5 (32), SHA-1 (40) or SHA-256 (64) hex hash`);
-  const [circl, mb, tf, ox, vt] = await Promise.all([
+  const [circl, mb, tf, ox, vt, ha] = await Promise.all([
     circlHash(ctx, algorithm, hash),
     malwareBazaar(ctx, hash),
     algorithm === 'sha1' ? Promise.resolve({ data: [] as ThreatFoxHit[], prov: null as Provenance | null }) : threatFox(ctx, 'hash', hash),
     otx(ctx, 'file', hash),
     virusTotal(ctx, 'file', hash),
+    hybridAnalysis(ctx, hash),
   ]);
-  const provenance = [circl.prov, mb.prov, ...(tf.prov ? [tf.prov] : []), ox.prov, vt.prov];
-  const part = { circl: circl.data, bazaar: mb.data, threatfox: tf.data ?? [], otx: ox.data, virustotal: vt.data };
+  const provenance = [circl.prov, mb.prov, ...(tf.prov ? [tf.prov] : []), ox.prov, vt.prov, ...(ha.prov ? [ha.prov] : [])];
+  const part = { circl: circl.data, bazaar: mb.data, threatfox: tf.data ?? [], otx: ox.data, virustotal: vt.data, hybrid: ha.data };
   const { verdict, reasons } = judgeHash(part);
-  const family = mb.data?.signature ?? tf.data?.[0]?.malware ?? vt.data?.label ?? ox.data?.family[0] ?? null;
+  const family = mb.data?.signature ?? tf.data?.[0]?.malware ?? vt.data?.label ?? ha.data?.family ?? ox.data?.family[0] ?? null;
   const advice = verdict === 'malicious'
     ? ['Do not open or run this file. Delete it, and if it already ran, disconnect the device and scan it.', 'Look for the same hash on other machines in your network.']
     : verdict === 'suspicious'

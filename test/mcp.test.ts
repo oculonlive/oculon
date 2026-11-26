@@ -26,7 +26,7 @@ test('tools/list exposes valid schemas; tools/call works and reports errors as t
   const list = (await s.handle({ jsonrpc: '2.0', id: 1, method: 'tools/list' })) as { result: { tools: { name: string; inputSchema: { type: string; required: string[]; properties: object } }[] } };
   assert.equal(list.result.tools.length, activeTools().length);
   assert.ok(activeTools().length < TOOLS.length, "on-chain tools are left out by default");
-  assert.ok(!list.result.tools.some((t: { name: string }) => /robinhood|wallet|^oculon_token$/.test(t.name)));
+  assert.ok(!list.result.tools.some((t: { name: string }) => /robinhood|^oculon_wallet$|^oculon_token$/.test(t.name)));
   for (const t of list.result.tools) {
     assert.match(t.name, /^oculon_[a-z_]+$/);
     assert.equal(t.inputSchema.type, 'object');

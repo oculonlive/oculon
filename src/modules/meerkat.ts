@@ -26,6 +26,8 @@ import { hazards } from './hazards.js';
 import { urlCheck } from './urlcheck.js';
 import { audit } from './audit.js';
 import { travel } from './travel.js';
+import { approvalsCheck } from './approvals.js';
+import { contractRisk } from './contract.js';
 
 const lc = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
@@ -36,7 +38,7 @@ export function splitQuakeTarget(target: string): { place: string; min: number }
   return { place: (place ?? '').trim(), min: Number.isFinite(m) && m > 0 ? m : 5 };
 }
 
-export const WATCH_KINDS = ['company', 'domain', 'wallet', 'token', 'plane', 'topic', 'lights', 'air', 'port', 'news', 'outage', 'cve', 'quake', 'hazard', 'url', 'package', 'travel'] as const;
+export const WATCH_KINDS = ['company', 'domain', 'wallet', 'token', 'approvals', 'contract', 'plane', 'topic', 'lights', 'air', 'port', 'news', 'outage', 'cve', 'quake', 'hazard', 'url', 'package', 'travel'] as const;
 export type WatchKind = (typeof WATCH_KINDS)[number];
 
 export interface WatchItem {
@@ -156,6 +158,30 @@ export async function observe(ctx: Ctx, item: WatchItem, prev: State | null): Pr
       }
       return { state: { verdict: r.verdict, liq }, changes };
     }
+    case 'approvals': {
+      const [address, chain] = item.target.split('@') as [string, string?];
+      const r = (await approvalsCheck(ctx, address, { chain })).result;
+      const keys = r.approvals.map((a) => `${a.token}|${a.spender}`);
+      if (prev) {
+        for (const a of r.approvals.filter((x) => newOnes(keys, prev.keys).includes(`${x.token}|${x.spender}`)).slice(0, 5)) changes.push(`new approval: ${a.symbol ?? a.token.slice(0, 10)} to ${a.spenderName ?? a.spender} (${a.amount}${a.risk !== 'low' ? `, ${a.risk} risk: ${a.why}` : ''})`);
+        if (prev.verdict !== r.verdict) changes.push(`verdict ${String(prev.verdict)} → ${r.verdict}`);
+      }
+      return { state: { keys, verdict: r.verdict }, changes };
+    }
+    case 'contract': {
+      const [address, chain] = item.target.split('@') as [string, string?];
+      const r = (await contractRisk(ctx, address, { chain })).result;
+      const liq = r.liquidity?.usd ?? null;
+      const impl = r.proxy?.implementation ?? null;
+      if (prev) {
+        if (prev.owner !== r.owner) changes.push(`owner changed: ${String(prev.owner ?? 'none')} → ${r.owner ?? 'none'}`);
+        if (prev.impl !== impl && impl) changes.push(`contract code upgraded: implementation ${String(prev.impl ?? 'none')} → ${impl}`);
+        if (typeof prev.liq === 'number' && prev.liq > 1000 && liq !== null && Math.abs(pct(liq, prev.liq)) >= 0.3) changes.push(`liquidity ${fmtPct(pct(liq, prev.liq))} (${Math.round(prev.liq).toLocaleString('en-US')} → ${Math.round(liq).toLocaleString('en-US')})`);
+        if (prev.verdict !== r.verdict) changes.push(`verdict ${String(prev.verdict)} → ${r.verdict}${r.reasons[0] ? ` (${r.reasons[0]})` : ''}`);
+        if (typeof prev.top10 === 'number' && r.holders?.top10Percent !== null && r.holders?.top10Percent !== undefined && r.holders.top10Percent - prev.top10 >= 10) changes.push(`top 10 holders went from ${prev.top10}% to ${r.holders.top10Percent}%`);
+      }
+      return { state: { owner: r.owner, impl, liq, verdict: r.verdict, top10: r.holders?.top10Percent ?? null }, changes };
+    }
     case 'plane': {
       const t = (await track(ctx, item.target)).result;
       if (prev && t.change) changes.push(t.change);
@@ -260,7 +286,7 @@ export async function observe(ctx: Ctx, item: WatchItem, prev: State | null): Pr
   }
 }
 
-const KIND_WEIGHT: Record<WatchKind, number> = { company: 55, domain: 60, wallet: 60, token: 65, plane: 65, topic: 50, lights: 65, air: 50, port: 60, news: 50, outage: 70, cve: 65, quake: 70, hazard: 70, url: 70, package: 60, travel: 65 };
+const KIND_WEIGHT: Record<WatchKind, number> = { company: 55, domain: 60, wallet: 60, token: 65, approvals: 70, contract: 70, plane: 65, topic: 50, lights: 65, air: 50, port: 60, news: 50, outage: 70, cve: 65, quake: 70, hazard: 70, url: 70, package: 60, travel: 65 };
 
 /** Run every watch item (or the given ids) one after another, so free-tier rate limits are respected. */
 export async function runWatch(ctx: Ctx, ids?: number[]): Promise<{ runs: WatchRun[]; signals: Signal[] }> {

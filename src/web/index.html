@@ -559,7 +559,18 @@ nav button { white-space: nowrap; }
           <optgroup label="Everyday checks">
           <option value="scam">Is this message a scam? (paste it)</option>
           <option value="url">Is this link safe? (URL)</option>
-          <option value="doc">Was this document edited? (PDF, screenshot or photo)</option>
+          <option value="doc">Was this document edited? (PDF, Word, Excel, screenshot or photo)</option>
+          <option value="aiimage">Is this image real? AI, edited or camera (image file)</option>
+          <option value="qr">Where does this QR code lead? (photo or screenshot)</option>
+          <option value="repo">Is this GitHub repo safe to run? (owner/name or link)</option>
+          <option value="domainreport">Full report on a domain (domain)</option>
+          <option value="site">Is this site a drainer or phishing page? (link)</option>
+          <option value="eml">Check a whole email file (.eml)</option>
+          <option value="apk">Is this Android app safe? (.apk file)</option>
+          <option value="job">Is this job offer a scam? (paste it)</option>
+          <option value="where">Where and when was this photo taken? (photo file)</option>
+          <option value="archive">Save a page as evidence (link)</option>
+          <option value="invite">What is behind this Telegram or Discord invite? (link)</option>
           <option value="iban">Is this IBAN valid? (IBAN)</option>
           <option value="headers">Was this email spoofed? (paste raw headers)</option>
           <option value="factcheck">Fact check (claim or news URL)</option>
@@ -581,6 +592,19 @@ nav button { white-space: nowrap; }
           <option value="lookalike">Lookalike domains of a brand (domain)</option>
           <option value="address">Crypto address check (BTC, 0x, Solana, Tron)</option>
           <option value="honeypot">Can this token be sold? (0x, Ethereum, BNB, Base)</option>
+          </optgroup>
+          <optgroup label="Wallet safety">
+          <option value="approvals">Who can take my tokens? Approvals (wallet 0x…, add arbitrum or polygon)</option>
+          <option value="contract">What can the token owner do? (token 0x…, add base, bsc…)</option>
+          <option value="signature">What does this signature request allow? (paste it)</option>
+          <option value="poisoning">Lookalike addresses in my history? (wallet 0x…)</option>
+          <option value="trace">Where did the money go? (address 0x…)</option>
+          <option value="walletreport">Full report on a wallet or token (0x…)</option>
+          <option value="tx">What happened in this transaction? (hash)</option>
+          <option value="creator">Who made this token? Creator record (token 0x…)</option>
+          <option value="stocktoken">Robinhood Stock Token (ticker or 0x…, empty for upcoming dividends)</option>
+          </optgroup>
+          <optgroup label="More threat intel">
           <option value="ransomware">Ransomware claims (country, sector, name, or empty)</option>
           <option value="satellites">Satellites (name, NORAD number, or empty for new launches)</option>
           </optgroup>
@@ -608,7 +632,7 @@ nav button { white-space: nowrap; }
           </optgroup>
         </select>
         <input type="text" id="inv-q" placeholder="paypa1-secure-login.top/verify" aria-label="Query">
-        <label id="inv-file-l" class="filepick" hidden><input type="file" id="inv-file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"><span id="inv-file-n">Choose a PDF, PNG or JPEG (max 10 MB)</span></label>
+        <label id="inv-file-l" class="filepick" hidden><input type="file" id="inv-file" accept=".pdf,.png,.jpg,.jpeg,.webp,.docx,.docm,.xlsx,.xlsm,.pptx,.doc,.xls,.eml,.apk,application/pdf,image/*,message/rfc822,application/vnd.android.package-archive"><span id="inv-file-n">Choose a file (max 10 MB)</span></label>
         <textarea id="inv-ta" rows="7" hidden aria-label="Raw email headers" placeholder="Paste the full raw headers. Gmail: open the email, ⋮ menu, Show original. Outlook: File, Properties, Internet headers."></textarea>
         <button class="go" id="inv-go">Investigate</button>
       </div>
@@ -945,7 +969,7 @@ function handleMapClick(e) {
 const waitMap = setInterval(() => { if (map) { map.on('click', handleMapClick); clearInterval(waitMap); } }, 300);
 
 /* investigate */
-const placeholders = { doc: '', headers: '', iban: 'GB82 WEST 1234 5698 7654 32', lookalike: 'paypal.com', address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', honeypot: '0x6982508145454ce325ddbe47a25d4ec3d2311933', phone: '+1 876 555 0100', password: 'type a password (it never leaves your browser)', breaches: '(empty = newest breaches) or adobe.com', company: 'NL004495445B01', ip: '185.220.101.1', hash: '094fd325049b8a9cf6d3e5ef2a6d4cc6a567d7d49c35f8bb8dd9e3c6acf3d78d', ransomware: '(empty = newest claims) or Healthcare, DE, a company', satellites: '(empty = new launches) or ISS, 25544', scam: 'USPS: your package is on hold, pay the $1.99 fee within 24 hours at usps-redelivery-help.top/track', recall: '2018 Honda Accord', emailsec: 'example.com', airport: 'JFK', country: 'Argentina', papers: 'solid-state battery', url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
+const placeholders = { stocktoken: 'TSLA', doc: '', headers: '', aiimage: '', qr: '', signature: '', eml: '', apk: '', job: '', where: '', site: 'https://claim-airdrop-example.xyz', tx: '0x… transaction hash', creator: '0x… token', archive: 'https://… page to keep as evidence', invite: 't.me/name or discord.gg/code', approvals: '0xd8da6bf26964af9d7eed9e03e53415d37aa96045', contract: '0x6982508145454ce325ddbe47a25d4ec3d2311933', poisoning: '0x… your wallet', trace: '0x… address the funds went to', walletreport: '0x… wallet or token', repo: 'owner/name or https://github.com/…', domainreport: 'example.com', iban:'GB82 WEST 1234 5698 7654 32', lookalike: 'paypal.com', address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh', honeypot: '0x6982508145454ce325ddbe47a25d4ec3d2311933', phone: '+1 876 555 0100', password: 'type a password (it never leaves your browser)', breaches: '(empty = newest breaches) or adobe.com', company: 'NL004495445B01', ip: '185.220.101.1', hash: '094fd325049b8a9cf6d3e5ef2a6d4cc6a567d7d49c35f8bb8dd9e3c6acf3d78d', ransomware: '(empty = newest claims) or Healthcare, DE, a company', satellites: '(empty = new launches) or ISS, 25544', scam: 'USPS: your package is on hold, pay the $1.99 fee within 24 hours at usps-redelivery-help.top/track', recall: '2018 Honda Accord', emailsec: 'example.com', airport: 'JFK', country: 'Argentina', papers: 'solid-state battery', url: 'paypa1-secure-login.top/verify', factcheck: 'The Great Wall of China is visible from space', audit: 'npm:lodash@4.17.15 npm:request pypi:requests==2.19.0', travel: 'Lisbon', dossier: 'Nvidia', hype: 'ai agent', footprint: 'openai.com', lights: 'Gaza Strip', aircraft: 'N628TS', image: 'Kyoto', /*onchain*/wallet: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045', token: '0xdac17f958d2ee523a2206206994597c13d831ec7', /*/onchain*/air: 'New Delhi', space: '(no input needed)', /*onchain*/robinhood: '(no input needed)', deployer: '0x… token or deployer', /*/onchain*/launches: 'OpenAI', markets: '(no input needed)', rewind: '2026-11-12', sanctions: 'IMO 1234567 or 0x… or exact name', health: 'Nvidia', impact: '(empty = current quakes and storms)', contradictions: 'Anthropic IPO' };
 const usd = (x) => (x == null ? '?' : '$' + Math.round(x).toLocaleString('en-US'));
 
 /* brief: tiny, safe Markdown renderer (escape first, then headings, bold, links, bullets) */
@@ -1092,8 +1116,21 @@ $('#ask-go').onclick = async () => {
   finally { $('#ask-go').disabled = false; }
 };
 $('#ask-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#ask-go').click(); });
-$('#inv-kind').onchange = () => { const k = $('#inv-kind').value; $('#inv-q').placeholder = placeholders[k]; $('#inv-q').type = k === 'password' ? 'password' : 'text'; if (k === 'password') $('#inv-q').value = ''; $('#inv-q').hidden = k === 'doc' || k === 'headers'; $('#inv-file-l').hidden = k !== 'doc'; $('#inv-ta').hidden = k !== 'headers'; };
-$('#inv-file').onchange = () => { const f = $('#inv-file').files[0]; $('#inv-file-n').textContent = f ? f.name + ' · ' + Math.round(f.size / 1024) + ' KB' : 'Choose a PDF, PNG or JPEG (max 10 MB)'; };
+$('#inv-kind').onchange = () => { const k = $('#inv-kind').value; $('#inv-q').placeholder = placeholders[k]; $('#inv-q').type = k === 'password' ? 'password' : 'text'; if (k === 'password') $('#inv-q').value = ''; $('#inv-q').hidden = FILE_KINDS.has(k) || TEXT_KINDS.has(k); $('#inv-file-l').hidden = !FILE_KINDS.has(k); $('#inv-ta').hidden = !TEXT_KINDS.has(k); $('#inv-ta').placeholder = TEXT_HINT[k] || ''; if (FILE_KINDS.has(k) && !$('#inv-file').files[0]) $('#inv-file-n').textContent = FILE_HINT[k]; };
+$('#inv-file').onchange = () => { const f = $('#inv-file').files[0]; $('#inv-file-n').textContent = f ? f.name + ' · ' + Math.round(f.size / 1024) + ' KB' : FILE_HINT[$('#inv-kind').value] || 'Choose a file (max 10 MB)'; };
+const FILE_KINDS = new Set(['doc', 'aiimage', 'qr', 'eml', 'apk', 'where']);
+const TEXT_KINDS = new Set(['headers', 'signature', 'job']);
+const FILE_HINT = { doc: 'Choose a PDF, Word, Excel, PNG or JPEG (max 10 MB)', aiimage: 'Choose the image file, not a screenshot of it (max 10 MB)', qr: 'Choose a photo or screenshot of the QR code (max 10 MB)', eml: 'Choose the .eml file (Gmail: ⋮ menu, Download message) (max 10 MB)', apk: 'Choose the .apk file (max 40 MB)', where: 'Choose the original photo file (JPEG or PNG, max 10 MB)' };
+const FILE_MAX = { apk: 40 };
+const TEXT_HINT = { headers: 'Paste the full raw headers. Gmail: open the email, ⋮ menu, Show original. Outlook: File, Properties, Internet headers.', signature: 'Paste what the wallet asks you to sign: the typed data JSON (eth_signTypedData), the transaction data (0x…), a {"to","data","value"} object, or the message text.', job: 'Paste the whole job message or email from the recruiter.' };
+const FILE_ROUTE = { doc: '/api/doc', aiimage: '/api/imagecheck', qr: '/api/qr', eml: '/api/eml', apk: '/api/apk', where: '/api/where' };
+const CHAIN_WORD = /^(eth|ethereum|base|bsc|bnb|arbitrum|polygon)$/i;
+/* Shared parts of the new check views: heading with verdict, list of reasons, advice. */
+const toneFor = (v, risk) => (/^(no|nothing|none)\b/i.test(v || '') ? 'ok' : /danger|malicious|sanction|poisoned|high risk|invalid|AI generated|mixer/i.test(v || '') || risk >= 70 ? 'bad' : /risky|suspicious|caution|check|review|edited|AI edited|computer/i.test(v || '') || risk >= 35 ? 'warn' : 'ok');
+const vHead = (title, d) => `<h3>${title} ${tonePill(toneFor(d.verdict, d.risk), d.verdict)} <span class="meta">risk ${d.risk}/100</span></h3>`;
+const vList = (xs, cls = 'ev') => (xs && xs.length ? `<ul class="${cls}">${xs.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '');
+const vAdvice = (d) => (d.advice && d.advice.length ? `<h3>What to do</h3>${vList(d.advice)}` : '');
+const short = (a) => (a ? esc(a.slice(0, 8) + '…' + a.slice(-6)) : '');
 /* Under every recorded check: what changed since last time, the replay log and the PDF report. */
 function checkFoot(r) {
   const c = r && r.check;
@@ -1106,6 +1143,89 @@ const sigList = (s) => (s.length ? `<h3>Signals</h3>${s.map(renderSignal).join('
 const link = (u, t) => `<a href="${safeUrl(u)}" target="_blank" rel="noopener noreferrer">${esc(t)}</a>`;
 const tonePill = (t, txt) => `<span class="pill ${t}">${esc(txt)}</span>`;
 const views = {
+  approvals: (r) => {
+    const d = r.result;
+    return `${vHead(`<code>${short(d.address)}</code> <span class="meta">${esc(d.chain)}</span>`, d)}<p>${d.active} active approval${d.active === 1 ? '' : 's'}, ${d.unlimited} unlimited. <a href="${safeUrl(d.revokeUrl)}" target="_blank" rel="noopener noreferrer">Revoke them</a></p>${d.approvals.length ? `<table><tr><th>token</th><th>spender</th><th>amount</th><th>risk</th></tr>${d.approvals.slice(0, 40).map((a) => `<tr><td>${esc(a.symbol || short(a.token))}</td><td>${esc(a.spenderName || '')} <code>${short(a.spender)}</code><div class="meta">${esc(a.spenderType)}${a.why ? ' · ' + esc(a.why) : ''}</div></td><td>${esc(a.amount)}</td><td>${tonePill(a.risk === 'high' ? 'bad' : a.risk === 'medium' ? 'warn' : 'ok', a.risk)}</td></tr>`).join('')}</table>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  contract: (r) => {
+    const d = r.result;
+    const h = d.holders, l = d.liquidity;
+    return `${vHead(`${esc(d.symbol || d.name || short(d.address))} <span class="meta">${esc(d.chain)}</span>`, d)}<p>${d.verified ? `Verified on ${esc(d.verifiedBy)}` : '<b>Source not verified</b>'} · owner ${d.owner ? `<code>${short(d.owner)}</code>${d.ownerRenounced ? ' (renounced)' : ''}` : 'none found'}${d.proxy ? ` · upgradeable proxy${d.proxy.admin ? `, admin <code>${short(d.proxy.admin)}</code>` : ''}` : ''}</p>${d.powers.length ? `<table><tr><th>owner power</th><th>functions</th></tr>${d.powers.map((p) => `<tr><td>${esc(p.power)}</td><td><code>${esc(p.functions.join(', '))}</code></td></tr>`).join('')}</table>` : '<p class="meta">No owner powers found in the code.</p>'}<p class="meta">${h ? `${h.count != null ? h.count.toLocaleString('en-US') + ' holders' : ''}${h.top10Percent != null ? ` · top 10 hold ${h.top10Percent}%` : ''}` : ''}${l ? ` · liquidity ${usd(l.usd)} ${esc(l.pair || '')} ${esc(l.dex || '')}${l.lockedPercent != null ? ` · ${l.lockedPercent}% LP locked or burned` : ''}` : ''}</p>${vList(d.reasons)}${vList(d.notes, 'meta')}${vAdvice(d)}`;
+  },
+  signature: (r) => {
+    const d = r.result;
+    return `${vHead(esc(d.type), d)}<h3>What you would allow</h3>${vList(d.allows)}${d.parties.length ? `<table><tr><th>role</th><th>address</th><th>who</th></tr>${d.parties.map((p) => `<tr><td>${esc(p.role)}</td><td><code>${esc(p.address)}</code></td><td>${esc(p.name || p.type || '?')}</td></tr>`).join('')}</table>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  poisoning: (r) => {
+    const d = r.result;
+    return `${vHead(`<code>${short(d.address)}</code> <span class="meta">${esc(d.chain)}</span>`, d)}<p class="meta">${d.checkedTransfers} token transfers read · ${d.realCounterparties} addresses this wallet really paid · ${d.zeroValue} zero-value transfers it never signed</p>${d.lookalikes.length ? `<table><tr><th>lookalike</th><th>posing as</th><th>how</th></tr>${d.lookalikes.map((x) => `<tr><td><code>${esc(x.fake)}</code></td><td><code>${esc(x.real)}</code></td><td>${esc(x.how.join(', '))} · ${x.seen}x</td></tr>`).join('')}</table>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  trace: (r) => {
+    const d = r.result;
+    return `${vHead(`<code>${short(d.address)}</code> <span class="meta">${esc(d.chain)} · ${d.hops} hops</span>`, d)}<table><tr><th>hop</th><th>to</th><th>amount</th><th></th></tr>${d.nodes.slice(1).map((n) => `<tr><td class="num">${n.hop}</td><td><code>${short(n.address)}</code> ${esc(n.label || '')}<div class="meta">from <code>${short(n.receivedFrom)}</code>${n.firstTx ? ` · tx <code>${short(n.firstTx)}</code>` : ''}</div></td><td>${esc(n.amount || '')}</td><td>${tonePill(n.kind === 'exchange' ? 'info' : /mixer|sanctioned|scam/.test(n.kind) ? 'bad' : 'ok', n.kind)}</td></tr>`).join('')}</table>${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  aiimage: (r) => {
+    const d = r.result;
+    const c = d.c2pa;
+    return `${vHead(esc(d.name), d)}<p class="meta">${esc(d.type)} · ${Math.round(d.bytes / 1024)} KB${d.camera ? ' · camera ' + esc(d.camera) : ''}${d.software ? ' · software ' + esc(d.software) : ''}</p>${c ? `<p>Content Credentials: ${esc(c.generator || 'present')}${c.sourceType ? ` · ${esc(c.sourceType)}` : ''}${c.signers.length ? ` · certificates name ${esc(c.signers.slice(0, 3).join(', '))}` : ''}</p>` : ''}${d.generator ? `<p>Generator: <b>${esc(d.generator.tool)}</b>${d.generator.prompt ? `<div class="meta">prompt: ${esc(d.generator.prompt)}</div>` : ''}</p>` : ''}${vList(d.reasons)}${vList(d.notes, 'meta')}${vAdvice(d)}`;
+  },
+  qr: (r) => {
+    const d = r.result;
+    return `${vHead(d.found ? esc(d.kind || 'QR code') : 'No QR code found', d)}${d.content ? `<p><code>${esc(d.content.slice(0, 500))}</code></p>` : ''}${Object.keys(d.target || {}).length ? `<table>${Object.entries(d.target).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  repo: (r) => {
+    const d = r.result;
+    const s = d.stats;
+    return `${vHead(link(d.url, d.repo), d)}<p class="meta">${s.stars.toLocaleString('en-US')} stars · created ${esc(s.createdAt.slice(0, 10))} · ${s.scanned} of ${s.files} files read${d.account ? ` · owner account ${d.account.ageDays ?? '?'} days old` : ''}${d.stars ? ` · ${d.stars.newAccounts} of the last ${d.stars.sampled} stars from new accounts` : ''}</p>${d.findings.length ? `<table><tr><th>file</th><th>finding</th><th></th></tr>${d.findings.slice(0, 30).map((f) => `<tr><td><code>${esc(f.file)}${f.line ? ':' + f.line : ''}</code></td><td>${esc(f.what)}${f.excerpt ? `<div class="meta"><code>${esc(f.excerpt)}</code></div>` : ''}</td><td>${tonePill(f.severity === 'high' ? 'bad' : f.severity === 'medium' ? 'warn' : 'ok', f.severity)}</td></tr>`).join('')}</table>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  stocktoken: (r) => {
+    const d = r.result;
+    const p = d.price;
+    return `${vHead(esc(d.symbol ? `${d.symbol} · ${d.name || ''}` : 'Robinhood Stock Tokens'), d)}${d.contract ? `<p class="meta">${esc(d.contract)} · ${esc(d.chain || '')}${d.isin ? ' · ISIN ' + esc(d.isin) : ''}${d.supply != null ? ' · supply ' + d.supply.toLocaleString('en-US') : ''}</p>` : ''}${p ? `<p>Bid <b>$${p.tokenBid?.toFixed(2) ?? '?'}</b> · ask <b>$${p.tokenAsk?.toFixed(2) ?? '?'}</b> per token · day $${p.dailyLow ?? '?'} to $${p.dailyHigh ?? '?'}${p.halted ? ' · <span class="pill bad">halted</span>' : ''}</p>` : ''}${d.corporateActions.length ? `<table><tr><th>date</th><th>token</th><th>action</th><th>status</th></tr>${d.corporateActions.map((x) => `<tr><td>${esc(x.date || '?')}</td><td>${esc(x.symbol)}</td><td>${esc(x.type)}${x.detail ? ` <span class="meta">${esc(x.detail)}</span>` : ''}</td><td class="meta">${esc(x.status)}</td></tr>`).join('')}</table>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  site: (r) => {
+    const d = r.result;
+    return `${vHead(link(d.finalUrl, d.domain), d)}<p class="meta">${d.title ? `"${esc(d.title)}" · ` : ''}${d.scripts.read} scripts read${d.reputation && d.reputation.ageDays != null ? ` · domain ${d.reputation.ageDays} days old` : ''}${d.finalUrl !== d.url ? ` · redirected from ${esc(d.url)}` : ''}</p>${d.browser ? `<p class="meta">Opened in a real browser by Cloudflare: ${d.browser.malicious ? '<b>malicious</b>' : 'no verdict'}${d.browser.categories.length ? ' · ' + esc(d.browser.categories.join(', ')) : ''} · ${d.browser.domains} domains contacted · ${link(d.browser.report, 'scan report')}</p>` : ''}${d.reports && d.reports.count ? `<p class="meta">${d.reports.count} victim reports on Chainabuse · ${link(d.reports.url, 'view')}</p>` : ''}${d.forms.filter((f) => f.password || f.seed || f.card).length ? `<table><tr><th>form sends to</th><th>asks for</th></tr>${d.forms.filter((f) => f.password || f.seed || f.card).map((f) => `<tr><td><code>${esc(f.action || '(same page)')}</code>${f.external ? ' <span class="pill bad">other domain</span>' : ''}</td><td>${[f.seed && 'seed phrase', f.password && 'password', f.card && 'card'].filter(Boolean).join(', ')}</td></tr>`).join('')}</table>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  tx: (r) => {
+    const d = r.result;
+    return `${vHead(`<code>${short(d.hash)}</code> <span class="meta">${esc(d.chain)} · ${esc(d.status)}</span>`, d)}${vList(d.summary)}${d.reasons.length ? `<h3>Why</h3>${vList(d.reasons)}` : ''}<p>${link(d.explorer, 'Open in the explorer')}</p>${vAdvice(d)}`;
+  },
+  creator: (r) => {
+    const d = r.result;
+    const toks = d.deployments.filter((x) => x.isToken);
+    return `${vHead(`<code>${short(d.token)}</code> <span class="meta">${esc(d.chain)}</span>`, d)}<p>Creator ${d.deployer ? `<code>${esc(d.deployer)}</code>` : 'not found'}${d.createdAt ? ` · created ${esc(d.createdAt.slice(0, 10))}` : ''}${d.fundedBy ? ` · first funded by ${esc(d.fundedBy.label || short(d.fundedBy.address))}` : ''}</p>${toks.length ? `<table><tr><th>token</th><th>created</th><th>liquidity</th><th></th></tr>${toks.slice(0, 30).map((x) => `<tr><td>${esc(x.symbol || '?')} <code>${short(x.address)}</code></td><td>${esc(x.createdAt.slice(0, 10))}</td><td>${x.liquidityUsd == null ? 'no pool' : usd(x.liquidityUsd)}</td><td>${tonePill(x.dead ? 'bad' : 'ok', x.dead ? 'dead' : 'alive')}</td></tr>`).join('')}</table>` : ''}${vList(d.reasons)}${vList(d.notes, 'meta')}${vAdvice(d)}`;
+  },
+  eml: (r) => {
+    const d = r.result;
+    return `${vHead(esc(d.subject || 'Email'), d)}<p class="meta">${esc(d.from || '')}${d.date ? ' · ' + esc(d.date) : ''}</p><table><tr><th>part</th><th>verdict</th><th>details</th></tr>${d.headers ? `<tr><td>headers</td><td>${tonePill(d.headers.tone === 'info' ? 'ok' : d.headers.tone, d.headers.verdict || 'checked')}</td><td class="meta">${esc(d.headers.points.slice(0, 2).join(' · '))}</td></tr>` : ''}${d.body ? `<tr><td>message (${d.body.links} links)</td><td>${tonePill(d.body.tone === 'info' ? 'ok' : d.body.tone, d.body.verdict || 'checked')}</td><td class="meta">${esc(d.body.points.slice(0, 2).join(' · '))}</td></tr>` : ''}${d.attachments.map((x) => `<tr><td>${esc(x.name)} <span class="meta">${esc(x.check)}</span></td><td>${tonePill(x.tone === 'info' ? 'ok' : x.tone, x.verdict || 'checked')}</td><td class="meta">${esc(x.points.slice(0, 2).join(' · '))}</td></tr>`).join('')}</table>${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  apk: (r) => {
+    const d = r.result;
+    return `${vHead(esc(d.package || d.name), d)}<p class="meta">version ${esc(d.version || '?')} · Android SDK ${d.minSdk ?? '?'} to ${d.targetSdk ?? '?'} · ${d.permissions.length} permissions · signed by ${esc(d.signer.join(', ') || 'unknown')}${d.malware ? ` · malware databases: ${esc(d.malware.verdict)}` : ''}</p>${d.risky.length ? `<table><tr><th>permission</th><th>what it allows</th></tr>${d.risky.map((p) => `<tr><td><code>${esc(p.permission)}</code></td><td>${esc(p.why)}</td></tr>`).join('')}</table>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  job: (r) => {
+    const d = r.result;
+    return `${vHead('Job offer', d)}${d.patterns.length ? `<table><tr><th>pattern</th><th>in the message</th></tr>${d.patterns.map((p) => `<tr><td>${esc(p.name)}</td><td class="meta">"${esc(p.evidence)}"</td></tr>`).join('')}</table>` : ''}${d.repo ? `<p>Repo ${esc(d.repo.repo)}: ${tonePill(toneFor(d.repo.verdict, d.repo.risk), d.repo.verdict)}</p>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  where: (r) => {
+    const d = r.result;
+    const w = d.weather;
+    return `${vHead(esc(d.place || d.name), d)}${d.gps ? `<p><code>${d.gps.lat}, ${d.gps.lon}</code> · ${link(d.gps.map, 'Open the map')}</p>` : ''}${d.taken ? `<p class="meta">taken ${esc(d.taken.local || '?')} local${d.taken.gpsUtc ? ' · GPS time ' + esc(d.taken.gpsUtc) : ''}${d.camera ? ' · ' + esc(d.camera) : ''}</p>` : ''}${w ? `<p>At that hour: ${esc([w.condition, w.tempC != null ? w.tempC + ' °C' : null, w.precipMm ? w.precipMm + ' mm rain' : null, w.daylight == null ? null : w.daylight ? 'daylight' : 'dark'].filter(Boolean).join(', '))}</p>` : ''}${vList(d.reasons)}${vList(d.notes, 'meta')}${vAdvice(d)}`;
+  },
+  archive: (r) => {
+    const d = r.result;
+    return `${vHead(esc(d.url), d)}${d.snapshot ? `<p>${link(d.snapshot, 'Wayback Machine snapshot')} <span class="meta">${esc(d.snapshotTime || '')}</span></p>` : ''}${d.page ? `<p class="meta">SHA-256 <code>${esc(d.page.sha256)}</code> · HTTP ${d.page.status} · ${esc(d.page.finalUrl)}</p>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  invite: (r) => {
+    const d = r.result;
+    return `${vHead(`${esc(d.name || d.link)} <span class="meta">${esc(d.platform)} ${esc(d.kind || '')}</span>`, d)}<p class="meta">${d.members != null ? d.members.toLocaleString('en-US') + ' members' : ''}${d.online != null ? ` · ${d.online} online` : ''}${d.verified ? ' · verified' : ' · not verified'}${d.createdAt ? ' · created ' + esc(d.createdAt.slice(0, 10)) : ''}</p>${d.description ? `<p>${esc(d.description.slice(0, 300))}</p>` : ''}${vList(d.reasons)}${vAdvice(d)}`;
+  },
+  domainreport: (r) => views.walletreport(r),
+  walletreport: (r) => {
+    const d = r.result;
+    return `${vHead(`<code>${esc(d.target)}</code> <span class="meta">${esc(d.kind)} report</span>`, d)}<table><tr><th>part</th><th>verdict</th><th>details</th></tr>${d.parts.map((p) => `<tr><td>${esc(p.part)}</td><td>${p.error ? '<span class="meta">not checked</span>' : tonePill(p.tone === 'bad' ? 'bad' : p.tone === 'warn' ? 'warn' : p.tone === 'ok' ? 'ok' : 'info', p.verdict || 'done')}${p.risk != null ? ` <span class="meta">${p.risk}</span>` : ''}</td><td class="meta">${esc(p.error || p.points.slice(0, 2).join(' · '))}</td></tr>`).join('')}</table>${vList(d.reasons)}${vAdvice(d)}`;
+  },
   ip: (r) => {
     const d = r.result;
     const t = d.verdict === 'malicious' ? 'bad' : d.verdict === 'suspicious' ? 'warn' : 'ok';
@@ -1340,17 +1460,28 @@ $('#inv-go').onclick = async () => {
     finally { $('#inv-go').disabled = false; }
     return;
   }
-  if (kind === 'doc' || kind === 'headers') {
+  if (FILE_KINDS.has(kind) || TEXT_KINDS.has(kind)) {
     $('#inv-go').disabled = true;
     try {
       let r;
-      if (kind === 'doc') {
+      if (FILE_KINDS.has(kind)) {
         const f = $('#inv-file').files[0];
         if (!f) throw new Error('Choose a file first.');
-        if (f.size > 10 * 1024 * 1024) throw new Error('The file is larger than 10 MB.');
+        const maxMb = FILE_MAX[kind] || 10;
+        if (f.size > maxMb * 1024 * 1024) throw new Error(`The file is larger than ${maxMb} MB.`);
         out.innerHTML = '<p class="meta">Reading the file…</p>';
         const data = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = () => rej(new Error('could not read the file')); fr.readAsDataURL(f); });
-        r = await post('/api/doc', { name: f.name, data });
+        r = await post(FILE_ROUTE[kind], { name: f.name, data });
+      } else if (kind === 'job') {
+        const s = $('#inv-ta').value.trim();
+        if (s.length < 20) throw new Error('Paste the job message first.');
+        out.innerHTML = '<p class="meta">Checking…</p>';
+        r = await post('/api/job', { message: s });
+      } else if (kind === 'signature') {
+        const s = $('#inv-ta').value.trim();
+        if (s.length < 10) throw new Error('Paste the signature request first.');
+        out.innerHTML = '<p class="meta">Decoding…</p>';
+        r = await post('/api/signature', { request: s });
       } else {
         const h = $('#inv-ta').value.trim();
         if (h.length < 20) throw new Error('Paste the raw headers first.');
@@ -1362,11 +1493,16 @@ $('#inv-go').onclick = async () => {
     finally { $('#inv-go').disabled = false; }
     return;
   }
-  const param = { iban: 'iban', lookalike: 'domain', address: 'address', honeypot: 'address', phone: 'number', breaches: 'domain', company: 'q', ip: 'ip', hash: 'hash', ransomware: 'q', satellites: 'q', scam: 'message', recall: 'q', emailsec: 'domain', airport: 'code', country: 'name', papers: 'topic', url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
+  const param = { stocktoken: 'q', site: 'url', tx: 'hash', creator: 'address', archive: 'url', invite: 'link', approvals: 'address', contract: 'address', poisoning: 'address', trace: 'address', walletreport: 'address', repo: 'repo', domainreport: 'domain', iban: 'iban',lookalike: 'domain', address: 'address', honeypot: 'address', phone: 'number', breaches: 'domain', company: 'q', ip: 'ip', hash: 'hash', ransomware: 'q', satellites: 'q', scam: 'message', recall: 'q', emailsec: 'domain', airport: 'code', country: 'name', papers: 'topic', url: 'url', factcheck: 'claim', audit: 'packages', travel: 'place', dossier: 'name', hype: 'topic', footprint: 'domain', lights: 'place', aircraft: 'q', /*onchain*/wallet: 'address', token: 'address', /*/onchain*/air: 'place', space: 'x', /*onchain*/robinhood: 'x', deployer: 'address', /*/onchain*/launches: 'company', markets: 'x', rewind: 'date', sanctions: 'q', health: 'company', impact: 'place', contradictions: 'topic' }[kind];
   $('#inv-go').disabled = true;
   out.innerHTML = '<p class="meta">Working… some sources are rate-limited and take a while.</p>';
   try {
-    const r = kind === 'audit' && /^[{]/.test(q) ? await post('/api/audit', { manifest: q }) : await api(`/api/${kind}?${param}=${encodeURIComponent(q)}`);
+    // "0x… arbitrum": a chain word after an address picks the chain.
+    const words = q.split(/\s+/);
+    const chainQ = words.length === 2 && /^0x[0-9a-f]{40}$/i.test(words[0]) && CHAIN_WORD.test(words[1]) ? `&chain=${encodeURIComponent(words[1].toLowerCase())}` : '';
+    const qq = chainQ ? words[0] : q;
+    const path = { domainreport: 'report/domain', walletreport: 'report/wallet' }[kind] || kind;
+    const r = kind === 'audit' && /^[{]/.test(q) ? await post('/api/audit', { manifest: q }) : await api(`/api/${path}?${param}=${encodeURIComponent(qq)}${chainQ}`);
     const shareable = ['url', 'factcheck', 'travel', 'audit', 'recall', 'emailsec', 'papers', 'country', 'airport'].includes(kind) && !(kind === 'audit' && /^[{]/.test(q));
     out.innerHTML = views[kind](r) + checkFoot(r) + (shareable ? '<p class="row" style="margin-top:14px"><button class="icon-btn" id="inv-share">Share result</button><span class="meta" id="inv-share-out"></span></p>' : '') + `<h3>Sources</h3>${renderSources(r.provenance)}`;
     if (shareable) $('#inv-share').onclick = async () => {
