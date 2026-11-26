@@ -98,7 +98,7 @@ test('console and API over HTTP: wallet sign-in, key made, key used by the SDK, 
   try {
     const page = await fetch(`${base}/console`);
     assert.equal(page.status, 200);
-    assert.match(await page.text(), /One key\. <span>Every check\.<\/span>/);
+    assert.match(await page.text(), /One key\.<br><span>Every check\.<\/span>/);
     assert.deepEqual(((await (await fetch(`${base}/api/dev/me`)).json()) as { signedIn: boolean }).signedIn, false);
 
     const n = (await (await post('/api/dev/nonce', { address: addr })).json()) as { message: string };
